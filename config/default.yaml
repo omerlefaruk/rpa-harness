@@ -1,0 +1,89 @@
+name: rpa-automation-suite
+log_level: INFO
+report_dir: ./reports
+screenshot_on_failure: true
+screenshot_on_success: false
+video_record: false
+slow_mo: 0
+
+browser: chromium
+headless: false
+viewport_width: 1920
+viewport_height: 1080
+locale: en-US
+
+desktop_platform: windows
+app_launch_timeout: 30
+element_find_timeout: 10
+
+enable_vision: true
+vision_model: gpt-4o
+vision_temperature: 0.2
+auto_heal_selectors: true
+
+enable_agent: true
+agent_model: gpt-4o
+agent_temperature: 0.3
+agent_max_steps: 50
+
+max_workers: 4
+
+variables:
+  base_url: https://example.com
+  default_user: admin
+  timeout: 30000
+  input_excel: ./data/input.xlsx
+  output_excel: ./reports/output.xlsx
+
+models:
+  fast:
+    provider: openai-compatible
+    model: gpt-4o-mini
+    temperature: 0.1
+    max_tokens: 4000
+
+  powerful:
+    provider: openai-compatible
+    model: gpt-4o
+    temperature: 0.2
+    max_tokens: 8000
+
+  vision:
+    provider: openai-compatible
+    model: gpt-4o
+    temperature: 0.1
+    max_tokens: 4000
+
+subagents:
+  explorer:
+    model: fast
+    timeout_seconds: 30
+    max_parallel: 4
+
+  selector:
+    model: fast
+    timeout_seconds: 60
+    max_parallel: 2
+
+  uia_tree:
+    model: fast
+    timeout_seconds: 60
+    max_parallel: 1
+
+  planner:
+    model: powerful
+    timeout_seconds: 120
+    max_parallel: 1
+
+  memory:
+    model: fast
+    timeout_seconds: 30
+    max_parallel: 2
+
+memory:
+  enabled: true
+  db_path: ./data/memory.db
+  worker_port: 38777
+  compression_model: gpt-4o-mini
+  embedding_model: text-embedding-3-small
+  max_context_inject: 5

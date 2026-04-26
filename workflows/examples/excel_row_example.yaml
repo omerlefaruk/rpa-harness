@@ -1,0 +1,41 @@
+id: excel_row_example
+name: Excel Row Processing Example
+version: "0.1.0"
+type: excel
+description: Reads rows from input Excel, processes each row, and writes results.
+
+inputs:
+  input_excel: "./data/input.xlsx"
+  output_excel: "./reports/output.xlsx"
+
+steps:
+  - id: verify_input_exists
+    description: Verify input Excel file exists.
+    action:
+      type: no_op
+    success_check:
+      - type: file_exists
+        value: "${inputs.input_excel}"
+
+  - id: create_output
+    description: Create output workbook with headers.
+    action:
+      type: no_op
+    success_check:
+      - type: file_exists
+        value: "${inputs.output_excel}"
+
+  - id: process_rows
+    description: Process each row from input.
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+
+  - id: verify_output
+    description: Verify output was written.
+    action:
+      type: no_op
+    success_check:
+      - type: file_exists
+        value: "${inputs.output_excel}"

@@ -1,0 +1,34 @@
+id: minimal_example
+name: Minimal Example
+version: "0.1.0"
+type: browser
+description: Opens example.com and verifies the page loaded.
+
+inputs:
+  target_url: "https://example.com"
+
+steps:
+  - id: open_page
+    description: Open the target page.
+    action:
+      type: browser.goto
+      url: "${inputs.target_url}"
+    success_check:
+      - type: url_contains
+        value: "example.com"
+
+  - id: verify_title
+    description: Verify the page has expected content.
+    action:
+      type: browser.get_title
+    success_check:
+      - type: text_contains
+        value: "Example"
+
+  - id: done
+    description: Workflow completed.
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+    allow_without_success_check: false

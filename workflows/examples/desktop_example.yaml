@@ -1,0 +1,90 @@
+id: desktop_example
+name: Desktop Calculator Example
+version: "0.1.0"
+type: desktop
+description: Opens Windows Calculator, performs 2+2, and verifies the result.
+
+inputs:
+  process_name: "CalculatorApp.exe"
+  app_path: "calc" # or full path
+
+steps:
+  - id: launch_calculator
+    description: Launch Calculator application.
+    action:
+      type: desktop.launch
+      app_path: "${inputs.app_path}"
+      window_title: "Calculator"
+    success_check:
+      - type: window_exists
+        value: "Calculator"
+
+  - id: click_two
+    description: Click the number 2 button.
+    action:
+      type: desktop.click
+      selector:
+        strategy: automation_id
+        value: "num2Button"
+    success_check:
+      - type: element_exists
+        selector:
+          strategy: automation_id
+          value: "num2Button"
+
+  - id: click_plus
+    description: Click the plus button.
+    action:
+      type: desktop.click
+      selector:
+        strategy: automation_id
+        value: "plusButton"
+    success_check:
+      - type: element_exists
+        selector:
+          strategy: automation_id
+          value: "plusButton"
+
+  - id: click_two_again
+    description: Click 2 again.
+    action:
+      type: desktop.click
+      selector:
+        strategy: automation_id
+        value: "num2Button"
+    success_check:
+      - type: element_exists
+        selector:
+          strategy: automation_id
+          value: "num2Button"
+
+  - id: click_equals
+    description: Click equals button.
+    action:
+      type: desktop.click
+      selector:
+        strategy: automation_id
+        value: "equalButton"
+    success_check:
+      - type: element_exists
+        selector:
+          strategy: automation_id
+          value: "equalButton"
+
+  - id: verify_result
+    description: Verify result displays 4.
+    action:
+      type: desktop.get_text
+      selector:
+        strategy: automation_id
+        value: "CalculatorResults"
+    success_check:
+      - type: text_contains
+        value: "4"
+
+  - id: close_calculator
+    description: Close the calculator.
+    action:
+      type: desktop.close
+    success_check:
+      - type: always_pass

@@ -1,0 +1,77 @@
+id: browser_login_example
+name: Browser Login Example
+version: "0.1.0"
+type: browser
+description: Log into example web app and verify dashboard appears.
+
+inputs:
+  base_url: "https://example.com"
+
+credentials:
+  username_secret: EXAMPLE_USERNAME
+  password_secret: EXAMPLE_PASSWORD
+
+steps:
+  - id: open_login
+    description: Open login page.
+    action:
+      type: browser.goto
+      url: "${inputs.base_url}/login"
+    success_check:
+      - type: url_contains
+        value: "/login"
+
+  - id: fill_username
+    description: Fill username field.
+    action:
+      type: browser.fill
+      selector:
+        strategy: label
+        value: "Username"
+      value: "${secrets.EXAMPLE_USERNAME}"
+    success_check:
+      - type: field_has_value
+        selector:
+          strategy: label
+          value: "Username"
+        redacted: true
+
+  - id: fill_password
+    description: Fill password field.
+    action:
+      type: browser.fill
+      selector:
+        strategy: label
+        value: "Password"
+      value: "${secrets.EXAMPLE_PASSWORD}"
+    success_check:
+      - type: field_has_value
+        selector:
+          strategy: label
+          value: "Password"
+        redacted: true
+
+  - id: submit
+    description: Click sign in button.
+    action:
+      type: browser.click
+      selector:
+        strategy: role
+        role: button
+        name: "Sign in"
+    success_check:
+      - type: url_contains
+        value: "/dashboard"
+      - type: visible_text
+        value: "Dashboard"
+    recovery:
+      - type: retry
+        max_attempts: 2
+
+  - id: verify_dashboard
+    description: Verify dashboard loaded successfully.
+    action:
+      type: browser.get_title
+    success_check:
+      - type: variable_has_value
+        value: "dashboard_title"

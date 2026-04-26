@@ -1,0 +1,42 @@
+id: api_example
+name: API Integration Example
+version: "0.1.0"
+type: api
+description: Calls a test API endpoint and verifies the response.
+
+inputs:
+  api_base_url: "https://jsonplaceholder.typicode.com"
+
+steps:
+  - id: get_posts
+    description: Fetch list of posts.
+    action:
+      type: api.get
+      url: "${inputs.api_base_url}/posts"
+    success_check:
+      - type: status_code
+        value: 200
+      - type: response_contains
+        value: "userId"
+
+  - id: get_single_post
+    description: Fetch a single post.
+    action:
+      type: api.get
+      url: "${inputs.api_base_url}/posts/1"
+    success_check:
+      - type: status_code
+        value: 200
+      - type: json_path_equals
+        value:
+          path: "$.id"
+          value: "1"
+
+  - id: verify_not_found
+    description: Verify 404 for non-existent resource.
+    action:
+      type: api.get
+      url: "${inputs.api_base_url}/posts/99999"
+    success_check:
+      - type: status_code
+        value: 404
