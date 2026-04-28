@@ -96,6 +96,33 @@ def validate_workflow_step(step: dict) -> List[str]:
             ctype = check.get("type", "")
             if not ctype or ctype not in [c.value for c in CheckType]:
                 errors.append(f"Step '{step['id']}' check[{i}]: unknown type '{ctype}'")
+                continue
+
+            value = check.get("value")
+            if ctype in {
+                CheckType.DOWNLOAD_EXISTS.value,
+                CheckType.WINDOW_EXISTS.value,
+                CheckType.SHEET_EXISTS.value,
+            } and not isinstance(value, str):
+                errors.append(f"Step '{step['id']}' check[{i}]: '{ctype}' requires string value")
+
+            if ctype == CheckType.JSON_PATH_EQUALS.value:
+                if not isinstance(value, dict) or "path" not in value or "value" not in value:
+                    errors.append(
+                        f"Step '{step['id']}' check[{i}]: 'json_path_equals' requires value.path and value.value"
+                    )
+
+            if ctype == CheckType.CELL_EQUALS.value:
+                if not isinstance(value, dict) or "cell" not in value or "value" not in value:
+                    errors.append(
+                        f"Step '{step['id']}' check[{i}]: 'cell_equals' requires value.cell and value.value"
+                    )
+
+            if ctype == CheckType.ELEMENT_TEXT_EQUALS.value:
+                if isinstance(value, dict) and "value" not in value:
+                    errors.append(
+                        f"Step '{step['id']}' check[{i}]: 'element_text_equals' dict value requires key 'value'"
+                    )
     return errors
 
 

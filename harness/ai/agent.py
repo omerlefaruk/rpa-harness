@@ -14,6 +14,7 @@ from harness.ai.tools import ToolRegistry, build_default_tools
 from harness.ai.vision import VisionEngine
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
+from harness.resilience.recovery import smart_retry
 
 
 class RPAAgent:
@@ -145,54 +146,90 @@ class RPAAgent:
 
         needs_decision = not step.tool_name or step.action in ("verify", "done")
 
-        for attempt in range(step.max_retries + 1):
-            try:
-                if needs_decision:
-                    tool_name, tool_args = await self._decide(step, plan, result)
+        attempts = 0
+
+        async def run_tool(tool_name_override: Optional[str] = None,
+                           tool_args_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+            nonlocal attempts
+            attempts += 1
+
+            if tool_name_override is not None:
+                tool_name = tool_name_override
+                tool_args = tool_args_override or {}
+            elif needs_decision:
+                tool_name, tool_args = await self._decide(step, plan, result)
+            else:
+                tool_name = step.tool_name
+                tool_args = step.tool_args
+
+            result["tool_name"] = tool_name
+            result["tool_args"] = tool_args
+
+            if tool_name == "done":
+                return {
+                    "tool_name": tool_name,
+                    "tool_args": tool_args,
+                    "output": tool_args.get("summary", "Task complete"),
+                }
+
+            output = await self.tools.execute(tool_name, tool_args)
+
+            if step.action in ("click", "fill", "navigate") and self.vision:
+                try:
+                    screenshot = await self._take_screenshot()
+                    if screenshot:
+                        verified, reasoning = await self.vision.verify_state(
+                            screenshot, step.expected_result
+                        )
+                        if not verified:
+                            self.logger.warning(f"Verification: {reasoning}")
+                except Exception:
+                    pass
+
+            return {
+                "tool_name": tool_name,
+                "tool_args": tool_args,
+                "output": output,
+            }
+
+        async def execute_with_recovery(tool_name_override: Optional[str] = None,
+                                        tool_args_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+            return await smart_retry(
+                lambda: run_tool(tool_name_override, tool_args_override),
+                logger=self.logger,
+                max_attempts_by_category={
+                    "TRANSIENT": step.max_retries + 1,
+                    "UNKNOWN": step.max_retries + 1,
+                    "PERMANENT": 1,
+                },
+            )
+
+        try:
+            execution = await execute_with_recovery()
+        except Exception as e:
+            if step.fallback_action:
+                self.logger.info(f"Trying fallback: {step.fallback_action}")
+                try:
+                    execution = await execute_with_recovery(step.fallback_action, {})
+                except Exception as fallback_error:
+                    e = fallback_error
+                    result["error"] = str(e)
+                    result["retries"] = max(0, attempts - 1)
+                    self.memory.add(MemoryEntry(
+                        step_name=step.description,
+                        action=step.action,
+                        tool_used=result.get("tool_name"),
+                        tool_args=result.get("tool_args", {}),
+                        success=False,
+                        error=str(e),
+                    ))
+                    self.logger.error(f"Step {step.id} exhausted retries: {e}")
                 else:
-                    tool_name = step.tool_name
-                    tool_args = step.tool_args
-
-                result["tool_name"] = tool_name
-                result["tool_args"] = tool_args
-
-                if tool_name == "done":
                     result["success"] = True
-                    result["output"] = tool_args.get("summary", "Task complete")
-                    break
-
-                output = await self.tools.execute(tool_name, tool_args)
-                result["output"] = output
-                result["success"] = True
-
-                self.memory.add(MemoryEntry(
-                    step_name=step.description,
-                    action=step.action,
-                    tool_used=tool_name,
-                    tool_args=tool_args,
-                    result=output,
-                    success=True,
-                    selector_used=tool_args.get("selector"),
-                ))
-
-                if step.action in ("click", "fill", "navigate") and self.vision:
-                    try:
-                        screenshot = await self._take_screenshot()
-                        if screenshot:
-                            verified, reasoning = await self.vision.verify_state(
-                                screenshot, step.expected_result
-                            )
-                            if not verified:
-                                self.logger.warning(f"Verification: {reasoning}")
-                    except Exception:
-                        pass
-
-                break
-
-            except Exception as e:
+                    result["output"] = execution["output"]
+            else:
                 result["error"] = str(e)
-                result["retries"] = attempt + 1
-
+                result["retries"] = max(0, attempts - 1)
                 self.memory.add(MemoryEntry(
                     step_name=step.description,
                     action=step.action,
@@ -201,17 +238,23 @@ class RPAAgent:
                     success=False,
                     error=str(e),
                 ))
+                self.logger.error(f"Step {step.id} exhausted retries: {e}")
+        else:
+            result["success"] = True
+            result["output"] = execution["output"]
 
-                if attempt < step.max_retries:
-                    self.logger.warning(
-                        f"Step {step.id} failed (attempt {attempt + 1}/{step.max_retries + 1}): {e}"
-                    )
-                    if step.fallback_action:
-                        self.logger.info(f"Trying fallback: {step.fallback_action}")
-                        step.tool_name = step.fallback_action
-                        step.tool_args = {}
-                else:
-                    self.logger.error(f"Step {step.id} exhausted retries: {e}")
+        result["retries"] = max(0, attempts - 1)
+
+        if result["success"]:
+            self.memory.add(MemoryEntry(
+                step_name=step.description,
+                action=step.action,
+                tool_used=result.get("tool_name"),
+                tool_args=result.get("tool_args", {}),
+                result=result.get("output"),
+                success=True,
+                selector_used=result.get("tool_args", {}).get("selector"),
+            ))
 
         end = datetime.now()
         result["duration_ms"] = (end - start).total_seconds() * 1000

@@ -1,4 +1,6 @@
 """Tests for verification contracts."""
+import json
+
 from harness.verification import (
     CheckType,
     SuccessCheck,
@@ -134,3 +136,123 @@ def test_check_runner_redacted():
     result = runner.run(SuccessCheck(type=CheckType.FIELD_HAS_VALUE, redacted=True))
     assert result.passed
     assert result.evidence.get("redacted")
+
+
+def test_validate_step_bad_json_path_payload():
+    errors = validate_workflow_step({
+        "id": "test",
+        "action": {"type": "api.get"},
+        "success_check": [{"type": "json_path_equals", "value": {"path": "$.id"}}],
+    })
+    assert len(errors) == 1
+    assert "value.path and value.value" in errors[0]
+
+
+def test_validate_step_bad_cell_equals_payload():
+    errors = validate_workflow_step({
+        "id": "test",
+        "action": {"type": "no_op"},
+        "success_check": [{"type": "cell_equals", "value": {"cell": "A1"}}],
+    })
+    assert len(errors) == 1
+    assert "value.cell and value.value" in errors[0]
+
+
+def test_check_runner_download_exists(tmp_path):
+    runner = CheckRunner()
+    report = tmp_path / "report.pdf"
+    report.write_text("ok")
+    runner.set_context("downloaded_files", [str(report)])
+
+    result = runner.run(SuccessCheck(type=CheckType.DOWNLOAD_EXISTS, value="report.pdf"))
+    assert result.passed
+
+    missing = runner.run(SuccessCheck(type=CheckType.DOWNLOAD_EXISTS, value="missing.pdf"))
+    assert not missing.passed
+
+
+def test_check_runner_json_path_equals():
+    runner = CheckRunner()
+    runner.set_context("response_body", json.dumps({"id": 1, "user": {"name": "Rau"}}))
+
+    result = runner.run(
+        SuccessCheck(
+            type=CheckType.JSON_PATH_EQUALS,
+            value={"path": "$.user.name", "value": "Rau"},
+        )
+    )
+    assert result.passed
+
+    missing = runner.run(
+        SuccessCheck(
+            type=CheckType.JSON_PATH_EQUALS,
+            value={"path": "$.user.id", "value": "1"},
+        )
+    )
+    assert not missing.passed
+
+
+def test_check_runner_sheet_exists():
+    runner = CheckRunner()
+    runner.set_context("sheet_names", ["Input", "Results"])
+
+    result = runner.run(SuccessCheck(type=CheckType.SHEET_EXISTS, value="Results"))
+    assert result.passed
+
+    missing = runner.run(SuccessCheck(type=CheckType.SHEET_EXISTS, value="Archive"))
+    assert not missing.passed
+
+
+def test_check_runner_cell_equals():
+    runner = CheckRunner()
+    runner.set_context("sheet_name", "Results")
+    runner.set_context("cell_values", {"Results!A1": "OK", "B2": 4})
+
+    result = runner.run(SuccessCheck(type=CheckType.CELL_EQUALS, value={"cell": "A1", "value": "OK"}))
+    assert result.passed
+
+    mismatch = runner.run(SuccessCheck(type=CheckType.CELL_EQUALS, value={"cell": "B2", "value": 5}))
+    assert not mismatch.passed
+
+
+def test_check_runner_window_exists():
+    runner = CheckRunner()
+    runner.set_context("available_windows", ["Calculator", "Notepad"])
+
+    result = runner.run(SuccessCheck(type=CheckType.WINDOW_EXISTS, value="Calculator"))
+    assert result.passed
+
+    missing = runner.run(SuccessCheck(type=CheckType.WINDOW_EXISTS, value="Paint"))
+    assert not missing.passed
+
+
+def test_check_runner_element_exists():
+    runner = CheckRunner()
+    runner.set_context("elements", [{"automation_id": "num2Button"}, {"automation_id": "equalButton"}])
+
+    result = runner.run(
+        SuccessCheck(
+            type=CheckType.ELEMENT_EXISTS,
+            selector={"strategy": "automation_id", "value": "num2Button"},
+        )
+    )
+    assert result.passed
+
+    missing = runner.run(
+        SuccessCheck(
+            type=CheckType.ELEMENT_EXISTS,
+            selector={"strategy": "automation_id", "value": "missingButton"},
+        )
+    )
+    assert not missing.passed
+
+
+def test_check_runner_element_text_equals():
+    runner = CheckRunner()
+    runner.set_context("element_text", "4")
+
+    result = runner.run(SuccessCheck(type=CheckType.ELEMENT_TEXT_EQUALS, value="4"))
+    assert result.passed
+
+    mismatch = runner.run(SuccessCheck(type=CheckType.ELEMENT_TEXT_EQUALS, value="5"))
+    assert not mismatch.passed

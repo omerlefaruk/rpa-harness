@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
+from harness.resilience.errors import RPAError
 
 
 class StepStatus(Enum):
@@ -52,6 +53,16 @@ class WorkflowStatus(Enum):
     PASSED = "passed"
     FAILED = "failed"
     ERROR = "error"
+
+
+class RetryableRecordError(RPAError):
+    code = "RETRYABLE_RECORD"
+    category = "TRANSIENT"
+
+    def __init__(self, result: dict):
+        message = result.get("reason") or result.get("status") or "Retryable workflow result"
+        super().__init__(message, details={"result": result})
+        self.result = result
 
 
 @dataclass
@@ -243,37 +254,43 @@ class RPAWorkflow:
         return self.result
 
     async def _process_with_retry(self, record: dict) -> dict:
-        import asyncio
-        from harness.resilience.recovery import retry_with_backoff
+        from harness.resilience.recovery import smart_retry
 
-        last_result = None
-        for attempt in range(self.max_retries_per_record + 1):
-            try:
-                result = await self.process_record(record)
-                status = result.get("status", "passed")
+        attempts = 0
 
-                if status == "passed" or status == "skipped":
-                    return result
+        async def operation() -> dict:
+            nonlocal attempts
+            attempts += 1
 
-                if attempt < self.max_retries_per_record and self._is_retryable(status):
-                    self.result.retried_records += 1
-                    delay = self.retry_base_delay_ms * (2 ** attempt)
-                    self.log(f"  Retry {attempt + 1}/{self.max_retries_per_record} in {delay}ms")
-                    await asyncio.sleep(delay / 1000)
-                    last_result = result
-                else:
-                    return result
+            result = await self.process_record(record)
+            status = result.get("status", "passed")
 
-            except Exception as e:
-                if attempt < self.max_retries_per_record:
-                    self.result.retried_records += 1
-                    delay = self.retry_base_delay_ms * (2 ** attempt)
-                    self.log(f"  Exception, retry {attempt + 1}/{self.max_retries_per_record}: {e}")
-                    await asyncio.sleep(delay / 1000)
-                else:
-                    return {"status": "failed", "reason": str(e)}
+            if status in ("passed", "skipped"):
+                return result
 
-        return last_result or {"status": "failed", "reason": "Max retries exceeded"}
+            if self._is_retryable(status):
+                raise RetryableRecordError(result)
+
+            return result
+
+        try:
+            result = await smart_retry(
+                operation,
+                logger=self.logger,
+                max_attempts_by_category={
+                    "TRANSIENT": self.max_retries_per_record + 1,
+                    "UNKNOWN": self.max_retries_per_record + 1,
+                    "PERMANENT": 1,
+                },
+            )
+            self.result.retried_records += max(0, attempts - 1)
+            return result
+        except RetryableRecordError as e:
+            self.result.retried_records += max(0, attempts - 1)
+            return e.result
+        except Exception as e:
+            self.result.retried_records += max(0, attempts - 1)
+            return {"status": "failed", "reason": str(e)}
 
     @staticmethod
     def _is_retryable(status: str) -> bool:

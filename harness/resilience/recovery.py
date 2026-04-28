@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Any, Awaitable, Callable, Optional, TypeVar
 
 from harness.logger import HarnessLogger
+from harness.resilience.errors import classify_error
 
 T = TypeVar("T")
 
@@ -166,8 +167,9 @@ class RecoveryStrategy(Enum):
 
 async def smart_retry(
     operation: Callable[[], Awaitable[T]],
-    error_category: str,
+    error_category: Optional[str] = None,
     logger: Optional[HarnessLogger] = None,
+    max_attempts_by_category: Optional[dict[str, int]] = None,
 ) -> T:
     log = logger or HarnessLogger("smart-retry")
 
@@ -177,15 +179,38 @@ async def smart_retry(
         "PERMANENT": (1, 0),
     }
 
+    if max_attempts_by_category:
+        strategies = {
+            category: (max_attempts_by_category.get(category, attempts), delay)
+            for category, (attempts, delay) in strategies.items()
+        }
+
+    initial_exception: Optional[Exception] = None
+    if error_category is None:
+        try:
+            return await operation()
+        except Exception as e:
+            initial_exception = e
+            error_category = classify_error(e)
+            log.warning(f"Detected {error_category} error: {e}")
+
     max_attempts, base_delay = strategies.get(error_category, (1, 0))
 
     if error_category == "PERMANENT":
         log.warning("Permanent error detected — not retrying")
+        if initial_exception is not None:
+            raise initial_exception
+        return await operation()
+
+    remaining_attempts = max_attempts - 1 if initial_exception is not None else max_attempts
+    if remaining_attempts <= 0:
+        if initial_exception is not None:
+            raise initial_exception
         return await operation()
 
     return await retry_with_backoff(
         operation,
-        max_attempts=max_attempts,
+        max_attempts=remaining_attempts,
         base_delay_ms=base_delay,
         logger=log,
     )

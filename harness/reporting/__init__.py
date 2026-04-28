@@ -84,13 +84,40 @@ class HTMLReporter:
                 logs_html = '<ul style="font-size:12px;margin:0;padding-left:16px;">' + \
                     ''.join(f'<li>{log}</li>' for log in logs) + '</ul>'
 
+            metadata_html = ""
+            meta = _get_metadata(r)
+            if meta and meta.get("review_data"):
+                rd = meta["review_data"]
+                snippets_html = ""
+                for s in rd.get("review_snippets", []):
+                    snippets_html += f'<span style="background:#dbeafe;padding:2px 8px;border-radius:4px;margin:2px;">{s}</span> '
+                impressions_html = ""
+                for imp in rd.get("guest_impressions", []):
+                    impressions_html += f'<span style="background:#fef3c7;padding:2px 8px;border-radius:4px;margin:2px;">{imp}</span> '
+                review_card = (
+                    f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:12px;">'
+                    f'<h3 style="margin:0 0 8px 0;color:#166534;">{rd.get("hotel", "Hotel")}</h3>'
+                    f'<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">'
+                    f'<div style="font-size:28px;font-weight:bold;color:#166534;">{rd.get("rating","?")}/10</div>'
+                    f'<div style="font-size:16px;color:#374151;">{rd.get("rating_label","")}</div>'
+                    f'<div style="font-size:16px;color:#6b7280;">{rd.get("review_count","?")} reviews</div>'
+                    f'</div>'
+                    f'<div style="margin-top:8px;">{snippets_html}</div>'
+                )
+                if impressions_html:
+                    review_card += f'<div style="margin-top:4px;font-size:13px;color:#92400e;"><strong>Guest impressions:</strong> {impressions_html}</div>'
+                if meta.get("note"):
+                    review_card += f'<div style="margin-top:8px;font-size:12px;color:#ef4444;font-style:italic;">{meta["note"]}</div>'
+                review_card += '</div>'
+                metadata_html = review_card
+
             rows += f"""
             <tr style="border-bottom:1px solid #e5e7eb;">
                 <td style="padding:12px;">{name}</td>
                 <td style="padding:12px;color:{status_color};font-weight:bold;text-transform:uppercase;">{status}</td>
                 <td style="padding:12px;">{duration:.0f}ms</td>
                 <td style="padding:12px;">{screenshots_html}</td>
-                <td style="padding:12px;">{error_html}{logs_html}</td>
+                <td style="padding:12px;">{metadata_html}{error_html}{logs_html}</td>
             </tr>"""
 
         html = f"""<!DOCTYPE html>
@@ -195,6 +222,14 @@ def _get_logs(result: Any) -> List[str]:
     if isinstance(result, dict):
         return result.get("logs", result.get("steps", []))
     return []
+
+
+def _get_metadata(result: Any) -> dict:
+    if hasattr(result, "metadata"):
+        return result.metadata or {}
+    if isinstance(result, dict):
+        return result.get("metadata", {})
+    return {}
 
 
 def _result_to_dict(result: Any) -> dict:
