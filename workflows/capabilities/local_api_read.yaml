@@ -1,0 +1,27 @@
+id: local_api_read
+name: Local API Read Capability
+version: "1.0"
+type: api
+description: Deterministic API read workflow shape for a local fake API server or fake APIDriver.
+
+inputs:
+  api_base_url: "http://127.0.0.1:8765"
+
+steps:
+  - id: read_item
+    description: Read an item from the local fake API.
+    action:
+      type: api.get
+      base_url: "${inputs.api_base_url}"
+      path: /read
+      params:
+        id: "7"
+    success_check:
+      - type: status_code
+        value: 200
+      - type: json_path_equals
+        value:
+          path: "$.id"
+          value: "7"
+      - type: response_contains
+        value: capability ok

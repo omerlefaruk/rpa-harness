@@ -16,10 +16,14 @@ env/
 data/*.xlsx
 data/*.csv
 data/*.db
+data/*.db-*
 data/*.sqlite
+data/*.sqlite-*
 
 # Reports
 reports/
+runs/*
+!runs/.gitkeep
 screenshots/
 downloads/
 logs/

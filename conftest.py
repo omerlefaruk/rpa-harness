@@ -1,7 +1,7 @@
 """
 Pytest fixtures for RPA Harness.
 Provides Playwright driver, Windows UIA driver, API client,
-vision engine, memory engine, and agent instances.
+vision engine, RPA Memory recorder, and agent instances.
 """
 
 import pytest
@@ -51,10 +51,16 @@ def vision_engine(harness_config):
 
 
 @pytest.fixture
-def memory_engine(harness_config):
-    from harness.memory.engine import RPAMemory
+def memory_recorder(harness_config):
+    from harness.memory import MemoryConfig, MemoryRecorder
 
-    return RPAMemory(config=harness_config, db_path=":memory:")
+    config = MemoryConfig(
+        enabled=False,
+        worker_url=harness_config.memory.worker_url,
+        required=False,
+        project=harness_config.memory.project,
+    )
+    return MemoryRecorder(config=config)
 
 
 @pytest.fixture
@@ -64,7 +70,6 @@ def agent(harness_config, playwright_driver):
     return RPAAgent(
         config=harness_config,
         playwright_driver=playwright_driver,
-        memory_engine=None,
     )
 
 

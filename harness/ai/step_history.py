@@ -1,19 +1,20 @@
 """
-Agent short-term memory — maintains step history, successful patterns,
-and context within a single agent session.
+Agent step history — short-lived state inside one agent session.
 """
 
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from harness.security import redact_mapping, redact_text, redact_value
+
 
 @dataclass
-class MemoryEntry:
-    id: str
+class StepHistoryEntry:
     step_name: str
     action: str
     tool_used: Optional[str]
+    id: str = ""
     tool_args: Dict[str, Any] = field(default_factory=dict)
     result: Any = None
     success: bool = True
@@ -40,17 +41,24 @@ class MemoryEntry:
         }
 
 
-class AgentMemory:
+class AgentStepHistory:
     def __init__(self, max_history: int = 50):
-        self._entries: List[MemoryEntry] = []
+        self._entries: List[StepHistoryEntry] = []
         self._selectors: Dict[str, str] = {}
         self._patterns: Dict[str, int] = {}
         self._max_history = max_history
         self._entry_counter = 0
 
-    def add(self, entry: MemoryEntry) -> MemoryEntry:
+    def add(self, entry: StepHistoryEntry) -> StepHistoryEntry:
         self._entry_counter += 1
         entry.id = str(self._entry_counter)
+        entry.tool_args = redact_mapping(entry.tool_args)
+        entry.result = redact_value(entry.result)
+        entry.error = redact_text(entry.error) if entry.error else None
+        entry.selector_used = redact_text(entry.selector_used) if entry.selector_used else None
+        entry.selector_healed = redact_text(entry.selector_healed) if entry.selector_healed else None
+        entry.screenshot_path = redact_text(entry.screenshot_path) if entry.screenshot_path else None
+        entry.metadata = redact_mapping(entry.metadata)
         self._entries.append(entry)
 
         if len(self._entries) > self._max_history:
@@ -63,13 +71,13 @@ class AgentMemory:
 
         return entry
 
-    def get_last(self, n: int = 5) -> List[MemoryEntry]:
+    def get_last(self, n: int = 5) -> List[StepHistoryEntry]:
         return self._entries[-n:]
 
-    def get_successful(self) -> List[MemoryEntry]:
+    def get_successful(self) -> List[StepHistoryEntry]:
         return [e for e in self._entries if e.success]
 
-    def get_failures(self) -> List[MemoryEntry]:
+    def get_failures(self) -> List[StepHistoryEntry]:
         return [e for e in self._entries if not e.success]
 
     def get_selector(self, step_name: str) -> Optional[str]:

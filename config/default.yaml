@@ -82,8 +82,10 @@ subagents:
 
 memory:
   enabled: true
-  db_path: ./data/memory.db
-  worker_port: 38777
-  compression_model: gpt-4o-mini
-  embedding_model: text-embedding-3-small
-  max_context_inject: 5
+  worker_url: http://127.0.0.1:37777
+  db_path: ./data/rpa_memory.db
+  required: false
+  project: rpa-harness
+  request_timeout_seconds: 2
+  semantic_inject: false
+  semantic_inject_limit: 5

@@ -6,17 +6,16 @@ Usage:
     python main.py --discover ./tests --run --report html
     python main.py --agent "Login to example.com and verify dashboard" --headless
     python main.py --serve --port 8080
-    python main.py --memory-serve
+    python main.py --rpa-memory-serve
     python main.py --run-workflows --discover-wf ./tests/rpa
 """
 
 import argparse
 import asyncio
 import sys
-from pathlib import Path
 
-from harness.orchestrator import AutomationHarness
 from harness.config import HarnessConfig
+from harness.orchestrator import AutomationHarness
 
 
 def parse_args():
@@ -29,7 +28,7 @@ Examples:
   python main.py --run --tags browser --headless
   python main.py --agent "Login and verify dashboard" --headless
   python main.py --serve --port 8080
-  python main.py --memory-serve --port 38777
+  python main.py --rpa-memory-serve --rpa-memory-port 37777
         """,
     )
     parser.add_argument("--config", "-c", help="Path to YAML config file")
@@ -54,8 +53,8 @@ Examples:
     parser.add_argument("--log-level", default="INFO")
     parser.add_argument("--serve", action="store_true", help="Start web dashboard")
     parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
-    parser.add_argument("--memory-serve", action="store_true", help="Start memory worker")
-    parser.add_argument("--memory-port", type=int, default=38777)
+    parser.add_argument("--rpa-memory-serve", action="store_true", help="Start RPA Memory service")
+    parser.add_argument("--rpa-memory-port", type=int, default=37777)
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
     return parser.parse_args()
@@ -101,9 +100,11 @@ async def main():
         return
 
     if args.validate_yaml:
-        from harness.verification import validate_workflow
         import yaml
-        wf = yaml.safe_load(open(args.validate_yaml).read())
+
+        from harness.verification import validate_workflow
+        with open(args.validate_yaml) as f:
+            wf = yaml.safe_load(f)
         errors = validate_workflow(wf)
         if errors:
             print(f"INVALID: {'; '.join(errors)}")
@@ -118,14 +119,33 @@ async def main():
         runner = YamlWorkflowRunner(config)
         result = await runner.run(args.run_yaml)
         print(f"\nStatus: {result['status']}")
-        if result.get("failures"):
-            for f in result["failures"]:
-                print(f"  - {f}")
+        for step in result.get("steps", []):
+            status = "PASS" if step.get("status") == "passed" else "FAIL"
+            checks = len(step.get("checks", []))
+            print(
+                f"  {status} {step.get('step_id')} "
+                f"({step.get('duration_ms', 0):.0f}ms, {checks} check(s))"
+            )
+        if result.get("status") != "passed":
+            print(f"Reason: {result.get('reason', 'Workflow failed')}")
+            if result.get("step"):
+                print(f"Failed step: {result['step']}")
+            if result.get("failure_report"):
+                print(f"Failure report: {result['failure_report']}")
+            if result.get("missing_secrets"):
+                missing = ", ".join(
+                    f"{item['name']} ({item['env']})" for item in result["missing_secrets"]
+                )
+                print(f"Missing secrets: {missing}")
+            if result.get("unsupported_actions"):
+                print(f"Unsupported actions: {', '.join(result['unsupported_actions'])}")
+            sys.exit(1)
         return
 
-    if args.memory_serve:
-        from harness.memory.server import run_memory_server
-        run_memory_server(port=args.memory_port)
+    if args.rpa_memory_serve:
+        from harness.memory.server import serve_memory_server
+        config = build_config(args)
+        await serve_memory_server(db_path=config.memory.db_path, port=args.rpa_memory_port)
         return
 
     config = build_config(args)
@@ -177,7 +197,7 @@ async def main():
     if (args.run or args.run_workflows) and args.report:
         formats = [f.strip() for f in args.report.split(",")]
         reports = harness.report(formats=formats)
-        print(f"\nReports:")
+        print("\nReports:")
         for fmt, path in reports.items():
             print(f"  [{fmt.upper()}] {path}")
 
@@ -205,11 +225,11 @@ async def main():
             sys.exit(1)
 
     # Show discovery
-    if not any([args.agent, args.run, args.run_workflows, args.serve, args.memory_serve]):
+    if not any([args.agent, args.run, args.run_workflows, args.serve, args.rpa_memory_serve]):
         print(
             f"Discovered {len(harness.test_classes)} test(s), "
             f"{len(harness.workflow_classes)} workflow(s). "
-            f"Use --run, --run-workflows, --agent, --serve, or --memory-serve."
+            f"Use --run, --run-workflows, --agent, --serve, or --rpa-memory-serve."
         )
 
 

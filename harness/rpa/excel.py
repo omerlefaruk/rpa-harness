@@ -32,9 +32,15 @@ class ExcelRow:
 
 
 class ExcelHandler:
-    def __init__(self, file_path: str, logger: Optional[HarnessLogger] = None):
+    def __init__(
+        self,
+        file_path: str,
+        logger: Optional[HarnessLogger] = None,
+        create_if_missing: bool = True,
+    ):
         self.file_path = Path(file_path)
         self.logger = logger or HarnessLogger("excel")
+        self.create_if_missing = create_if_missing
         self._workbook = None
         self._open_workbook()
 
@@ -44,9 +50,11 @@ class ExcelHandler:
             if self.file_path.exists():
                 self._workbook = openpyxl.load_workbook(str(self.file_path), data_only=True)
                 self.logger.info(f"Opened workbook: {self.file_path}")
-            else:
+            elif self.create_if_missing:
                 self._workbook = openpyxl.Workbook()
                 self.logger.info(f"Created new workbook: {self.file_path}")
+            else:
+                raise FileNotFoundError(f"Workbook not found: {self.file_path}")
         except ImportError:
             self.logger.error("openpyxl not installed. Run: pip install openpyxl")
             raise

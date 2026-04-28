@@ -1,176 +1,211 @@
 """
-Memory worker — FastAPI HTTP service on port 38777.
-Provides REST API for memory search, observation ingestion, and session management.
+RPA Memory HTTP service.
 """
 
-import json
-from datetime import datetime
-from pathlib import Path
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse, PlainTextResponse
+from pydantic import BaseModel, Field
 
-from harness.memory.database import MemoryDatabase
-from harness.memory.search import MemorySearch
-from harness.logger import HarnessLogger
+from harness.memory.config import MemoryConfig
+from harness.memory.store import MemoryStore
 
 
-def create_memory_app(db_path: str = "./data/memory.db") -> FastAPI:
-    app = FastAPI(title="RPA Memory Worker", version="0.1.0")
-    logger = HarnessLogger("memory-server")
-    db = MemoryDatabase(db_path, logger=logger)
-    search_engine = MemorySearch(memory_db=db)
+class SessionInitRequest(BaseModel):
+    content_session_id: Optional[str] = Field(default=None, alias="contentSessionId")
+    project: str = "rpa-harness"
+    prompt: str = ""
+    platform_source: str = Field(default="rpa-harness", alias="platformSource")
+    custom_title: Optional[str] = Field(default=None, alias="customTitle")
+
+
+class ObservationRequest(BaseModel):
+    content_session_id: Optional[str] = Field(default=None, alias="contentSessionId")
+    tool_name: str
+    tool_input: Dict[str, Any] = Field(default_factory=dict)
+    tool_response: Any = None
+    cwd: str = ""
+    agent_id: Optional[str] = Field(default=None, alias="agentId")
+    agent_type: Optional[str] = Field(default=None, alias="agentType")
+
+
+class SummarizeRequest(BaseModel):
+    content_session_id: Optional[str] = Field(default=None, alias="contentSessionId")
+    last_assistant_message: str = ""
+
+
+class ManualMemoryRequest(BaseModel):
+    text: str
+    title: Optional[str] = None
+    project: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ObservationBatchRequest(BaseModel):
+    ids: List[int]
+    project: Optional[str] = None
+    order_by: str = Field(default="date_desc", alias="orderBy")
+    limit: Optional[int] = None
+
+
+def create_memory_app(db_path: str = "./data/rpa_memory.db") -> FastAPI:
+    app = FastAPI(title="RPA Memory", version="0.2.0")
+    store = MemoryStore(db_path)
 
     @app.get("/health")
     async def health():
-        return {"status": "ok", "database": str(db.db_path)}
+        return {"status": "ok", "database": str(store.db_path)}
 
-    @app.post("/memory/observe")
-    async def add_observation(
-        session_id: str,
-        step_id: int,
-        step_name: str,
-        action: str = "",
-        tool_used: str = "",
-        tool_args: Optional[Dict] = None,
-        success: bool = True,
-        error_message: str = "",
-        error_category: str = "",
-        selector_used: str = "",
-        selector_healed: str = "",
-        duration_ms: float = 0,
-        screenshot_path: str = "",
-        output_summary: str = "",
-    ):
-        obs_id = db.add_observation(
-            session_id=session_id,
-            step_id=step_id,
-            step_name=step_name,
-            action=action,
-            tool_used=tool_used,
-            tool_args=tool_args or {},
-            success=success,
-            error_message=error_message,
-            error_category=error_category,
-            selector_used=selector_used,
-            selector_healed=selector_healed,
-            duration_ms=duration_ms,
-            screenshot_path=screenshot_path,
-            output_summary=output_summary,
+    @app.post("/api/sessions/init")
+    async def init_session(request: SessionInitRequest):
+        return store.create_or_update_session(
+            content_session_id=request.content_session_id or "",
+            project=request.project,
+            prompt=request.prompt,
+            platform_source=request.platform_source,
+            custom_title=request.custom_title,
         )
-        return {"id": obs_id, "status": "stored"}
 
-    @app.get("/memory/search")
+    @app.post("/api/sessions/observations")
+    async def add_observation(request: ObservationRequest):
+        return store.add_observation(
+            content_session_id=request.content_session_id or "",
+            tool_name=request.tool_name,
+            tool_input=request.tool_input,
+            tool_response=request.tool_response,
+            cwd=request.cwd,
+            agent_id=request.agent_id,
+            agent_type=request.agent_type,
+        )
+
+    @app.post("/api/sessions/summarize")
+    async def summarize(request: SummarizeRequest):
+        return store.add_summary(
+            content_session_id=request.content_session_id or "",
+            last_assistant_message=request.last_assistant_message,
+        )
+
+    @app.post("/api/memory/save")
+    async def save_memory(request: ManualMemoryRequest):
+        return store.save_manual_memory(
+            text=request.text,
+            title=request.title,
+            project=request.project or "rpa-harness",
+            metadata=request.metadata,
+        )
+
+    @app.get("/api/search")
     async def search(
-        q: str = Query(..., description="Search query"),
-        type: str = Query("all", description="Search type: all, selector, workflow, error"),
-        limit: int = Query(10, ge=1, le=50),
+        query: Optional[str] = None,
+        project: Optional[str] = None,
+        type: Optional[str] = None,
+        obs_type: Optional[str] = None,
+        limit: int = Query(20, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+        orderBy: str = "date_desc",
     ):
-        results = search_engine.search_index(q, search_type=type, limit=limit)
-        return {"query": q, "type": type, "count": len(results), "results": results}
+        return store.search(
+            query=query,
+            project=project,
+            result_type=type,
+            obs_type=obs_type,
+            limit=limit,
+            offset=offset,
+            order_by=orderBy,
+        )
 
-    @app.get("/memory/search/ft")
-    async def search_fulltext(
-        q: str = Query(..., description="Full-text search query"),
-        limit: int = Query(10, ge=1, le=50),
+    @app.get("/api/timeline")
+    async def timeline(
+        anchor: Optional[int] = None,
+        query: Optional[str] = None,
+        project: Optional[str] = None,
+        depth_before: int = Query(3, ge=0, le=20),
+        depth_after: int = Query(3, ge=0, le=20),
     ):
-        results = db.search_ft(q, limit=limit)
-        return {"query": q, "count": len(results), "results": results}
+        return store.timeline(
+            anchor=anchor,
+            query=query,
+            project=project,
+            depth_before=depth_before,
+            depth_after=depth_after,
+        )
 
-    @app.get("/memory/context/{obs_id}")
-    async def get_context(
-        obs_id: int,
-        window: int = Query(5, ge=1, le=20),
-    ):
-        context = search_engine.get_context(obs_id, window=window)
-        if not context:
-            raise HTTPException(status_code=404, detail="Observation not found")
-        return context
+    @app.post("/api/observations/batch")
+    async def observations_batch(request: ObservationBatchRequest):
+        return store.get_observations(
+            ids=request.ids,
+            project=request.project,
+            order_by=request.order_by,
+            limit=request.limit,
+        )
 
-    @app.post("/memory/observations")
-    async def get_observations(ids: List[int]):
-        details = search_engine.get_details(ids)
-        return {"count": len(details), "results": details}
+    @app.get("/api/context/inject", response_class=PlainTextResponse)
+    async def inject_context(project: str, full: bool = False):
+        return store.context_for_project(project, limit=50 if full else 10)
 
-    @app.get("/memory/selectors")
-    async def get_selectors(
-        url: str = Query(..., description="URL pattern to match"),
-        limit: int = Query(10, ge=1, le=50),
-    ):
-        results = db.get_selectors(url, limit=limit)
-        return {"url_pattern": url, "count": len(results), "selectors": results}
-
-    @app.get("/memory/sessions")
-    async def get_sessions(limit: int = Query(10, ge=1, le=50)):
-        sessions = db.get_recent_sessions(limit=limit)
-        return {"count": len(sessions), "sessions": sessions}
-
-    @app.get("/memory/session/{session_id}")
-    async def get_session(session_id: str):
-        context = db.get_session_context(session_id)
-        return {"session_id": session_id, "context": context}
+    @app.post("/api/context/semantic")
+    async def semantic_context(payload: Dict[str, Any]):
+        project = payload.get("project") or "rpa-harness"
+        limit = int(payload.get("limit") or 5)
+        return {
+            "context": store.context_for_project(project, limit=limit),
+            "count": limit,
+        }
 
     @app.get("/")
     @app.get("/ui")
     async def dashboard():
-        sessions = db.get_recent_sessions(limit=20)
-        return HTMLResponse(_dashboard_html(sessions))
+        return HTMLResponse(_dashboard_html())
 
     return app
 
 
-def _dashboard_html(sessions: List[Dict[str, Any]]) -> str:
-    session_rows = ""
-    for s in sessions:
-        status_color = {"passed": "#22c55e", "failed": "#ef4444", "running": "#3b82f6"}.get(
-            s.get("status", ""), "#6b7280"
-        )
-        session_rows += f"""
-        <tr>
-            <td>{s['id'][:12]}</td>
-            <td>{s.get('workflow_name', '')[:40]}</td>
-            <td style="color:{status_color};font-weight:bold">{s.get('status', '')}</td>
-            <td>{s.get('successful_steps', 0)}/{s.get('failed_steps', 0) or 0}</td>
-            <td>{s.get('duration_seconds', 0):.1f}s</td>
-            <td>{s.get('start_time', '')[:19] if s.get('start_time') else ''}</td>
-        </tr>"""
-
-    return f"""<!DOCTYPE html>
+def _dashboard_html() -> str:
+    return """<!doctype html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>RPA Memory Dashboard</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin:0; padding:32px; background:#f3f4f6; }}
-        .container {{ max-width:1100px; margin:0 auto; background:white; border-radius:12px; padding:32px; box-shadow:0 4px 6px rgba(0,0,0,0.1); }}
-        h1 {{ color:#111827; }}
-        table {{ width:100%; border-collapse:collapse; margin-top:16px; }}
-        th {{ text-align:left; padding:12px; background:#f9fafb; font-weight:600; }}
-        td {{ padding:12px; border-bottom:1px solid #e5e7eb; }}
-    </style>
+  <meta charset="utf-8">
+  <title>RPA Memory</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 32px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>RPA Memory</h1>
-        <table>
-            <thead><tr>
-                <th>Session</th><th>Workflow</th><th>Status</th>
-                <th>Steps</th><th>Duration</th><th>Started</th>
-            </tr></thead>
-            <tbody>{session_rows}</tbody>
-        </table>
-    </div>
+  <h1>RPA Memory</h1>
+  <p>Use <code>/api/search</code>, <code>/api/timeline</code>, and
+  <code>/api/observations/batch</code> for progressive retrieval.</p>
 </body>
 </html>"""
 
 
-def run_memory_server(db_path: str = "./data/memory.db", port: int = 38777):
+def run_memory_server(
+    db_path: str = "./data/rpa_memory.db",
+    port: int = 37777,
+    host: str = "127.0.0.1",
+):
     import uvicorn
+
     app = create_memory_app(db_path)
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+async def serve_memory_server(
+    db_path: str = "./data/rpa_memory.db",
+    port: int = 37777,
+    host: str = "127.0.0.1",
+):
+    import uvicorn
+
+    app = create_memory_app(db_path)
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
 
 
 if __name__ == "__main__":
-    run_memory_server()
+    config = MemoryConfig.from_env()
+    run_memory_server(db_path=config.db_path, port=int(config.worker_url.rsplit(":", 1)[-1]))

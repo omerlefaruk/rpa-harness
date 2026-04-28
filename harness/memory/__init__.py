@@ -1,20 +1,23 @@
 """
-Persistent memory system for RPA harness.
-Adapted from claude-mem: SQLite + FTS5, 3-layer search, hooks, compression.
+RPA Memory.
+
+Observation-first persistent memory for automation runs, workflows, and
+agent sessions. The retrieval contract is search -> timeline -> details.
 """
 
-from harness.memory.engine import RPAMemory
-from harness.memory.database import MemoryDatabase
-from harness.memory.hooks import MemoryHooks
-from harness.memory.search import MemorySearch
-from harness.memory.inject import ContextInjector
-from harness.memory.compress import MemoryCompressor
+from harness.memory.client import MemoryClient
+from harness.memory.config import MemoryConfig
+from harness.memory.errors import MemoryUnavailableError
+from harness.memory.events import ManualMemory, MemoryObservation
+from harness.memory.recorder import MemoryRecorder
+from harness.memory.store import MemoryStore
 
 __all__ = [
-    "RPAMemory",
-    "MemoryDatabase",
-    "MemoryHooks",
-    "MemorySearch",
-    "ContextInjector",
-    "MemoryCompressor",
+    "ManualMemory",
+    "MemoryClient",
+    "MemoryConfig",
+    "MemoryObservation",
+    "MemoryRecorder",
+    "MemoryStore",
+    "MemoryUnavailableError",
 ]

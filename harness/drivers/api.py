@@ -13,6 +13,7 @@ import httpx
 from harness.config import HarnessConfig
 from harness.drivers.base import AbstractBaseDriver
 from harness.logger import HarnessLogger
+from harness.security import sanitize_url
 
 
 class APIDriver(AbstractBaseDriver):
@@ -100,7 +101,7 @@ class APIDriver(AbstractBaseDriver):
             await self.launch()
 
         url = path if path.startswith("http") else f"{self.base_url}/{path.lstrip('/')}"
-        self.logger.info(f"{method} {url}")
+        self.logger.info(f"{method} {sanitize_url(url)}")
 
         response = await self._client.request(method, url, **kwargs)
         self._last_response = response

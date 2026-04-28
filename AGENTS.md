@@ -16,19 +16,20 @@ Build deterministic automation code that AI agents can inspect, generate, repair
 
 - **Language**: Python 3.10+
 - **Framework**: Playwright + pywinauto + OpenAI-compatible Vision + SQLite memory
-- **Architecture**: Orchestrator → Drivers (Browser/Desktop/API) + Verification → AI Layer (Agent/Vision/Planner) + Memory (claude-mem adapted)
+- **Architecture**: Orchestrator → Drivers (Browser/Desktop/API) + Verification → AI Layer (Agent/Vision/Planner) + RPA Memory
 
 ## Required Workflow
 
 For every task:
-1. Inspect relevant files
-2. Understand the requested automation
-3. Identify type: browser, desktop, API, Excel/workflow, harness improvement, skill/rule/memory update
-4. Create or update a plan
-5. Make the smallest useful change
-6. Add or update tests
-7. Run verification commands
-8. Produce final summary: files changed, commands run, test results, remaining risks
+1. Open RPA Memory first: search for relevant prior sessions, selectors, failures, workflows, and decisions before planning or editing.
+2. Inspect relevant files
+3. Understand the requested automation
+4. Identify type: browser, desktop, API, Excel/workflow, harness improvement, skill/rule/memory update
+5. Create or update a plan
+6. Make the smallest useful change
+7. Add or update tests
+8. Run verification commands
+9. Produce final summary: files changed, commands run, test results, remaining risks
 
 ## Verification Rules
 
@@ -53,6 +54,8 @@ Protected areas: `harness/core/`, `harness/orchestrator.py`, `harness/memory/`, 
 ## Memory Rules
 
 Memory stores evidence, not assumptions. Allowed: selector stats, error signatures, recovery outcomes, workflow history, reusable lessons. Disallowed: passwords, cookies, personal data, one-off guesses, unverified claims.
+
+Before any task work, query RPA Memory using the 3-layer pattern: `GET /api/search` for compact matches, `GET /api/timeline` for surrounding context, and `POST /api/observations/batch` only for the specific details needed. If the RPA Memory service is unavailable, state that and continue only with current repo evidence unless the task explicitly requires memory.
 
 ## Browser Automation
 

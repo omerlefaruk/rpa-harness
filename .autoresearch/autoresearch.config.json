@@ -1,0 +1,17 @@
+{
+  "objective": "Improve RPA Harness reliability with measured, reversible changes.",
+  "metric_name": "capability_pass_rate",
+  "metric_unit": "",
+  "direction": "higher",
+  "benchmark_command": "bash .autoresearch/autoresearch.sh",
+  "checks_command": "bash .autoresearch/autoresearch.checks.sh",
+  "allowed_paths": [
+    "tools/",
+    "tests/",
+    "docs/",
+    ".autoresearch/"
+  ],
+  "memory_url": "http://127.0.0.1:37777",
+  "memory_required": false,
+  "max_iterations": 25
+}

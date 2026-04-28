@@ -98,8 +98,9 @@ class AutomationTestCase:
 
         try:
             await self.setup()
-            await self.run()
-            self.result.status = TestStatus.PASSED
+            if not self._skipped:
+                await self.run()
+                self.result.status = TestStatus.PASSED
         except Exception as e:
             self.result.status = TestStatus.FAILED
             self.result.error_message = str(e)

@@ -3,10 +3,10 @@ name: rpa-harness
 description: >
   AI-powered RPA automation harness for Playwright browser automation,
   Windows UIAutomation (desktop), API integrations, Excel-driven workflows,
-  agentic AI loop, persistent memory, and web dashboard.
+  agentic AI loop, RPA Memory, and web dashboard.
   Use when: automating web apps, desktop apps, writing test suites,
   running UI validations, creating RPA-style automation workflows,
-  delegating to fast/powerful subagents, or searching agent memory.
+  delegating to fast/powerful subagents, or searching RPA Memory.
 ---
 
 # RPA Harness
@@ -18,7 +18,7 @@ description: >
 - API integration testing (REST, GraphQL via httpx)
 - RPA workflows (Excel-driven data processing with mismatch detection)
 - Agentic AI execution (natural language task → autonomous execution with tools)
-- Memory search (past selectors, workflows, error patterns)
+- RPA Memory search (sessions, observations, summaries, selector/failure evidence)
 
 ## Core Architecture
 
@@ -39,12 +39,13 @@ AI Layer
 ├── RPAAgent           (agent loop with tool registry and decision making)
 ├── VisionEngine       (screenshot analysis, element detection, state verification)
 ├── TaskPlanner        (task → step decomposition with dependencies)
-└── AgentMemory        (short-term step history within session)
+└── AgentStepHistory   (short-term step history within session)
 
-Memory (claude-mem adapted)
-├── RPAMemory          (observations, selector cache, error patterns)
-├── MemoryDatabase     (SQLite + FTS5)
-└── MemoryServer       (FastAPI worker on port 38777)
+RPA Memory (local service)
+├── Sessions       (suite, workflow, YAML, and agent run lifecycle)
+├── Observations   (verified step evidence, failures, selector healing)
+├── Summaries      (compact run/session summaries)
+└── Search         (keyword, timeline, observation lookup, context injection)
 ```
 
 ## Quick Start
@@ -66,8 +67,8 @@ python main.py --agent "Login to example.com and verify dashboard" --headless
 # Serve dashboard
 python main.py --serve --port 8080
 
-# Memory worker
-python main.py --memory-serve
+# RPA Memory service
+python main.py --rpa-memory-serve
 ```
 
 ## Writing Tests
@@ -128,7 +129,7 @@ When delegating, use the appropriate subagent:
 | Browser inspection, selector discovery | selector | fast |
 | Windows UIA tree walking | uia-tree | fast |
 | Task decomposition | planner | powerful |
-| Memory search | memory | fast |
+| RPA Memory search | memory | fast |
 
 ## CLI Reference
 
@@ -138,6 +139,6 @@ python main.py --run --tags browser --headless
 python main.py --agent "Login and verify" --headless
 python main.py --run-workflows --discover-wf ./tests/rpa
 python main.py --serve --port 8080
-python main.py --memory-serve --port 38777
+python main.py --rpa-memory-serve --rpa-memory-port 37777
 python main.py --config ./config/default.yaml --discover ./tests --run
 ```

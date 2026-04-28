@@ -3,6 +3,7 @@ Selector strategy module — priority ladder for robust element selection.
 Adapted from CasareRPA selector-strategies skill patterns.
 """
 
+import re
 from typing import List, Optional, Tuple
 
 
@@ -105,15 +106,32 @@ def get_healing_ladder(original_selector: str) -> List[str]:
 
 
 def score_selector(selector: str) -> int:
-    for strategy_name, template, priority in SELECTOR_PRIORITY:
-        base = template.split("{")[0].replace("'", "").replace("[", "").replace("=", "")
-        if selector.startswith(base):
-            return priority
+    normalized = selector.strip()
+
+    if any(key in normalized for key in ("data-testid", "data-test", "data-qa")):
+        return 5
+    if normalized.startswith("[aria-label=") or normalized.startswith("[name="):
+        return 4
+    if normalized.startswith("[role="):
+        return 4
+    if is_dynamic_selector(normalized):
+        return 1
+    if normalized.startswith("#"):
+        return 3
+    if normalized.startswith("[placeholder="):
+        return 3
+    if normalized.startswith("text=") or ":has-text(" in normalized:
+        return 3
+    if re.match(r"^\.[A-Za-z0-9_-]+$", normalized):
+        return 2
+    if normalized.startswith("xpath=") or normalized.startswith("//"):
+        return 1
+    if normalized:
+        return 2
     return 1
 
 
 def is_dynamic_selector(selector: str) -> bool:
-    import re
     patterns = [
         r'[a-f0-9]{8,}',  # long hex strings
         r'(?:emotion|styled|css)-[a-z0-9]+',  # CSS-in-JS

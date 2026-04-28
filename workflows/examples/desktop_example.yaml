@@ -78,13 +78,14 @@ steps:
       selector:
         strategy: automation_id
         value: "CalculatorResults"
+      output: calculator_result
     success_check:
       - type: text_contains
         value: "4"
 
   - id: close_calculator
-    description: Close the calculator.
+    description: Workflow completed.
     action:
-      type: desktop.close
+      type: no_op
     success_check:
       - type: always_pass

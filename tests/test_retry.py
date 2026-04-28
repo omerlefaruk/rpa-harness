@@ -220,7 +220,7 @@ class _FlakyTools:
 
 def test_agent_step_uses_shared_recovery_for_transient_errors(monkeypatch):
     @dataclass
-    class MemoryEntryStub:
+    class StepHistoryEntryStub:
         step_name: str
         action: str
         tool_used: str = ""
@@ -231,11 +231,11 @@ def test_agent_step_uses_shared_recovery_for_transient_errors(monkeypatch):
         error: str = ""
 
     monkeypatch.setattr(HarnessLogger, "_setup_jsonl", lambda self, path: setattr(self, "_jsonl_path", path))
-    monkeypatch.setattr("harness.ai.agent.MemoryEntry", MemoryEntryStub)
+    monkeypatch.setattr("harness.ai.agent.StepHistoryEntry", StepHistoryEntryStub)
     agent = RPAAgent(config=HarnessConfig(enable_vision=False))
     tools = _FlakyTools()
     agent.tools = tools
-    agent.memory = type("MemoryStub", (), {"add": lambda self, entry: None})()
+    agent.history = type("HistoryStub", (), {"add": lambda self, entry: None})()
 
     step = PlanStep(
         id=1,

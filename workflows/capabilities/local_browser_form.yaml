@@ -1,0 +1,169 @@
+id: local_browser_form
+name: Local Browser Form Capability
+version: "1.0"
+type: browser
+description: Deterministic local HTML fixture covering YAML browser runtime actions and success checks.
+
+inputs:
+  target_url: "file://${PWD}/workflows/capabilities/local_browser_form.html"
+
+steps:
+  - id: open_form
+    description: Open the local form fixture.
+    action:
+      type: browser.goto
+      url: "${inputs.target_url}"
+    success_check:
+      - type: url_contains
+        value: "local_browser_form.html"
+      - type: url_equals
+        value: "${inputs.target_url}"
+      - type: selector_visible
+        selector:
+          strategy: data-testid
+          value: heading
+
+  - id: read_title
+    description: Capture the document title.
+    action:
+      type: browser.get_title
+      output: page_title
+    success_check:
+      - type: variable_equals
+        value:
+          var: page_title
+          value: Capability Fixture
+
+  - id: read_heading
+    description: Capture the heading text.
+    action:
+      type: browser.get_text
+      selector:
+        strategy: data-testid
+        value: heading
+      output: heading_text
+    success_check:
+      - type: variable_has_value
+        value: heading_text
+      - type: variable_equals
+        value:
+          var: heading_text
+          value: Capability Form
+
+  - id: fill_name
+    description: Fill the text field by label.
+    action:
+      type: browser.fill
+      selector:
+        strategy: label
+        value: Name
+      value: Rau
+    success_check:
+      - type: field_has_value
+        selector:
+          strategy: label
+          value: Name
+
+  - id: press_enter
+    description: Press Enter in the name field.
+    action:
+      type: browser.press
+      selector:
+        strategy: label
+        value: Name
+      key: Enter
+    success_check:
+      - type: selector_visible
+        selector:
+          strategy: data-testid
+          value: press-marker
+
+  - id: fill_password
+    description: Fill the password field with a non-secret fixture value and redact evidence.
+    action:
+      type: browser.fill
+      selector:
+        strategy: label
+        value: Password
+      value: fixture-password-value
+    success_check:
+      - type: field_has_value
+        selector:
+          strategy: label
+          value: Password
+        redacted: true
+
+  - id: select_plan
+    description: Select an option from the dropdown.
+    action:
+      type: browser.select_option
+      selector:
+        strategy: label
+        value: Plan
+      value: pro
+    success_check:
+      - type: field_has_value
+        selector:
+          strategy: label
+          value: Plan
+
+  - id: check_advanced
+    description: Check the checkbox and verify the dynamic panel appears.
+    action:
+      type: browser.check
+      selector:
+        strategy: id
+        value: toggle
+    success_check:
+      - type: selector_visible
+        selector:
+          strategy: data-testid
+          value: advanced-panel
+
+  - id: uncheck_advanced
+    description: Uncheck the checkbox and verify the dynamic panel hides.
+    action:
+      type: browser.uncheck
+      selector:
+        strategy: id
+        value: toggle
+    success_check:
+      - type: selector_hidden
+        selector:
+          strategy: data-testid
+          value: advanced-panel
+
+  - id: submit_form
+    description: Submit the form and verify visible success text.
+    action:
+      type: browser.click
+      selector:
+        strategy: role
+        role: button
+        name: Save
+    success_check:
+      - type: visible_text
+        value: Saved
+      - type: url_contains
+        value: "#submitted"
+
+  - id: wait_for_submitted_url
+    description: Wait until the URL hash confirms submission.
+    action:
+      type: browser.wait_for_url
+      url: "${inputs.target_url}#submitted"
+    success_check:
+      - type: url_equals
+        value: "${inputs.target_url}#submitted"
+
+  - id: wait_for_success
+    description: Wait for success message visibility.
+    action:
+      type: browser.wait_for
+      selector:
+        strategy: data-testid
+        value: success
+      state: visible
+    success_check:
+      - type: visible_text
+        value: Saved

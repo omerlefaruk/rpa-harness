@@ -2,7 +2,6 @@
 Verification checks — executes success checks against real state.
 """
 import json
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -240,7 +239,7 @@ class CheckRunner:
             )
 
         found, actual = self._resolve_json_path(response_data, str(path))
-        passed = found and str(actual) == str(expected)
+        passed = found and self._values_equal(actual, expected)
         return VerificationResult(
             passed=passed,
             check_type=check.type,
@@ -449,20 +448,25 @@ class CheckRunner:
         if data is None or not path.startswith("$"):
             return False, None
 
-        current = data
-        tokens = re.findall(r"\.([A-Za-z_][A-Za-z0-9_]*)|\[(\d+)\]", path)
-        for attr, index in tokens:
-            if attr:
-                if not isinstance(current, dict) or attr not in current:
-                    return False, None
-                current = current[attr]
-            else:
-                idx = int(index)
-                if not isinstance(current, list) or idx >= len(current):
-                    return False, None
-                current = current[idx]
+        try:
+            from jsonpath_ng.ext import parse
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "json_path_equals requires jsonpath-ng. Install dependencies with "
+                "python3 -m pip install -r requirements.txt"
+            ) from exc
 
-        return True, current
+        matches = [match.value for match in parse(path).find(data)]
+        if not matches:
+            return False, None
+
+        actual = matches[0] if len(matches) == 1 else matches
+        return True, actual
+
+    def _values_equal(self, actual: Any, expected: Any) -> bool:
+        if isinstance(actual, (dict, list)) or isinstance(expected, (dict, list)):
+            return actual == expected
+        return str(actual) == str(expected)
 
 
 def run_all_checks(checks: List[SuccessCheck], context: Dict[str, Any] = None) -> List[VerificationResult]:

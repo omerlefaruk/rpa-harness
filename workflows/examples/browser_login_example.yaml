@@ -1,15 +1,15 @@
 id: browser_login_example
-name: Browser Login Example
+name: Illustrative Browser Login Example
 version: "0.1.0"
 type: browser
-description: Log into example web app and verify dashboard appears.
+description: Illustrative login workflow shape. This is not runnable against example.com.
 
 inputs:
   base_url: "https://example.com"
 
 credentials:
-  username_secret: EXAMPLE_USERNAME
-  password_secret: EXAMPLE_PASSWORD
+  username: EXAMPLE_USERNAME
+  password: EXAMPLE_PASSWORD
 
 steps:
   - id: open_login
@@ -28,7 +28,7 @@ steps:
       selector:
         strategy: label
         value: "Username"
-      value: "${secrets.EXAMPLE_USERNAME}"
+      value: "${secrets.username}"
     success_check:
       - type: field_has_value
         selector:
@@ -43,7 +43,7 @@ steps:
       selector:
         strategy: label
         value: "Password"
-      value: "${secrets.EXAMPLE_PASSWORD}"
+      value: "${secrets.password}"
     success_check:
       - type: field_has_value
         selector:
@@ -72,6 +72,7 @@ steps:
     description: Verify dashboard loaded successfully.
     action:
       type: browser.get_title
+      output: dashboard_title
     success_check:
       - type: variable_has_value
         value: "dashboard_title"

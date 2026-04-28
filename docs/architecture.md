@@ -17,7 +17,7 @@ harness/          ← Deterministic Python runner
   selectors/      ← Priority ladder and cache
   rpa/            ← Excel, workflow, retry, queue, office
   ai/             ← Agent loop, vision, planner, tools
-  memory/         ← SQLite persistence (claude-mem adapted)
+  memory/         ← RPA Memory sessions, observations, summaries, search
   reporting/      ← HTML, JSON, failure reports
 tools/            ← CLI utilities (inspect, analyze, patch)
 runs/             ← Run artifacts per execution
@@ -35,7 +35,7 @@ User request → Codex plans → YAML workflow created
   → success checks per step
   → failure → failure_report.json + evidence
   → Codex reads failure → proposes patch → tests verify
-  → proven lessons → memory (selector cache, error patterns)
+  → proven lessons → RPA Memory (sessions, observations, summaries, search)
 ```
 
 ## Safety Boundaries

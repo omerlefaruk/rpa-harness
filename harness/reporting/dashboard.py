@@ -92,8 +92,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <div class="value pending">Ready</div>
         </div>
         <div class="card">
-            <h3>Memory Port</h3>
-            <div class="value" style="color:#3b82f6;">38777</div>
+            <h3>RPA Memory</h3>
+            <div class="value" style="color:#3b82f6;">37777</div>
         </div>
         <div class="card">
             <h3>Workers</h3>
@@ -112,7 +112,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 python main.py --discover ./tests --run --report html
 python main.py --agent "Login to example.com and verify dashboard"
 python main.py --serve --port 8080
-python main.py --memory-serve
+python main.py --rpa-memory-serve
                 </pre>
             </div>
         </div>

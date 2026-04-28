@@ -12,7 +12,8 @@ steps:
     description: Fetch list of posts.
     action:
       type: api.get
-      url: "${inputs.api_base_url}/posts"
+      base_url: "${inputs.api_base_url}"
+      path: "/posts"
     success_check:
       - type: status_code
         value: 200
@@ -23,7 +24,8 @@ steps:
     description: Fetch a single post.
     action:
       type: api.get
-      url: "${inputs.api_base_url}/posts/1"
+      base_url: "${inputs.api_base_url}"
+      path: "/posts/1"
     success_check:
       - type: status_code
         value: 200
@@ -36,7 +38,8 @@ steps:
     description: Verify 404 for non-existent resource.
     action:
       type: api.get
-      url: "${inputs.api_base_url}/posts/99999"
+      base_url: "${inputs.api_base_url}"
+      path: "/posts/99999"
     success_check:
       - type: status_code
         value: 404

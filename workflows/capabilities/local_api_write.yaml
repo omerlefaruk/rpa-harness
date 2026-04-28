@@ -1,0 +1,26 @@
+id: local_api_write
+name: Local API Write Capability
+version: "1.0"
+type: api
+description: Deterministic API write workflow shape for a local fake API server or fake APIDriver.
+allow_destructive: true
+
+inputs:
+  api_base_url: "http://127.0.0.1:8765"
+
+steps:
+  - id: create_item
+    description: Create an item through the local fake API.
+    action:
+      type: api.post
+      base_url: "${inputs.api_base_url}"
+      path: /write
+      json_data:
+        name: fixture
+    success_check:
+      - type: status_code
+        value: 201
+      - type: json_path_equals
+        value:
+          path: "$.created"
+          value: true

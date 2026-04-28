@@ -32,8 +32,8 @@ def test_success_check_redacted():
 
 def test_validate_step_missing_check():
     errors = validate_workflow_step({"id": "test", "action": {"type": "browser.click"}})
-    assert len(errors) == 1
-    assert "missing success_check" in errors[0]
+    assert any("missing success_check" in error for error in errors)
+    assert any("requires selector" in error for error in errors)
 
 
 def test_validate_step_no_op_allowed():
@@ -51,7 +51,7 @@ def test_validate_step_bad_check_type():
         "action": {"type": "browser.click"},
         "success_check": [{"type": "invalid_check_type"}],
     })
-    assert len(errors) == 1
+    assert any("unknown type" in error for error in errors)
 
 
 def test_validate_workflow_missing_fields():
@@ -144,8 +144,7 @@ def test_validate_step_bad_json_path_payload():
         "action": {"type": "api.get"},
         "success_check": [{"type": "json_path_equals", "value": {"path": "$.id"}}],
     })
-    assert len(errors) == 1
-    assert "value.path and value.value" in errors[0]
+    assert any("value.path and value.value" in error for error in errors)
 
 
 def test_validate_step_bad_cell_equals_payload():
@@ -190,6 +189,43 @@ def test_check_runner_json_path_equals():
         )
     )
     assert not missing.passed
+
+
+def test_check_runner_json_path_equals_supports_parser_features():
+    runner = CheckRunner()
+    runner.set_context(
+        "response_json",
+        {
+            "items": [
+                {"name": "alpha", "id": 1},
+                {"name": "beta", "id": 2},
+            ],
+            "meta": {"odd.key": "value"},
+        },
+    )
+
+    wildcard = runner.run(
+        SuccessCheck(
+            type=CheckType.JSON_PATH_EQUALS,
+            value={"path": "$.items[*].name", "value": ["alpha", "beta"]},
+        )
+    )
+    filtered = runner.run(
+        SuccessCheck(
+            type=CheckType.JSON_PATH_EQUALS,
+            value={"path": '$.items[?(@.name == "beta")].id', "value": 2},
+        )
+    )
+    quoted_key = runner.run(
+        SuccessCheck(
+            type=CheckType.JSON_PATH_EQUALS,
+            value={"path": "$['meta']['odd.key']", "value": "value"},
+        )
+    )
+
+    assert wildcard.passed
+    assert filtered.passed
+    assert quoted_key.passed
 
 
 def test_check_runner_sheet_exists():

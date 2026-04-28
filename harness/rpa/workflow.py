@@ -112,6 +112,7 @@ class RPAWorkflow:
     tags: List[str] = []
     max_retries_per_record: int = 2
     retry_base_delay_ms: int = 1000
+    allow_mismatches: bool = False
 
     def __init__(self, config: Optional[HarnessConfig] = None):
         self.config = config
@@ -220,7 +221,7 @@ class RPAWorkflow:
                 self.result.status = WorkflowStatus.PASSED
             elif self.result.failed_records == 0:
                 self.result.status = WorkflowStatus.PASSED
-            elif self.result.processed_records > 0:
+            elif self.allow_mismatches and self.result.processed_records > 0:
                 self.result.status = WorkflowStatus.PASSED
             else:
                 self.result.status = WorkflowStatus.FAILED

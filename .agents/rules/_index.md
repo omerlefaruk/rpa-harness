@@ -8,4 +8,4 @@
 - `03-model-mapping.md` — Task-type → model mapping
 - `04-hooks.md` — Hook taxonomy
 - `05-enforcement.md` — Verification and enforcement rules
-- `06-memory.md` — Memory system rules (claude-mem adaptation)
+- `06-memory.md` — RPA Memory system rules

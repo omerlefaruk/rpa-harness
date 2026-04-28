@@ -23,6 +23,7 @@ dependencies = [
     "python-docx>=1.0.0",
     "pypdf>=4.0.0",
     "pydantic-settings>=2.0.0",
+    "jsonpath-ng>=1.8.0",
 ]
 
 [project.optional-dependencies]

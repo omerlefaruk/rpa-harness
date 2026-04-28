@@ -8,12 +8,13 @@ import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from harness.ai.memory import AgentMemory, MemoryEntry
 from harness.ai.planner import Plan, PlanStep, TaskPlanner
+from harness.ai.step_history import AgentStepHistory, StepHistoryEntry
 from harness.ai.tools import ToolRegistry, build_default_tools
 from harness.ai.vision import VisionEngine
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
+from harness.memory.recorder import MemoryRecorder
 from harness.resilience.recovery import smart_retry
 
 
@@ -26,7 +27,7 @@ class RPAAgent:
         api_driver=None,
         excel_handler=None,
         vision_engine: Optional[VisionEngine] = None,
-        memory_engine=None,
+        memory_recorder: Optional[MemoryRecorder] = None,
     ):
         self.config = config or HarnessConfig.from_env()
         self.logger = HarnessLogger("agent", jsonl_output=True)
@@ -37,6 +38,7 @@ class RPAAgent:
         self.excel = excel_handler
 
         self.vision = vision_engine or (VisionEngine(config=self.config) if self.config.enable_vision else None)
+        self.memory_recorder = memory_recorder or MemoryRecorder.from_harness_config(self.config)
 
         tools = build_default_tools(
             playwright_driver=self.playwright,
@@ -44,7 +46,7 @@ class RPAAgent:
             api_driver=self.api,
             excel_handler=self.excel,
             vision_engine=self.vision,
-            memory_engine=memory_engine,
+            memory_client=self.memory_recorder.client,
         )
 
         tools_desc = "\n".join(
@@ -54,8 +56,7 @@ class RPAAgent:
         self.tools = ToolRegistry(logger=self.logger)
         self.tools.register_many(tools)
         self.planner = TaskPlanner(config=self.config, tools_description=tools_desc)
-        self.memory = AgentMemory(max_history=50)
-        self._persistent_memory = memory_engine
+        self.history = AgentStepHistory(max_history=50)
 
         self._max_steps = config.agent_max_steps if config else 50
         self._client = None
@@ -73,11 +74,12 @@ class RPAAgent:
     async def execute(self, task: str, context: Optional[str] = None) -> Dict[str, Any]:
         start_time = datetime.now()
         self.logger.info(f"Agent task: {task[:100]}")
+        memory_session_id = self.memory_recorder.new_session_id("agent")
+        await self.memory_recorder.start_session(memory_session_id, task, custom_title="Agent task")
+        self.tools.bind_memory(self.memory_recorder, memory_session_id)
 
-        if self._persistent_memory:
-            past_context = await self._persistent_memory.inject_context(
-                task, context or ""
-            )
+        if self.memory_recorder.config.enabled:
+            past_context = await self.memory_recorder.semantic_context(task)
             if past_context:
                 context = (context or "") + "\n\n[Previous session context]\n" + past_context
 
@@ -118,11 +120,17 @@ class RPAAgent:
             "failed_steps": sum(1 for r in step_results if not r.get("success")),
             "duration_seconds": round(duration, 2),
             "steps": step_results,
-            "memory_summary": self.memory.summarize(),
+            "step_history": self.history.summarize(),
         }
 
-        if self._persistent_memory:
-            await self._persistent_memory.capture_session(summary)
+        await self.memory_recorder.record_observation(
+            content_session_id=memory_session_id,
+            tool_name="agent_result",
+            tool_input={"task": task},
+            tool_response=summary,
+            tool_use_id="agent-result",
+        )
+        await self.memory_recorder.summarize(memory_session_id, summary)
 
         self.logger.info(f"Agent complete: {summary['successful_steps']}/{summary['total_steps']} steps passed ({duration:.1f}s)")
         return summary
@@ -215,7 +223,7 @@ class RPAAgent:
                     e = fallback_error
                     result["error"] = str(e)
                     result["retries"] = max(0, attempts - 1)
-                    self.memory.add(MemoryEntry(
+                    self.history.add(StepHistoryEntry(
                         step_name=step.description,
                         action=step.action,
                         tool_used=result.get("tool_name"),
@@ -230,7 +238,7 @@ class RPAAgent:
             else:
                 result["error"] = str(e)
                 result["retries"] = max(0, attempts - 1)
-                self.memory.add(MemoryEntry(
+                self.history.add(StepHistoryEntry(
                     step_name=step.description,
                     action=step.action,
                     tool_used=result.get("tool_name"),
@@ -246,7 +254,7 @@ class RPAAgent:
         result["retries"] = max(0, attempts - 1)
 
         if result["success"]:
-            self.memory.add(MemoryEntry(
+            self.history.add(StepHistoryEntry(
                 step_name=step.description,
                 action=step.action,
                 tool_used=result.get("tool_name"),
@@ -263,7 +271,7 @@ class RPAAgent:
         return result
 
     async def _decide(self, step: PlanStep, plan: Plan, last_result: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-        context = self.memory.get_context_for_prompt(max_entries=10)
+        context = self.history.get_context_for_prompt(max_entries=10)
 
         system = """You are an RPA agent deciding what tool to call next.
 Return JSON: {"tool_name": "...", "tool_args": {...}}
@@ -313,7 +321,7 @@ Which tool should I call? Return the tool name and arguments."""
     async def _take_screenshot(self) -> Optional[str]:
         if self.playwright:
             try:
-                return await self.playwright.screenshot(name=f"agent_step_{self.memory._entry_counter}.png")
+                return await self.playwright.screenshot(name=f"agent_step_{self.history._entry_counter}.png")
             except Exception:
                 pass
         return None

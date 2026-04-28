@@ -1,6 +1,6 @@
 # Memory System Rules
 
-Adapted from claude-mem architecture.
+RPA Memory is the first context source for agents working in this repo.
 
 ## Lifecycle
 
@@ -19,15 +19,19 @@ SessionStart → StepStart → PostStep → StepError → SessionEnd
 
 ## Search Pattern (3-Layer Progressive Disclosure)
 
-1. **Layer 1 — index**: `memory/search?q=query&type=all&limit=10` → compact results (~50 tokens each)
-2. **Layer 2 — context**: `memory/context/{obs_id}?window=5` → timeline around match (~200 tokens)
-3. **Layer 3 — details**: POST `/memory/observations` with IDs → full data (~500 tokens each)
+1. **Layer 1 — index**: `GET /api/search?query=...&type=all&limit=10` → compact results with observation IDs.
+2. **Layer 2 — context**: `GET /api/timeline?anchor=<obs_id>&depth_before=3&depth_after=3` → surrounding context around the match.
+3. **Layer 3 — details**: `POST /api/observations/batch` with selected IDs → full observation data only when needed.
 
 ## When to Search Memory
 
+- Before every task, before planning, and before editing code
 - Before starting any browser or desktop interaction (cache selectors)
 - Before retrying a failed step (check error patterns)
 - When planning a workflow (check similar past sessions)
+- When changing harness architecture, memory behavior, credentials, verification, or agent rules
+
+If RPA Memory is unavailable, state the outage clearly and continue from current repo evidence unless the task explicitly depends on memory.
 
 ## When to Store to Memory
 

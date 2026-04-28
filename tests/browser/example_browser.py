@@ -7,9 +7,18 @@ from harness import AutomationTestCase, PlaywrightDriver
 
 class ExampleBrowserTest(AutomationTestCase):
     name = "example_browser"
-    tags = ["browser", "playwright", "example"]
+    tags = ["browser", "playwright", "example", "external", "public-site"]
 
     async def setup(self):
+        try:
+            import playwright.async_api  # noqa: F401
+        except ModuleNotFoundError:
+            self.driver = None
+            self.skip(
+                "Playwright is not installed. Install with: "
+                "python3 -m pip install playwright && python3 -m playwright install chromium"
+            )
+            return
         self.driver = await PlaywrightDriver.launch(config=self.config)
 
     async def run(self):

@@ -21,9 +21,12 @@ steps:
     description: Verify the page has expected content.
     action:
       type: browser.get_title
+      output: page_title
     success_check:
-      - type: text_contains
-        value: "Example"
+      - type: variable_equals
+        value:
+          var: page_title
+          value: "Example Domain"
 
   - id: done
     description: Workflow completed.

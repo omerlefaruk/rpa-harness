@@ -195,5 +195,4 @@ def test_verify_weakening_is_rejected():
         }],
     }
     errors = validate_workflow(workflow)
-    assert len(errors) == 1
-    assert "missing success_check" in errors[0]
+    assert any("missing success_check" in error for error in errors)

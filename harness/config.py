@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from harness.memory.config import MemoryConfig
+
 
 @dataclass
 class ModelConfig:
@@ -33,16 +35,6 @@ class SubagentConfig:
     @classmethod
     def from_dict(cls, data: dict) -> "SubagentConfig":
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
-
-
-@dataclass
-class MemoryConfig:
-    enabled: bool = True
-    db_path: str = "./data/memory.db"
-    worker_port: int = 38777
-    compression_model: str = "gpt-4o-mini"
-    embedding_model: str = "text-embedding-3-small"
-    max_context_inject: int = 5
 
 
 @dataclass
@@ -114,10 +106,7 @@ class HarnessConfig:
             max_workers=int(os.getenv("RPA_MAX_WORKERS", "4")),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_API_BASE"),
-            memory=MemoryConfig(
-                enabled=os.getenv("RPA_MEMORY_ENABLED", "true").lower() == "true",
-                db_path=os.getenv("RPA_MEMORY_DB", "./data/memory.db"),
-            ),
+            memory=MemoryConfig.from_env(),
         )
 
     @classmethod

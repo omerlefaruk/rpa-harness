@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from harness.security import redact_text, redact_value
+
 
 class JSONReporter:
     def __init__(self, output_dir: str = "./reports"):
@@ -31,8 +33,9 @@ class JSONReporter:
                 "total_duration_ms": round(total_duration, 2),
             },
             "metadata": metadata or {},
-            "tests": [_result_to_dict(r) for r in results],
+            "tests": [redact_value(_result_to_dict(r)) for r in results],
         }
+        report["metadata"] = redact_value(report["metadata"])
 
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         path = self.output_dir / f"report_{timestamp}.json"
@@ -70,10 +73,10 @@ class HTMLReporter:
                 name = Path(s).name if s else "screenshot.png"
                 screenshots_html += f'<img src="{name}" style="max-width:200px;margin:4px;border:1px solid #ddd;border-radius:4px;"/>'
 
-            name = _get_name(r)
+            name = redact_text(_get_name(r))
             duration = _get_duration(r)
-            error = _get_error(r)
-            logs = _get_logs(r)
+            error = redact_text(_get_error(r))
+            logs = redact_value(_get_logs(r))
 
             error_html = ""
             if error:
@@ -85,7 +88,7 @@ class HTMLReporter:
                     ''.join(f'<li>{log}</li>' for log in logs) + '</ul>'
 
             metadata_html = ""
-            meta = _get_metadata(r)
+            meta = redact_value(_get_metadata(r))
             if meta and meta.get("review_data"):
                 rd = meta["review_data"]
                 snippets_html = ""

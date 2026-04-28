@@ -28,7 +28,13 @@ class PlaywrightDriver(AbstractBaseDriver):
 
     @classmethod
     async def launch(cls, config: Optional[HarnessConfig] = None, **kwargs) -> "PlaywrightDriver":
-        from playwright.async_api import async_playwright
+        try:
+            from playwright.async_api import async_playwright
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "Playwright browser automation requires Playwright. Install it with: "
+                "python3 -m pip install playwright && python3 -m playwright install chromium"
+            ) from exc
 
         self = cls(config=config)
         self._playwright = await async_playwright().start()

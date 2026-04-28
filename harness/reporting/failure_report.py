@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from harness.security import redact_value
+
 
 class FailureReport:
     def __init__(self, runs_dir: str = "./runs"):
@@ -89,7 +91,7 @@ class FailureReport:
 
         report_path = self._run_dir / "failure_report.json" if self._run_dir else None
         if report_path:
-            report_path.write_text(json.dumps(report, indent=2, default=str))
+            report_path.write_text(json.dumps(redact_value(report), indent=2, default=str))
 
         return str(report_path) if report_path else ""
 

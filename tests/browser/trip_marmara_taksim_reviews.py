@@ -16,9 +16,18 @@ from harness import AutomationTestCase, PlaywrightDriver
 
 class TripMarmaraTaksimReviewsTest(AutomationTestCase):
     name = "trip_marmara_taksim_reviews"
-    tags = ["browser", "trip", "reviews", "marmara-taksim"]
+    tags = ["browser", "external", "public-site", "trip", "reviews", "marmara-taksim"]
 
     async def setup(self):
+        try:
+            import playwright.async_api  # noqa: F401
+        except ModuleNotFoundError:
+            self.driver = None
+            self.skip(
+                "Playwright is not installed. Install with: "
+                "python3 -m pip install playwright && python3 -m playwright install chromium"
+            )
+            return
         self.driver = await PlaywrightDriver.launch(config=self.config)
 
     async def run(self):
