@@ -1,0 +1,29 @@
+{
+  "interval_seconds": 3600,
+  "max_cycles": null,
+  "session_id": "continuous",
+  "base_branch": "main",
+  "branch_prefix": "autoresearch",
+  "worktree_root": ".autoresearch/worktrees",
+  "git_binary": "/Users/rau/bin/codex-git-proxy",
+  "agent_command": "/Applications/Codex.app/Contents/Resources/codex exec --full-auto --cd . -",
+  "review_command": "/Applications/Codex.app/Contents/Resources/codex exec review --uncommitted --full-auto --output-last-message .autoresearch/review.md",
+  "post_merge_command": "bash .autoresearch/autoresearch.checks.sh",
+  "auto_merge": true,
+  "push": true,
+  "memory_url": "http://127.0.0.1:37777",
+  "memory_required": false,
+  "min_confidence": null,
+  "max_artifact_bytes": 536870912,
+  "max_recent_rejections": 3,
+  "allowed_paths": [
+    "tools/",
+    "tests/",
+    "docs/",
+    "harness/memory/",
+    "harness/reporting/",
+    "harness/rpa/",
+    "harness/ai/",
+    ".autoresearch/"
+  ]
+}

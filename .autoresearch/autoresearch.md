@@ -34,5 +34,11 @@ Improve RPA Harness reliability with measured, reversible changes.
 The runner writes `.autoresearch/codex_prompt.md` for the next implementation session.
 Codex makes one scoped change, then stops. The runner measures and decides keep/discard.
 
+## Always-On Supervisor
+The periodic supervisor is configured in `.autoresearch/autoresearch.supervisor.json`.
+It scans code, failure reports, and RPA Memory; creates an isolated worktree; asks Codex to make one scoped improvement; runs autoresearch measurement; reviews the diff; commits kept work; fast-forward merges to `main`; reruns checks; and pushes when every gate passes.
+
+Generated supervisor state lives in `.autoresearch/supervisor.jsonl`, `.autoresearch/supervisor_plan.md`, `.autoresearch/review.md`, `.autoresearch/review.json`, `.autoresearch/autoresearch.learnings.md`, and `.autoresearch/worktrees/`.
+
 ## What's Been Tried
 - Baseline not recorded yet.

@@ -7,12 +7,15 @@ Usage:
     python main.py --agent "Login to example.com and verify dashboard" --headless
     python main.py --serve --port 8080
     python main.py --rpa-memory-serve
+    python main.py --autoresearch
+    python main.py --autoresearch-supervisor-once
     python main.py --run-workflows --discover-wf ./tests/rpa
 """
 
 import argparse
 import asyncio
 import sys
+from pathlib import Path
 
 from harness.config import HarnessConfig
 from harness.orchestrator import AutomationHarness
@@ -29,6 +32,8 @@ Examples:
   python main.py --agent "Login and verify dashboard" --headless
   python main.py --serve --port 8080
   python main.py --rpa-memory-serve --rpa-memory-port 37777
+  python main.py --autoresearch
+  python main.py --autoresearch-supervisor-once
         """,
     )
     parser.add_argument("--config", "-c", help="Path to YAML config file")
@@ -55,16 +60,35 @@ Examples:
     parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
     parser.add_argument("--rpa-memory-serve", action="store_true", help="Start RPA Memory service")
     parser.add_argument("--rpa-memory-port", type=int, default=37777)
+    parser.add_argument(
+        "--autoresearch",
+        action="store_true",
+        help="Start autoresearch supervisor daemon",
+    )
+    parser.add_argument(
+        "--autoresearch-supervisor",
+        action="store_true",
+        help="Start autoresearch supervisor daemon",
+    )
+    parser.add_argument(
+        "--autoresearch-supervisor-once",
+        action="store_true",
+        help="Run one autoresearch supervisor cycle",
+    )
+    parser.add_argument(
+        "--autoresearch-supervisor-plan",
+        action="store_true",
+        help="Write the next autoresearch supervisor plan",
+    )
+    parser.add_argument("--autoresearch-supervisor-config", help="Path to supervisor config JSON")
+    parser.add_argument("--autoresearch-config", help="Path to supervisor config JSON")
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
     return parser.parse_args()
 
 
 def build_config(args) -> HarnessConfig:
-    if args.config:
-        config = HarnessConfig.from_yaml(args.config)
-    else:
-        config = HarnessConfig.from_env()
+    config = HarnessConfig.from_yaml(args.config) if args.config else HarnessConfig.from_env()
 
     if args.browser:
         config.browser = args.browser
@@ -148,6 +172,46 @@ async def main():
         await serve_memory_server(db_path=config.memory.db_path, port=args.rpa_memory_port)
         return
 
+    if (
+        args.autoresearch
+        or args.autoresearch_supervisor
+        or args.autoresearch_supervisor_once
+        or args.autoresearch_supervisor_plan
+    ):
+        from tools.autoresearch_supervisor import (
+            build_supervisor_prompt,
+            discover_improvements,
+            load_config_for_supervisor,
+            load_supervisor_config,
+            run_daemon,
+            run_supervisor_cycle,
+        )
+
+        supervisor_config = load_supervisor_config(
+            args.autoresearch_config or args.autoresearch_supervisor_config,
+            Path(".").resolve(),
+        )
+        if args.autoresearch_supervisor_plan:
+            autoresearch_config = load_config_for_supervisor(supervisor_config)
+            candidates = discover_improvements(supervisor_config, autoresearch_config)
+            supervisor_config.session_dir.mkdir(parents=True, exist_ok=True)
+            supervisor_config.plan_path.write_text(
+                build_supervisor_prompt(supervisor_config, autoresearch_config, candidates),
+                encoding="utf-8",
+            )
+            print(supervisor_config.plan_path)
+            return
+        if args.autoresearch_supervisor_once:
+            import json
+
+            result = run_supervisor_cycle(supervisor_config)
+            print(json.dumps(result, indent=2))
+            if result.get("status") not in {"planned", "committed", "merged", "pushed"}:
+                sys.exit(1)
+            return
+        run_daemon(supervisor_config)
+        return
+
     config = build_config(args)
     harness = AutomationHarness(config)
 
@@ -225,11 +289,23 @@ async def main():
             sys.exit(1)
 
     # Show discovery
-    if not any([args.agent, args.run, args.run_workflows, args.serve, args.rpa_memory_serve]):
+    if not any(
+        [
+            args.agent,
+            args.run,
+            args.run_workflows,
+            args.serve,
+            args.rpa_memory_serve,
+            args.autoresearch_supervisor,
+            args.autoresearch_supervisor_once,
+            args.autoresearch_supervisor_plan,
+        ]
+    ):
         print(
             f"Discovered {len(harness.test_classes)} test(s), "
             f"{len(harness.workflow_classes)} workflow(s). "
-            f"Use --run, --run-workflows, --agent, --serve, or --rpa-memory-serve."
+            "Use --run, --run-workflows, --agent, --serve, --rpa-memory-serve, "
+            "or --autoresearch-supervisor."
         )
 
 

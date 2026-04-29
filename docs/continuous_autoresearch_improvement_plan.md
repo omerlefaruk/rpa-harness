@@ -37,6 +37,37 @@ Each iteration runs:
 8. Append the run result, hypothesis, learned lesson, failure category, and next focus to JSONL and RPA Memory.
 9. Run heartbeat checks before the next iteration.
 
+## Autonomous Integration Loop
+
+The target mode is fully autonomous after the session is configured:
+
+1. Create an isolated `autoresearch/<session-id>` branch and matching git worktree.
+2. Run each experiment inside the worktree, never in the user's active checkout.
+3. Commit kept experiments in the worktree branch with the metric, checks result, and lesson in the commit message.
+4. Revert or reset discarded, crashed, or checks-failed experiments inside the worktree only.
+5. Run an automated code-review gate over the kept diff before integration.
+6. Merge to `main` automatically only when every merge gate passes.
+7. Push `main` only after the local merge, checks, and post-merge smoke run succeed.
+
+Automatic merge is allowed only for changes that stay inside the configured allowed paths, improve the primary metric, pass correctness checks, pass review, contain no secret/report/data artifacts, and preserve a clean post-merge working tree.
+
+Automatic merge must stop instead of forcing through when protected runtime files are touched, review finds a blocking issue, tests fail, the branch is behind `main`, merge conflicts appear, generated artifacts are staged, secrets are detected, or the improvement is inside benchmark noise.
+
+## Always-On Supervisor
+
+Run `tools/autoresearch_supervisor.py` as the periodic control loop. It is responsible for:
+
+1. Running heartbeat before every cycle.
+2. Searching the codebase for improvement candidates such as TODO/FIXME markers, recent failure reports, and RPA Memory matches.
+3. Writing `.autoresearch/supervisor_plan.md` with the next scoped experiment prompt.
+4. Starting Codex in the isolated worktree to implement exactly one small improvement.
+5. Running the deterministic autoresearch benchmark/check judge.
+6. Running automated review against the uncommitted worktree diff.
+7. Committing kept work, fast-forward merging to `main`, rerunning post-merge checks, and pushing when configured.
+8. Appending `.autoresearch/supervisor.jsonl` and saving a compact lesson to RPA Memory.
+
+The supervisor is configured by `.autoresearch/autoresearch.supervisor.json`. The default interval is one hour. Worktrees live under `.autoresearch/worktrees/` and are ignored by git.
+
 ## Session Files
 
 Use these files at the repo root or under `.autoresearch/`:
@@ -101,6 +132,8 @@ Run before every iteration and every few minutes during long commands:
 - No broad rewrites. Each experiment owns a small file set.
 - No accepting improvements from noisy metrics without confidence or confirmation re-run.
 - No permanent code change without tests or a documented reason why the change is doc-only.
+- No automatic merge unless the isolated worktree branch passes benchmark, checks, automated code review, merge-conflict detection, secret scan, artifact hygiene, and post-merge smoke verification.
+- No automatic push unless the local `main` merge is clean and the remote has not advanced unexpectedly.
 
 ## Implementation Phases
 
@@ -145,6 +178,13 @@ Run before every iteration and every few minutes during long commands:
 - Allow the loop to optimize its own idea-selection and hook strategy, but not protected harness code directly.
 - Evaluate search strategies by whether they produce kept improvements, fewer repeated failures, and faster root-cause classification.
 
+### Phase 8: Autonomous Review, Merge, and Push
+
+- Add isolated worktree orchestration for each autoresearch session.
+- Add a review command that classifies findings as blocking or non-blocking and writes a machine-readable review report.
+- Add an integration command that rebases or updates from `main`, runs the merge dry-run, merges only clean reviewed branches, reruns checks on `main`, and pushes through `/Users/rau/bin/codex-git-proxy`.
+- Keep a full append-only audit trail in JSONL and RPA Memory: branch, worktree, commit, metric, review result, merge result, push result, and rollback hint.
+
 ## First Experiments To Run
 
 1. Memory health and retrieval quality: improve search/context scoring so `api`, `excel`, and `desktop` queries retrieve the most useful prior observations.
@@ -160,4 +200,5 @@ Run before every iteration and every few minutes during long commands:
 - Every discarded/crashed run preserves what was tried and why it failed.
 - Heartbeat failure stops or pauses the loop predictably.
 - The default harness verification remains green.
+- Automatic review, commit, merge, and push are allowed only after all configured gates pass and the final `main` verification succeeds.
 - The plan improves the harness without weakening deterministic execution or credential safety.
