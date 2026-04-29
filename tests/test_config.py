@@ -1,5 +1,8 @@
 """Tests for harness config."""
-from harness.config import HarnessConfig, ModelConfig, SubagentConfig
+import os
+
+from harness.config import HarnessConfig, ModelConfig
+from main import load_local_env
 
 
 def test_config_defaults():
@@ -48,3 +51,22 @@ def test_config_default_fallback():
     config = HarnessConfig()
     unknown = config.get_model_config("nonexistent")
     assert unknown.model == "gpt-4o-mini"
+
+
+def test_load_local_env_reads_env_local_without_overriding_process_env(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env.local"
+    env_file.write_text(
+        "RPA_TELEGRAM_ENABLED=1\n"
+        "RPA_TELEGRAM_CHAT_ID='local-chat'\n"
+        "RPA_KEEP_EXISTING=from-file\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("RPA_TELEGRAM_ENABLED", raising=False)
+    monkeypatch.delenv("RPA_TELEGRAM_CHAT_ID", raising=False)
+    monkeypatch.setenv("RPA_KEEP_EXISTING", "from-process")
+
+    load_local_env(paths=(str(env_file),))
+
+    assert os.environ["RPA_TELEGRAM_ENABLED"] == "1"
+    assert os.environ["RPA_TELEGRAM_CHAT_ID"] == "local-chat"
+    assert os.environ["RPA_KEEP_EXISTING"] == "from-process"

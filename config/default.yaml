@@ -89,3 +89,17 @@ memory:
   request_timeout_seconds: 2
   semantic_inject: false
   semantic_inject_limit: 5
+
+# Telegram notifications are configured through environment variables so bot
+# tokens never enter config files:
+# RPA_TELEGRAM_ENABLED=1
+# RPA_TELEGRAM_BOT_TOKEN=...
+# RPA_TELEGRAM_CHAT_ID=...
+# Optional for forum topics: RPA_TELEGRAM_THREAD_ID=...
+# Optional named topics:
+# RPA_TELEGRAM_TOPIC_REPORTS=9
+# RPA_TELEGRAM_TOPIC_QUESTIONS=10
+# RPA_TELEGRAM_TOPIC_FAILURES=11
+# RPA_TELEGRAM_TOPIC_RANTS=12
+# RPA_TELEGRAM_TOPIC_DEPLOYMENTS=13
+# RPA_TELEGRAM_TOPIC_MEMORIES=14

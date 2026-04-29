@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 
@@ -84,6 +85,33 @@ Examples:
     parser.add_argument("--autoresearch-config", help="Path to supervisor config JSON")
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
+    parser.add_argument(
+        "--telegram-message",
+        help="Send one Telegram bot message using RPA_TELEGRAM_BOT_TOKEN and RPA_TELEGRAM_CHAT_ID",
+    )
+    parser.add_argument(
+        "--telegram-question",
+        help="Send a question message to the Telegram bot channel",
+    )
+    parser.add_argument(
+        "--telegram-rant",
+        action="append",
+        help="Send one frustration item. Repeat for multiple items.",
+    )
+    parser.add_argument(
+        "--telegram-source",
+        default="rpa-harness",
+        help="Source label for Telegram question/rant messages",
+    )
+    parser.add_argument(
+        "--telegram-topic",
+        help="Telegram group topic name, for example reports, questions, rants, or memories",
+    )
+    parser.add_argument(
+        "--telegram-discover-chat",
+        action="store_true",
+        help="List recent Telegram chats visible to the bot using getUpdates",
+    )
     return parser.parse_args()
 
 
@@ -114,8 +142,75 @@ def build_config(args) -> HarnessConfig:
     return config
 
 
+def load_local_env(paths=(".env", ".env.local")):
+    original_keys = set(os.environ)
+    loaded = {}
+    for env_path in paths:
+        path = Path(env_path)
+        if not path.exists():
+            continue
+        for raw_line in path.read_text().splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if not key or key in original_keys:
+                continue
+            loaded[key] = _strip_env_quotes(value.strip())
+    os.environ.update(loaded)
+
+
+def _strip_env_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
 async def main():
     args = parse_args()
+    load_local_env()
+
+    if (
+        args.telegram_message
+        or args.telegram_question
+        or args.telegram_rant
+        or args.telegram_discover_chat
+    ):
+        import json
+
+        from harness.notifications import TelegramBotChannel
+
+        channel = TelegramBotChannel()
+        if args.telegram_message:
+            await channel.send_message(
+                args.telegram_message,
+                topic=args.telegram_topic,
+                strict=True,
+            )
+            print("Telegram message sent")
+            return
+        if args.telegram_question:
+            await channel.ask_question(
+                args.telegram_question,
+                context=f"source={args.telegram_source}",
+                topic=args.telegram_topic or "questions",
+                strict=True,
+            )
+            print("Telegram question sent")
+            return
+        if args.telegram_rant:
+            await channel.send_frustration_report(
+                args.telegram_source,
+                args.telegram_rant,
+                topic=args.telegram_topic or "rants",
+                strict=True,
+            )
+            print("Telegram frustration report sent")
+            return
+        result = await channel.discover_chat_id(strict=True)
+        print(json.dumps(result, indent=2, default=str))
+        return
 
     # Serve modes
     if args.serve:
@@ -236,6 +331,7 @@ async def main():
                 task=args.agent,
                 playwright_driver=driver,
             )
+            await _notify_agent_result(result)
             print(f"\n{'='*60}")
             print(f"Status: {result['status']}")
             print(f"Steps: {result['successful_steps']}/{result['total_steps']} passed")
@@ -264,6 +360,7 @@ async def main():
         print("\nReports:")
         for fmt, path in reports.items():
             print(f"  [{fmt.upper()}] {path}")
+        await _notify_run_report(config, harness.summary(), reports)
 
     # Summary
     if args.run or args.run_workflows:
@@ -307,6 +404,58 @@ async def main():
             "Use --run, --run-workflows, --agent, --serve, --rpa-memory-serve, "
             "or --autoresearch-supervisor."
         )
+
+
+async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict[str, str]):
+    from harness.notifications import TelegramBotChannel, TelegramNotificationConfig
+
+    telegram_config = TelegramNotificationConfig.from_env()
+    if not telegram_config.enabled:
+        return
+    if not telegram_config.configured:
+        print(
+            "Telegram notification skipped: set RPA_TELEGRAM_BOT_TOKEN and "
+            "RPA_TELEGRAM_CHAT_ID.",
+            file=sys.stderr,
+        )
+        return
+    channel = TelegramBotChannel(telegram_config)
+    try:
+        result = await channel.send_run_report(
+            suite_name=config.name,
+            summary=summary,
+            report_paths=reports,
+        )
+        if result is None:
+            print("Telegram notification failed.", file=sys.stderr)
+    except Exception as exc:
+        if telegram_config.strict:
+            raise
+        print(f"Telegram notification failed: {exc}", file=sys.stderr)
+
+
+async def _notify_agent_result(result: dict):
+    from harness.notifications import TelegramBotChannel, TelegramNotificationConfig
+
+    telegram_config = TelegramNotificationConfig.from_env()
+    if not telegram_config.enabled:
+        return
+    if not telegram_config.configured:
+        print(
+            "Telegram notification skipped: set RPA_TELEGRAM_BOT_TOKEN and "
+            "RPA_TELEGRAM_CHAT_ID.",
+            file=sys.stderr,
+        )
+        return
+    channel = TelegramBotChannel(telegram_config)
+    try:
+        telegram_result = await channel.send_agent_report(result)
+        if telegram_result is None:
+            print("Telegram notification failed.", file=sys.stderr)
+    except Exception as exc:
+        if telegram_config.strict:
+            raise
+        print(f"Telegram notification failed: {exc}", file=sys.stderr)
 
 
 if __name__ == "__main__":
