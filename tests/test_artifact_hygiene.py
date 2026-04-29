@@ -25,6 +25,7 @@ def test_generated_artifact_paths_are_ignored_by_default():
         "playwright-report/",
         "test-results/",
         ".autoresearch/worktrees/",
+        ".autoresearch/supervisor.jsonl",
     }
 
     assert required_patterns.issubset(patterns)
