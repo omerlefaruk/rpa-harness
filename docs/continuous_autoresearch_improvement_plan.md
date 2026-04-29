@@ -59,14 +59,17 @@ Run `tools/autoresearch_supervisor.py` as the periodic control loop. It is respo
 
 1. Running heartbeat before every cycle.
 2. Searching the codebase for improvement candidates such as TODO/FIXME markers, recent failure reports, and RPA Memory matches.
-3. Writing `.autoresearch/supervisor_plan.md` with the next scoped experiment prompt.
-4. Starting Codex in the isolated worktree to implement exactly one small improvement.
-5. Running the deterministic autoresearch benchmark/check judge.
-6. Running automated review against the uncommitted worktree diff.
-7. Committing kept work, fast-forward merging to `main`, rerunning post-merge checks, and pushing when configured.
-8. Appending `.autoresearch/supervisor.jsonl` and saving a compact lesson to RPA Memory.
+3. Spawning read-only scout subagents in parallel to inspect allowed paths and propose focused improvements.
+4. Merging scout proposals with deterministic candidates and writing `.autoresearch/supervisor_plan.md` with the next scoped experiment prompt.
+5. Starting Codex in the isolated worktree to implement exactly one small improvement.
+6. Running the deterministic autoresearch benchmark/check judge.
+7. Running automated review against the uncommitted worktree diff.
+8. Committing kept work, fast-forward merging to `main`, rerunning post-merge checks, and pushing when configured.
+9. Appending `.autoresearch/supervisor.jsonl` and saving a compact lesson to RPA Memory.
 
 The supervisor is configured by `.autoresearch/autoresearch.supervisor.json`. The default interval is one hour. Worktrees live under `.autoresearch/worktrees/` and are ignored by git.
+
+The default scout subagents are `code_explorer`, `failure_analyst`, and `test_gap_planner`. They run through Codex CLI with a read-only sandbox, produce JSON candidates only, and cannot bypass the existing autoresearch benchmark, integration gate, automated review, post-merge checks, or push gate.
 
 ## Session Files
 

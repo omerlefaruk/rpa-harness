@@ -83,6 +83,23 @@ Examples:
         help="Element/action intent to prioritize, for example 'Save'",
     )
     parser.add_argument(
+        "--browser-selector-swarm-wait-until",
+        choices=["commit", "domcontentloaded", "load", "networkidle"],
+        default="domcontentloaded",
+        help="Page readiness strategy for browser selector swarm discovery",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-use-subagents",
+        action="store_true",
+        help="Enable tiered local Codex CLI subagent escalation",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-subagent-policy",
+        choices=["auto", "focused", "all"],
+        default="auto",
+        help="Subagent policy when local Codex CLI subagents are enabled",
+    )
+    parser.add_argument(
         "--browser-selector-swarm-safe-click",
         action="store_true",
         help="Allow safe click validation; requires an expected URL or text check",
@@ -274,8 +291,11 @@ async def main():
             output_dir=args.browser_selector_swarm_output,
             browser_name=config.browser,
             headless=config.headless,
+            wait_until=args.browser_selector_swarm_wait_until,
             max_candidates=args.browser_selector_swarm_max_candidates,
             intent=args.browser_selector_swarm_intent,
+            use_subagents=args.browser_selector_swarm_use_subagents,
+            subagent_policy=args.browser_selector_swarm_subagent_policy,
             safe_click=args.browser_selector_swarm_safe_click,
             expect_url_contains=args.browser_selector_swarm_expect_url_contains,
             expect_text=args.browser_selector_swarm_expect_text,
@@ -290,6 +310,8 @@ async def main():
                     "intent": report["summary"]["intent"],
                     "candidates": report["summary"]["candidates"],
                     "validated": report["summary"]["validated"],
+                    "subagent_policy": report["summary"]["subagent_policy"],
+                    "subagent_escalation_reasons": report["summary"]["subagent_escalation_reasons"],
                     "winner": report["validation"]["winner"],
                     "report": report["artifacts"]["report"],
                     "html_report": report["artifacts"]["html_report"],

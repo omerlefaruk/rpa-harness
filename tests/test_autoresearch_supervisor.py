@@ -23,6 +23,7 @@ def _supervisor_config(tmp_path: Path, agent_command: str = "") -> supervisor.Su
         memory_url="http://127.0.0.1:1",
         memory_required=False,
         allowed_paths=["tools/", "tests/", ".autoresearch/"],
+        scout_enabled=False,
     )
 
 
@@ -63,6 +64,20 @@ def test_load_supervisor_config_reads_repo_defaults(tmp_path):
                 "git_user_email": "bot@example.test",
                 "max_artifact_bytes": 1024,
                 "max_recent_rejections": 2,
+                "improvement_scouts": {
+                    "enabled": True,
+                    "max_parallel": 2,
+                    "agents": [
+                        {
+                            "name": "code_explorer",
+                            "focus": "Find focused source improvements.",
+                            "paths": ["tools/"],
+                            "model": "gpt-5.4-mini",
+                            "reasoning_effort": "low",
+                            "timeout_seconds": 30,
+                        }
+                    ],
+                },
                 "allowed_paths": ["tools/"],
             }
         ),
@@ -80,6 +95,10 @@ def test_load_supervisor_config_reads_repo_defaults(tmp_path):
     assert config.max_artifact_bytes == 1024
     assert config.max_recent_rejections == 2
     assert config.allowed_paths == ["tools/"]
+    assert config.scout_enabled is True
+    assert config.scout_max_parallel == 2
+    assert config.scout_agents[0].name == "code_explorer"
+    assert config.scout_agents[0].reasoning_effort == "low"
 
 
 def test_discover_improvements_finds_allowed_code_markers(tmp_path):
@@ -109,7 +128,114 @@ def test_build_supervisor_prompt_includes_candidates_and_rules(tmp_path):
 
     assert "Autonomous supervisor instructions" in prompt
     assert "Improve reports" in prompt
+    assert "Read-only scout subagent results" in prompt
     assert "Do not commit, merge, push" in prompt
+
+
+def test_merge_scout_candidates_front_loads_scout_proposals(tmp_path):
+    config = _supervisor_config(tmp_path)
+    config.scout_enabled = False
+    scout_results = [
+        {
+            "name": "code_explorer",
+            "status": "sent",
+            "proposed_candidates": [
+                {
+                    "source": "scout:code_explorer",
+                    "priority": 4,
+                    "title": "Add missing review guard",
+                    "detail": "A narrow guard is missing.",
+                }
+            ],
+        }
+    ]
+
+    merged = supervisor.merge_scout_candidates(
+        [{"source": "fallback", "priority": 20, "title": "Fallback"}],
+        scout_results,
+    )
+
+    assert merged[0]["source"] == "scout:code_explorer"
+
+
+def test_sanitize_scout_candidates_tolerates_non_numeric_priority():
+    agent = supervisor.ScoutAgentConfig(name="code_explorer", focus="Find improvements.")
+
+    candidates = supervisor.sanitize_scout_candidates(
+        [
+            {
+                "title": "Tighten parsing",
+                "detail": "Scout returned a non-numeric priority.",
+                "priority": "high",
+            }
+        ],
+        agent,
+    )
+
+    assert candidates[0]["priority"] == 8
+
+
+def test_run_improvement_scouts_disabled_reports_each_agent(tmp_path):
+    config = _supervisor_config(tmp_path)
+    config.scout_agents = [
+        supervisor.ScoutAgentConfig(name="code_explorer", focus="Find improvements.")
+    ]
+    autoresearch_config = _autoresearch_config(tmp_path)
+
+    results = supervisor.run_improvement_scouts(config, autoresearch_config, [])
+
+    assert results[0]["name"] == "code_explorer"
+    assert results[0]["status"] == "disabled"
+
+
+def test_run_improvement_scouts_unavailable_keeps_cycle_deterministic(tmp_path, monkeypatch):
+    config = _supervisor_config(tmp_path)
+    config.scout_enabled = True
+    config.scout_agents = [
+        supervisor.ScoutAgentConfig(name="code_explorer", focus="Find improvements.")
+    ]
+    autoresearch_config = _autoresearch_config(tmp_path)
+    monkeypatch.setattr(supervisor, "find_codex_cli", lambda: None)
+
+    results = supervisor.run_improvement_scouts(config, autoresearch_config, [])
+
+    assert results[0]["status"] == "unavailable"
+    assert results[0]["proposed_candidates"] == []
+
+
+def test_run_improvement_scouts_parses_json_candidates(tmp_path, monkeypatch):
+    config = _supervisor_config(tmp_path)
+    config.scout_enabled = True
+    config.scout_agents = [
+        supervisor.ScoutAgentConfig(name="code_explorer", focus="Find improvements.")
+    ]
+    autoresearch_config = _autoresearch_config(tmp_path)
+    monkeypatch.setattr(supervisor, "find_codex_cli", lambda: "/bin/codex")
+
+    def _fake_call(_codex_path, _workdir, _agent, _prompt):
+        return json.dumps(
+            {
+                "summary": "Found one narrow issue.",
+                "candidates": [
+                    {
+                        "title": "Tighten audit parsing",
+                        "detail": "Malformed audit lines should stay ignored.",
+                        "files": ["tools/autoresearch_supervisor.py"],
+                        "priority": 3,
+                        "risk": "low",
+                        "verification": "python3 -m pytest tests/test_autoresearch_supervisor.py",
+                    }
+                ],
+                "notes": ["read-only"],
+            }
+        )
+
+    monkeypatch.setattr(supervisor, "call_codex_scout", _fake_call)
+
+    results = supervisor.run_improvement_scouts(config, autoresearch_config, [])
+
+    assert results[0]["status"] == "sent"
+    assert results[0]["proposed_candidates"][0]["source"] == "scout:code_explorer"
 
 
 def test_integration_gate_blocks_outside_allowed_paths(tmp_path, monkeypatch):

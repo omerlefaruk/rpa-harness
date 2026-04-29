@@ -18,6 +18,36 @@
   "min_confidence": null,
   "max_artifact_bytes": 536870912,
   "max_recent_rejections": 3,
+  "improvement_scouts": {
+    "enabled": true,
+    "max_parallel": 3,
+    "agents": [
+      {
+        "name": "code_explorer",
+        "focus": "Search allowed source and docs paths for small reliability, maintainability, or evidence-quality improvements.",
+        "paths": ["tools/", "harness/memory/", "harness/reporting/", "harness/rpa/", "harness/ai/", "docs/", ".autoresearch/"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 180
+      },
+      {
+        "name": "failure_analyst",
+        "focus": "Inspect recent failure reports, autoresearch audit entries, and memory-facing code for recurring failure classes.",
+        "paths": ["runs/", ".autoresearch/", "harness/memory/", "tests/"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 180
+      },
+      {
+        "name": "test_gap_planner",
+        "focus": "Look for narrow missing tests around existing autoresearch, memory, reporting, RPA, or AI helper behavior.",
+        "paths": ["tests/", "tools/", "harness/memory/", "harness/reporting/", "harness/rpa/", "harness/ai/"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 180
+      }
+    ]
+  },
   "allowed_paths": [
     "tools/",
     "tests/",

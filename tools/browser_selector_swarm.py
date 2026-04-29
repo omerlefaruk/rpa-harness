@@ -24,10 +24,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", "-o", default="runs/browser_recon", help="Output directory")
     parser.add_argument("--browser", default="chromium", choices=["chromium", "firefox", "webkit"])
     parser.add_argument("--headed", action="store_true", help="Run browser visibly")
-    parser.add_argument("--wait-until", default="networkidle", help="Playwright wait_until value")
+    parser.add_argument("--wait-until", default="domcontentloaded", help="Playwright wait_until value")
     parser.add_argument("--timeout-ms", type=int, default=30000)
     parser.add_argument("--max-candidates", type=int, default=50)
     parser.add_argument("--intent", help="Element/action intent to prioritize, for example 'Save'")
+    parser.add_argument(
+        "--use-subagents",
+        action="store_true",
+        help="Enable tiered local Codex CLI subagent escalation",
+    )
+    parser.add_argument(
+        "--subagent-policy",
+        choices=["auto", "focused", "all"],
+        default="auto",
+        help="Subagent policy when --use-subagents is set",
+    )
     parser.add_argument("--safe-click", action="store_true", help="Try clicking candidates")
     parser.add_argument("--expect-url-contains", help="Required URL fragment after safe click")
     parser.add_argument("--expect-text", help="Required visible text after safe click")
@@ -53,6 +64,8 @@ async def main() -> int:
         timeout_ms=args.timeout_ms,
         max_candidates=args.max_candidates,
         intent=args.intent,
+        use_subagents=args.use_subagents,
+        subagent_policy=args.subagent_policy,
         safe_click=args.safe_click,
         expect_url_contains=args.expect_url_contains,
         expect_text=args.expect_text,
@@ -66,6 +79,8 @@ async def main() -> int:
                 "interactive_elements": report["summary"]["interactive_elements"],
                 "candidates": report["summary"]["candidates"],
                 "validated": report["summary"]["validated"],
+                "subagent_policy": report["summary"]["subagent_policy"],
+                "subagent_escalation_reasons": report["summary"]["subagent_escalation_reasons"],
                 "winner": report["validation"]["winner"],
                 "report": report["artifacts"]["report"],
                 "html_report": report["artifacts"]["html_report"],

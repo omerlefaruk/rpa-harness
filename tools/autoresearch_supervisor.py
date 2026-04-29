@@ -10,11 +10,14 @@ autoresearch runner remains the deterministic measurement judge.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -58,6 +61,60 @@ SUCCESS_STATUSES = {"planned", "committed", "merged", "pushed"}
 
 
 @dataclass
+class ScoutAgentConfig:
+    name: str
+    focus: str
+    paths: list[str] = field(default_factory=list)
+    model: str = "gpt-5.4-mini"
+    reasoning_effort: str = "medium"
+    timeout_seconds: int = 180
+
+
+def default_scout_agents() -> list[ScoutAgentConfig]:
+    return [
+        ScoutAgentConfig(
+            name="code_explorer",
+            focus=(
+                "Search allowed source and docs paths for small reliability, "
+                "maintainability, or evidence-quality improvements."
+            ),
+            paths=[
+                "tools/",
+                "harness/memory/",
+                "harness/reporting/",
+                "harness/rpa/",
+                "harness/ai/",
+                "docs/",
+                ".autoresearch/",
+            ],
+        ),
+        ScoutAgentConfig(
+            name="failure_analyst",
+            focus=(
+                "Inspect recent failure reports, autoresearch audit entries, and "
+                "memory-facing code for recurring failure classes."
+            ),
+            paths=["runs/", ".autoresearch/", "harness/memory/", "tests/"],
+        ),
+        ScoutAgentConfig(
+            name="test_gap_planner",
+            focus=(
+                "Look for narrow missing tests around existing autoresearch, "
+                "memory, reporting, RPA, or AI helper behavior."
+            ),
+            paths=[
+                "tests/",
+                "tools/",
+                "harness/memory/",
+                "harness/reporting/",
+                "harness/rpa/",
+                "harness/ai/",
+            ],
+        ),
+    ]
+
+
+@dataclass
 class SupervisorConfig:
     workdir: Path
     autoresearch_config_path: Path | None = None
@@ -86,6 +143,9 @@ class SupervisorConfig:
     max_artifact_bytes: int = DEFAULT_MAX_ARTIFACT_BYTES
     max_recent_rejections: int = 3
     allowed_paths: list[str] = field(default_factory=list)
+    scout_enabled: bool = True
+    scout_max_parallel: int = 3
+    scout_agents: list[ScoutAgentConfig] = field(default_factory=default_scout_agents)
 
     @property
     def session_dir(self) -> Path:
@@ -132,7 +192,14 @@ def main() -> int:
     if args.plan_only:
         autoresearch_config = load_config_for_supervisor(config)
         candidates = discover_improvements(config, autoresearch_config)
-        prompt = build_supervisor_prompt(config, autoresearch_config, candidates)
+        scout_results = run_improvement_scouts(config, autoresearch_config, candidates)
+        candidates = merge_scout_candidates(candidates, scout_results)
+        prompt = build_supervisor_prompt(
+            config,
+            autoresearch_config,
+            candidates,
+            scout_results=scout_results,
+        )
         config.plan_path.write_text(prompt, encoding="utf-8")
         print(config.plan_path)
         return 0
@@ -182,6 +249,8 @@ def load_supervisor_config(config_path: str | None, workdir: Path) -> Supervisor
     if resolved_worktree_root and not resolved_worktree_root.is_absolute():
         resolved_worktree_root = (configured_workdir / resolved_worktree_root).resolve()
 
+    scout_config = parse_scout_config(data.get("improvement_scouts"))
+
     return SupervisorConfig(
         workdir=configured_workdir,
         autoresearch_config_path=resolved_config_path,
@@ -221,7 +290,50 @@ def load_supervisor_config(config_path: str | None, workdir: Path) -> Supervisor
         max_artifact_bytes=int(data.get("max_artifact_bytes", DEFAULT_MAX_ARTIFACT_BYTES)),
         max_recent_rejections=int(data.get("max_recent_rejections", 3)),
         allowed_paths=list(data.get("allowed_paths", [])),
+        scout_enabled=scout_config["enabled"],
+        scout_max_parallel=scout_config["max_parallel"],
+        scout_agents=scout_config["agents"],
     )
+
+
+def parse_scout_config(raw: Any) -> dict[str, Any]:
+    if raw is None:
+        return {
+            "enabled": True,
+            "max_parallel": 3,
+            "agents": default_scout_agents(),
+        }
+    if not isinstance(raw, dict):
+        return {
+            "enabled": True,
+            "max_parallel": 3,
+            "agents": default_scout_agents(),
+        }
+
+    agents: list[ScoutAgentConfig] = []
+    for item in raw.get("agents", []) or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        focus = str(item.get("focus") or "").strip()
+        if not name or not focus:
+            continue
+        agents.append(
+            ScoutAgentConfig(
+                name=name,
+                focus=focus,
+                paths=[str(path) for path in item.get("paths", []) or []],
+                model=str(item.get("model") or "gpt-5.4-mini"),
+                reasoning_effort=str(item.get("reasoning_effort") or "medium"),
+                timeout_seconds=int(item.get("timeout_seconds") or 180),
+            )
+        )
+
+    return {
+        "enabled": bool(raw.get("enabled", True)),
+        "max_parallel": max(1, int(raw.get("max_parallel") or 3)),
+        "agents": agents or default_scout_agents(),
+    }
 
 
 def load_config_for_supervisor(config: SupervisorConfig) -> AutoresearchConfig:
@@ -254,8 +366,15 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         )
 
     candidates = discover_improvements(config, autoresearch_config)
-    prompt = build_supervisor_prompt(config, autoresearch_config, candidates)
-    before_hook = run_hook(config, "before", {"candidates": candidates})
+    scout_results = run_improvement_scouts(config, autoresearch_config, candidates)
+    candidates = merge_scout_candidates(candidates, scout_results)
+    prompt = build_supervisor_prompt(
+        config,
+        autoresearch_config,
+        candidates,
+        scout_results=scout_results,
+    )
+    before_hook = run_hook(config, "before", {"candidates": candidates, "scouts": scout_results})
     if before_hook.passed and before_hook.stdout.strip():
         prompt += "\n\nBefore hook context:\n" + before_hook.stdout[-4000:]
     config.session_dir.mkdir(parents=True, exist_ok=True)
@@ -265,7 +384,12 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         return audit_and_return(
             config,
             autoresearch_config,
-            {"status": "planned", "plan": str(config.plan_path), "candidates": candidates},
+            {
+                "status": "planned",
+                "plan": str(config.plan_path),
+                "candidates": candidates,
+                "scouts": summarize_scout_results(scout_results),
+            },
         )
 
     worktree_result = ensure_worktree(config)
@@ -625,10 +749,269 @@ def search_memory(memory_url: str, query: str, limit: int) -> list[dict[str, Any
     return candidates
 
 
+def run_improvement_scouts(
+    config: SupervisorConfig,
+    autoresearch_config: AutoresearchConfig,
+    current_candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Run read-only scout agents that propose improvement candidates."""
+    if not config.scout_enabled:
+        return [
+            scout_result(
+                agent,
+                status="disabled",
+                summary="Improvement scouting disabled by supervisor config.",
+            )
+            for agent in config.scout_agents
+        ]
+
+    codex_path = find_codex_cli()
+    if not codex_path:
+        return [
+            scout_result(
+                agent,
+                status="unavailable",
+                summary="Codex CLI unavailable; deterministic candidate scan still ran.",
+            )
+            for agent in config.scout_agents
+        ]
+
+    context = scout_context(config, autoresearch_config, current_candidates)
+    max_workers = max(1, min(config.scout_max_parallel, len(config.scout_agents)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [
+            pool.submit(run_one_improvement_scout, codex_path, config, agent, context)
+            for agent in config.scout_agents
+        ]
+        return [future.result() for future in futures]
+
+
+def run_one_improvement_scout(
+    codex_path: str,
+    config: SupervisorConfig,
+    agent: ScoutAgentConfig,
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    started = time.time()
+    prompt = build_scout_prompt(agent, context)
+    try:
+        response = call_codex_scout(codex_path, config.workdir, agent, prompt)
+        parsed = parse_scout_json(response)
+        return scout_result(
+            agent,
+            status="sent",
+            summary=str(parsed.get("summary") or "")[:500],
+            proposed_candidates=sanitize_scout_candidates(parsed.get("candidates", []), agent),
+            notes=[str(note)[:300] for note in parsed.get("notes", []) or []],
+            duration_seconds=round(time.time() - started, 3),
+        )
+    except Exception as exc:
+        return scout_result(
+            agent,
+            status="error",
+            summary=str(exc)[:500],
+            duration_seconds=round(time.time() - started, 3),
+        )
+
+
+def call_codex_scout(
+    codex_path: str,
+    workdir: Path,
+    agent: ScoutAgentConfig,
+    prompt: str,
+) -> str:
+    with tempfile.NamedTemporaryFile("w+", suffix=f"-{agent.name}.json", delete=True) as output:
+        command = [
+            codex_path,
+            "exec",
+            "--model",
+            agent.model,
+            "--cd",
+            str(workdir),
+            "--sandbox",
+            "read-only",
+            "--skip-git-repo-check",
+            "--output-last-message",
+            output.name,
+            "-c",
+            f'model_reasoning_effort="{agent.reasoning_effort}"',
+            "-",
+        ]
+        result = subprocess.run(
+            command,
+            input=prompt,
+            text=True,
+            capture_output=True,
+            timeout=agent.timeout_seconds,
+            check=False,
+        )
+        output.seek(0)
+        response = output.read().strip()
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()[-500:]
+        raise RuntimeError(f"Scout {agent.name} failed with exit {result.returncode}: {detail}")
+    return response or result.stdout or "{}"
+
+
+def build_scout_prompt(agent: ScoutAgentConfig, context: dict[str, Any]) -> str:
+    return json.dumps(
+        {
+            "role": agent.name,
+            "focus": agent.focus,
+            "task": (
+                "Read the repository in read-only mode and propose at most three "
+                "small, production-safe autoresearch improvement candidates. "
+                "Do not edit files, run destructive commands, print secrets, or "
+                "include private chain-of-thought. Prefer candidates with clear "
+                "evidence, narrow file scope, and a deterministic verification command. "
+                "Return only JSON with keys: summary, candidates, notes. Each candidate "
+                "must include title, detail, files, priority, risk, and verification."
+            ),
+            "context": context,
+        },
+        default=str,
+    )
+
+
+def scout_context(
+    config: SupervisorConfig,
+    autoresearch_config: AutoresearchConfig,
+    current_candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    recent_supervisor = read_supervisor_audit(config.audit_path)[-5:]
+    recent_runs = read_jsonl(autoresearch_config.jsonl_path)[-5:]
+    return {
+        "objective": autoresearch_config.objective,
+        "metric_name": autoresearch_config.metric_name,
+        "allowed_paths": autoresearch_config.allowed_paths,
+        "scout_allowed_paths": {
+            agent.name: agent.paths for agent in config.scout_agents
+        },
+        "current_candidates": redact_value(current_candidates[:10]),
+        "recent_supervisor_statuses": [
+            {
+                "status": item.get("status"),
+                "timestamp": item.get("timestamp"),
+                "lesson": item.get("lesson"),
+            }
+            for item in recent_supervisor
+        ],
+        "recent_autoresearch_runs": [
+            {
+                "run": item.get("run"),
+                "status": item.get("status"),
+                "metric_name": item.get("metric_name"),
+                "metric": item.get("metric"),
+                "lesson": item.get("lesson"),
+            }
+            for item in recent_runs
+        ],
+    }
+
+
+def parse_scout_json(text: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return {"summary": text[:500], "candidates": [], "notes": []}
+    if not isinstance(parsed, dict):
+        return {"summary": "Scout returned non-object JSON.", "candidates": [], "notes": []}
+    return parsed
+
+
+def sanitize_scout_candidates(raw_candidates: Any, agent: ScoutAgentConfig) -> list[dict[str, Any]]:
+    if not isinstance(raw_candidates, list):
+        return []
+    candidates: list[dict[str, Any]] = []
+    for raw in raw_candidates[:3]:
+        if not isinstance(raw, dict):
+            continue
+        title = str(raw.get("title") or "").strip()
+        detail = str(raw.get("detail") or "").strip()
+        if not title or not detail:
+            continue
+        files = raw.get("files", [])
+        candidates.append(
+            {
+                "source": f"scout:{agent.name}",
+                "priority": safe_int(raw.get("priority"), default=8),
+                "title": title[:160],
+                "detail": detail[:800],
+                "files": [str(path)[:200] for path in files[:10]] if isinstance(files, list) else [],
+                "risk": str(raw.get("risk") or "")[:300],
+                "verification": str(raw.get("verification") or "")[:300],
+            }
+        )
+    return candidates
+
+
+def merge_scout_candidates(
+    candidates: list[dict[str, Any]],
+    scout_results: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    merged = list(candidates)
+    for result in scout_results:
+        merged.extend(result.get("proposed_candidates", []) or [])
+    return sorted(merged, key=lambda item: safe_int(item.get("priority"), default=50))[:10]
+
+
+def summarize_scout_results(scout_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": result.get("name"),
+            "status": result.get("status"),
+            "summary": result.get("summary"),
+            "proposed": len(result.get("proposed_candidates") or []),
+            "duration_seconds": result.get("duration_seconds"),
+        }
+        for result in scout_results
+    ]
+
+
+def scout_result(
+    agent: ScoutAgentConfig,
+    *,
+    status: str,
+    summary: str,
+    proposed_candidates: list[dict[str, Any]] | None = None,
+    notes: list[str] | None = None,
+    duration_seconds: float | None = None,
+) -> dict[str, Any]:
+    return {
+        "name": agent.name,
+        "status": status,
+        "sent": status in {"sent", "error"},
+        "model": agent.model,
+        "reasoning_effort": agent.reasoning_effort,
+        "timeout_seconds": agent.timeout_seconds,
+        "focus": agent.focus,
+        "paths": agent.paths,
+        "summary": summary,
+        "proposed_candidates": proposed_candidates or [],
+        "notes": notes or [],
+        "duration_seconds": duration_seconds,
+    }
+
+
+def find_codex_cli() -> str | None:
+    return shutil.which("codex") or (
+        DEFAULT_CODEX if Path(DEFAULT_CODEX).exists() else None
+    )
+
+
+def safe_int(value: Any, *, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def build_supervisor_prompt(
     config: SupervisorConfig,
     autoresearch_config: AutoresearchConfig,
     candidates: list[dict[str, Any]],
+    *,
+    scout_results: list[dict[str, Any]] | None = None,
 ) -> str:
     base_prompt = build_codex_prompt(autoresearch_config)
     return f"""{base_prompt}
@@ -641,6 +1024,9 @@ Autonomous supervisor instructions:
 - Run only targeted checks needed while editing; the supervisor will run the benchmark and gates.
 - Do not commit, merge, push, reset, or edit files outside allowed paths.
 - Stop after one scoped change.
+
+Read-only scout subagent results:
+{json.dumps(redact_value(summarize_scout_results(scout_results or [])), indent=2)}
 
 Candidates:
 {json.dumps(redact_value(candidates), indent=2)}
