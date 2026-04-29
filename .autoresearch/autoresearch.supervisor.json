@@ -11,6 +11,8 @@
   "post_merge_command": "bash .autoresearch/autoresearch.checks.sh",
   "auto_merge": true,
   "push": true,
+  "git_user_name": "omerlefaruk",
+  "git_user_email": "23411283+omerlefaruk@users.noreply.github.com",
   "memory_url": "http://127.0.0.1:37777",
   "memory_required": false,
   "min_confidence": null,
@@ -24,6 +26,7 @@
     "harness/reporting/",
     "harness/rpa/",
     "harness/ai/",
+    ".agents/config/",
     ".autoresearch/"
   ]
 }

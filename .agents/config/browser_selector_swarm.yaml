@@ -1,0 +1,294 @@
+# Browser selector swarm subagent configuration.
+#
+# This config is intentionally separate from .agents/config/agents.yaml so the
+# default agent routing remains stable. Use it for high-speed browser
+# reconnaissance, selector candidate generation, and deterministic validation.
+
+version: 1
+name: browser-selector-swarm
+description: Parallel selector discovery and validation for browser RPA tasks.
+
+model_profiles:
+  ultra_fast:
+    provider: codex
+    model: gpt-5.3-codex-spark
+    reasoning_effort: low
+    temperature: 0.0
+    max_tokens: 3000
+    use_for:
+      - compact extraction
+      - DOM map parsing
+      - candidate formatting
+
+  fast_general:
+    provider: codex
+    model: gpt-5.4-mini
+    reasoning_effort: high
+    temperature: 0.0
+    max_tokens: 4000
+    use_for:
+      - memory lookup
+      - lightweight analysis
+      - network summary
+      - result merging
+
+  coding:
+    provider: codex
+    model: gpt-5.5
+    reasoning_effort: medium
+    temperature: 0.0
+    max_tokens: 8000
+    use_for:
+      - workflow generation
+      - test creation
+      - repair patches
+
+  planner:
+    provider: codex
+    model: gpt-5.5
+    reasoning_effort: high
+    temperature: 0.1
+    max_tokens: 12000
+    use_for:
+      - complex task decomposition
+      - multi-page flow planning
+      - safety/risk decisions
+
+  vision_reasoning:
+    provider: codex
+    model: gpt-5.4
+    reasoning_effort: medium
+    temperature: 0.0
+    max_tokens: 6000
+    use_for:
+      - screenshot interpretation
+      - visual fallback selector hints
+      - layout ambiguity resolution
+
+execution:
+  default_timeout_seconds: 60
+  max_total_parallel_subagents: 10
+  page_context_parallelism: 3
+  candidate_validation_parallelism: 8
+  stop_on_first_proven_candidate: true
+  save_failed_candidates_to_memory: true
+  save_raw_html_to_memory: false
+  save_raw_screenshots_to_memory: false
+  raw_artifacts_dir: runs/browser_recon
+
+selector_policy:
+  priority:
+    - data-testid
+    - data-test
+    - data-qa
+    - role
+    - label
+    - name
+    - aria-label
+    - placeholder
+    - text
+    - id
+    - css
+    - xpath
+  reject_patterns:
+    - nth-child
+    - :first
+    - "css-"
+    - emotion-
+    - styled-
+    - "[class*="
+  allow_coordinates: false
+  require_unique_match_by_default: true
+  require_success_check: true
+
+safety:
+  destructive_action_keywords:
+    - delete
+    - remove
+    - cancel
+    - submit payment
+    - send
+    - approve
+    - publish
+    - archive
+  destructive_actions_require_explicit_safe_mode: true
+  prefer_disposable_contexts: true
+  redact_before_memory: true
+
+subagents:
+  memory_recon:
+    model_profile: fast_general
+    max_parallel: 2
+    timeout_seconds: 20
+    owns:
+      - memory search
+      - prior selector retrieval
+      - known failure filtering
+    output_schema: memory_evidence_bundle
+
+  page_stabilizer:
+    model_profile: ultra_fast
+    max_parallel: 1
+    timeout_seconds: 45
+    owns:
+      - route stabilization instructions
+      - page readiness checks
+      - artifact manifest
+    output_schema: page_state_bundle
+
+  dom_scraper:
+    model_profile: ultra_fast
+    max_parallel: 3
+    timeout_seconds: 45
+    owns:
+      - interactive DOM inventory
+      - attribute extraction
+      - duplicate element grouping
+    output_schema: interactive_dom_map
+
+  accessibility_mapper:
+    model_profile: ultra_fast
+    max_parallel: 3
+    timeout_seconds: 45
+    owns:
+      - role selectors
+      - accessible names
+      - label relationships
+    output_schema: selector_candidate_list
+
+  form_mapper:
+    model_profile: ultra_fast
+    max_parallel: 3
+    timeout_seconds: 45
+    owns:
+      - input selectors
+      - labels
+      - placeholders
+      - validation messages
+    output_schema: selector_candidate_list
+
+  text_mapper:
+    model_profile: ultra_fast
+    max_parallel: 2
+    timeout_seconds: 30
+    owns:
+      - visible text selectors
+      - heading/link/button text fallbacks
+    output_schema: selector_candidate_list
+
+  structure_mapper:
+    model_profile: fast_general
+    max_parallel: 2
+    timeout_seconds: 45
+    owns:
+      - css fallback selectors
+      - xpath fallback selectors
+      - dynamic selector rejection
+    output_schema: selector_candidate_list
+
+  network_mapper:
+    model_profile: fast_general
+    max_parallel: 2
+    timeout_seconds: 45
+    owns:
+      - API call summaries
+      - response/status success checks
+      - route transition checks
+    output_schema: success_check_candidate_list
+
+  state_mapper:
+    model_profile: fast_general
+    max_parallel: 1
+    timeout_seconds: 30
+    owns:
+      - safe app-state extraction
+      - route metadata
+      - framework hydration hints
+    output_schema: state_hint_bundle
+
+  vision_mapper:
+    model_profile: vision_reasoning
+    max_parallel: 1
+    timeout_seconds: 90
+    owns:
+      - screenshot region analysis
+      - visual fallback candidates
+      - ambiguity notes
+    output_schema: selector_candidate_list
+
+  selector_scorer:
+    model_profile: fast_general
+    max_parallel: 1
+    timeout_seconds: 30
+    owns:
+      - candidate merge
+      - ranking
+      - risk flags
+      - duplicate removal
+    output_schema: ranked_selector_candidates
+
+  candidate_validator:
+    model_profile: null
+    runtime: playwright
+    max_parallel: 8
+    timeout_seconds: 120
+    owns:
+      - syntax checks
+      - uniqueness checks
+      - visibility checks
+      - enabled/editable checks
+      - safe action execution
+      - success-check proof
+    output_schema: selector_validation_report
+
+  workflow_planner:
+    model_profile: planner
+    max_parallel: 1
+    timeout_seconds: 180
+    owns:
+      - workflow step ordering
+      - success-check assignment
+      - safety gate placement
+    output_schema: workflow_step_plan
+
+  workflow_generator:
+    model_profile: coding
+    max_parallel: 1
+    timeout_seconds: 180
+    owns:
+      - YAML workflow generation
+      - browser test generation
+      - verification command suggestions
+    output_schema: workflow_patch_plan
+
+  repair_agent:
+    model_profile: coding
+    max_parallel: 1
+    timeout_seconds: 180
+    owns:
+      - failed validation diagnosis
+      - selector repair
+      - minimal code/test patch recommendations
+    output_schema: repair_plan
+
+recommended_dispatch:
+  first_wave_parallel:
+    - memory_recon
+    - page_stabilizer
+  second_wave_parallel:
+    - dom_scraper
+    - accessibility_mapper
+    - form_mapper
+    - text_mapper
+    - network_mapper
+    - state_mapper
+  fallback_wave:
+    - structure_mapper
+    - vision_mapper
+  sequential:
+    - selector_scorer
+    - candidate_validator
+    - workflow_planner
+    - workflow_generator
+  on_failure:
+    - repair_agent

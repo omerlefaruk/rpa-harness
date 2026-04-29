@@ -59,6 +59,8 @@ def test_load_supervisor_config_reads_repo_defaults(tmp_path):
                 "agent_command": "",
                 "auto_merge": False,
                 "push": False,
+                "git_user_name": "bot",
+                "git_user_email": "bot@example.test",
                 "max_artifact_bytes": 1024,
                 "max_recent_rejections": 2,
                 "allowed_paths": ["tools/"],
@@ -73,6 +75,8 @@ def test_load_supervisor_config_reads_repo_defaults(tmp_path):
     assert config.branch_name == "autoresearch/nightly"
     assert config.agent_command == ""
     assert config.auto_merge is False
+    assert config.git_user_name == "bot"
+    assert config.git_user_email == "bot@example.test"
     assert config.max_artifact_bytes == 1024
     assert config.max_recent_rejections == 2
     assert config.allowed_paths == ["tools/"]
@@ -265,6 +269,50 @@ def test_repair_worktree_aborts_rebase_and_resets_to_main(tmp_path, monkeypatch)
     assert ["merge", "--abort"] in calls
     assert ["reset", "--hard", "main"] in calls
     assert ["clean", "-fd"] in calls
+
+
+def test_ensure_git_identity_configures_missing_identity(tmp_path, monkeypatch):
+    config = _supervisor_config(tmp_path)
+    config.worktree_path.mkdir(parents=True)
+    config.git_user_name = "bot"
+    config.git_user_email = "bot@example.test"
+    state: dict[str, str] = {}
+    calls = []
+
+    def _fake_output(_git_binary, args, _cwd):
+        if args == ["config", "user.name"]:
+            return state.get("name", "")
+        if args == ["config", "user.email"]:
+            return state.get("email", "")
+        return ""
+
+    def _fake_git(_git_binary, args, _cwd, timeout_seconds=30):
+        calls.append(args)
+        if args[:2] == ["config", "user.name"]:
+            state["name"] = args[2]
+        if args[:2] == ["config", "user.email"]:
+            state["email"] = args[2]
+        return supervisor.CommandResult("git", 0, 0.0, "", "")
+
+    monkeypatch.setattr(supervisor, "git_output", _fake_output)
+    monkeypatch.setattr(supervisor, "run_git", _fake_git)
+
+    result = supervisor.ensure_git_identity(config)
+
+    assert result.passed
+    assert ["config", "user.name", "bot"] in calls
+    assert ["config", "user.email", "bot@example.test"] in calls
+
+
+def test_ensure_git_identity_blocks_missing_identity(tmp_path, monkeypatch):
+    config = _supervisor_config(tmp_path)
+    config.worktree_path.mkdir(parents=True)
+    monkeypatch.setattr(supervisor, "git_output", lambda *_args: "")
+
+    result = supervisor.ensure_git_identity(config)
+
+    assert not result.passed
+    assert "Missing git user.name or user.email" in result.stderr
 
 
 def test_supervisor_cycle_without_agent_writes_plan_and_audit(tmp_path):

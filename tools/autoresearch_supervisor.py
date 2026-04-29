@@ -78,6 +78,8 @@ class SupervisorConfig:
     post_merge_command: str = "bash .autoresearch/autoresearch.checks.sh"
     auto_merge: bool = True
     push: bool = True
+    git_user_name: str | None = None
+    git_user_email: str | None = None
     memory_url: str = "http://127.0.0.1:37777"
     memory_required: bool = False
     min_confidence: float | None = None
@@ -211,6 +213,8 @@ def load_supervisor_config(config_path: str | None, workdir: Path) -> Supervisor
         ),
         auto_merge=bool(data.get("auto_merge", True)),
         push=bool(data.get("push", True)),
+        git_user_name=data.get("git_user_name") or os.getenv("AUTORESEARCH_GIT_USER_NAME"),
+        git_user_email=data.get("git_user_email") or os.getenv("AUTORESEARCH_GIT_USER_EMAIL"),
         memory_url=data.get("memory_url", "http://127.0.0.1:37777"),
         memory_required=bool(data.get("memory_required", False)),
         min_confidence=data.get("min_confidence"),
@@ -790,6 +794,10 @@ def confidence_gate_failure(
 
 
 def commit_worktree(config: SupervisorConfig, latest_entry: dict[str, Any]) -> CommandResult:
+    identity = ensure_git_identity(config)
+    if not identity.passed:
+        return identity
+
     add_result = run_git(config.git_binary, ["add", "-A"], config.worktree_path)
     if not add_result.passed:
         return add_result
@@ -803,6 +811,43 @@ def commit_worktree(config: SupervisorConfig, latest_entry: dict[str, Any]) -> C
         f"Lesson: {latest_entry.get('lesson', '')}"
     )
     return run_git(config.git_binary, ["commit", "-m", message], config.worktree_path)
+
+
+def ensure_git_identity(config: SupervisorConfig) -> CommandResult:
+    name = git_output(config.git_binary, ["config", "user.name"], config.worktree_path)
+    email = git_output(config.git_binary, ["config", "user.email"], config.worktree_path)
+    if name and email:
+        return CommandResult("git identity", 0, 0.0, name, email)
+
+    if config.git_user_name:
+        name_result = run_git(
+            config.git_binary,
+            ["config", "user.name", config.git_user_name],
+            config.worktree_path,
+        )
+        if not name_result.passed:
+            return name_result
+    if config.git_user_email:
+        email_result = run_git(
+            config.git_binary,
+            ["config", "user.email", config.git_user_email],
+            config.worktree_path,
+        )
+        if not email_result.passed:
+            return email_result
+
+    name = git_output(config.git_binary, ["config", "user.name"], config.worktree_path)
+    email = git_output(config.git_binary, ["config", "user.email"], config.worktree_path)
+    if name and email:
+        return CommandResult("git identity", 0, 0.0, name, email)
+
+    return CommandResult(
+        "git identity",
+        1,
+        0.0,
+        "",
+        "Missing git user.name or user.email; configure supervisor git identity.",
+    )
 
 
 def tag_winner(
