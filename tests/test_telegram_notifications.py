@@ -133,16 +133,17 @@ async def test_question_and_frustration_messages_have_expected_labels():
 
 
 @pytest.mark.asyncio
-async def test_strict_mode_rejects_unknown_topic_mapping():
+async def test_strict_mode_does_not_require_optional_topic_mapping():
     client = _FakeClient()
     channel = TelegramBotChannel(
         TelegramNotificationConfig(enabled=True, bot_token="token", chat_id="chat"),
         client=client,
     )
 
-    with pytest.raises(TelegramNotificationError):
-        await channel.send_message("hello", topic="missing", strict=True)
-    assert client.posts == []
+    await channel.send_message("hello", topic="missing", strict=True)
+
+    assert client.posts[0]["json"]["chat_id"] == "chat"
+    assert "message_thread_id" not in client.posts[0]["json"]
 
 
 @pytest.mark.asyncio
