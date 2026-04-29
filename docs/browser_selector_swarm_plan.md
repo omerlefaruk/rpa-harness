@@ -66,8 +66,9 @@ Create focused page maps:
   page metadata.
 - Visual map: screenshot regions and bounding boxes for visible controls.
 
-Default rule: preserve raw HTML and screenshot as artifacts, but give subagents
-the compact maps unless deeper diagnosis is required.
+Default rule: preserve the redacted DOM map and screenshot as artifacts. Do not
+store raw HTML because authenticated pages can contain hidden tokens or private
+data.
 
 ### 4. Parallel Candidate Generation
 
@@ -169,6 +170,21 @@ Do not store secrets, cookies, personal data, or raw credentials.
 
 ## Implementation Phases
 
+## Implemented Initial Slice
+
+- Reusable module: `harness/selectors/browser_swarm.py`
+- Standalone command: `python3 tools/browser_selector_swarm.py <url>`
+- Main CLI command: `python3 main.py --browser-selector-swarm <url>`
+- Default mode: scrape compact page map, generate ranked candidates, validate
+  uniqueness, visibility, and enabled state.
+- Intent mode: add `--intent` or `--browser-selector-swarm-intent` to
+  prioritize candidates for a target action or element.
+- Bounded brute-force mode: add `--safe-click` plus an expected URL/text check
+  to test candidates until one proves the intended outcome.
+- Report artifact: `selector_swarm_report.json` with redacted page map,
+  candidates, validations, winner, screenshot path, console errors, and failed
+  requests. Optional DOM artifacts are redacted maps, not raw HTML.
+
 ### Phase 1: Offline Config and Docs
 
 - Add the selector-swarm plan.
@@ -178,7 +194,7 @@ Do not store secrets, cookies, personal data, or raw credentials.
 ### Phase 2: Recon Artifacts
 
 - Add a browser recon command that produces page maps.
-- Store raw artifacts under run output directories.
+- Store redacted artifacts under run output directories.
 - Redact sensitive values before memory writes.
 
 ### Phase 3: Candidate Tournament

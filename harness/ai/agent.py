@@ -15,6 +15,7 @@ from harness.ai.vision import VisionEngine
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
 from harness.memory.recorder import MemoryRecorder
+from harness.notifications import BotNotifier
 from harness.resilience.recovery import smart_retry
 
 
@@ -39,6 +40,7 @@ class RPAAgent:
 
         self.vision = vision_engine or (VisionEngine(config=self.config) if self.config.enable_vision else None)
         self.memory_recorder = memory_recorder or MemoryRecorder.from_harness_config(self.config)
+        self.notifier = BotNotifier.from_env(source="rpa-agent")
 
         tools = build_default_tools(
             playwright_driver=self.playwright,
@@ -106,6 +108,14 @@ class RPAAgent:
 
             if not result.get("success") and step.is_critical:
                 self.logger.warning(f"Critical step {step.id} failed — stopping")
+                await self.notifier.failure(
+                    "A critical agent step failed, so I stopped the run.",
+                    context={
+                        "task": task,
+                        "step": step.description,
+                        "error": result.get("error"),
+                    },
+                )
                 break
 
         end_time = datetime.now()
@@ -217,6 +227,14 @@ class RPAAgent:
         except Exception as e:
             if step.fallback_action:
                 self.logger.info(f"Trying fallback: {step.fallback_action}")
+                await self.notifier.frustration(
+                    "The first agent action failed, so I am trying the fallback.",
+                    context={
+                        "step": step.description,
+                        "fallback": step.fallback_action,
+                        "attempts": attempts,
+                    },
+                )
                 try:
                     execution = await execute_with_recovery(step.fallback_action, {})
                 except Exception as fallback_error:
@@ -232,6 +250,15 @@ class RPAAgent:
                         error=str(e),
                     ))
                     self.logger.error(f"Step {step.id} exhausted retries: {e}")
+                    await self.notifier.failure(
+                        "An agent step exhausted retries and the fallback did not recover it.",
+                        context={
+                            "step": step.description,
+                            "tool": result.get("tool_name"),
+                            "error": str(e),
+                            "retries": result["retries"],
+                        },
+                    )
                 else:
                     result["success"] = True
                     result["output"] = execution["output"]
@@ -247,11 +274,30 @@ class RPAAgent:
                     error=str(e),
                 ))
                 self.logger.error(f"Step {step.id} exhausted retries: {e}")
+                await self.notifier.failure(
+                    "An agent step exhausted retries.",
+                    context={
+                        "step": step.description,
+                        "tool": result.get("tool_name"),
+                        "error": str(e),
+                        "retries": result["retries"],
+                    },
+                )
         else:
             result["success"] = True
             result["output"] = execution["output"]
 
         result["retries"] = max(0, attempts - 1)
+
+        if result["success"] and result["retries"] > 0:
+            await self.notifier.frustration(
+                "I recovered this agent step after retrying it.",
+                context={
+                    "step": step.description,
+                    "tool": result.get("tool_name"),
+                    "retries": result["retries"],
+                },
+            )
 
         if result["success"]:
             self.history.add(StepHistoryEntry(
@@ -316,6 +362,14 @@ Which tool should I call? Return the tool name and arguments."""
 
         except Exception as e:
             self.logger.warning(f"Decision LLM failed: {e} — returning done")
+            await self.notifier.question(
+                "I could not decide the next tool call.",
+                context={
+                    "step": step.description,
+                    "action": step.action,
+                    "error": str(e),
+                },
+            )
             return "done", {"summary": f"Could not decide: {e}", "status": "failed"}
 
     async def _take_screenshot(self) -> Optional[str]:

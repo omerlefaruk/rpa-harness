@@ -1,7 +1,7 @@
 """Capability characterization for Python RPAWorkflow and Excel workflows."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import openpyxl
 import pytest
@@ -24,6 +24,23 @@ def _config(tmp_path: Path, **variables: Any) -> HarnessConfig:
 
 async def _execute(workflow: RPAWorkflow):
     return await workflow._execute()
+
+
+class FakeNotifier:
+    def __init__(self):
+        self.events: list[tuple[str, str, Optional[dict]]] = []
+
+    async def question(self, question: str, *, context: Optional[dict] = None):
+        self.events.append(("question", question, context))
+
+    async def failure(self, message: str, *, context: Optional[dict] = None, topic: str = "failures"):
+        self.events.append(("failure", message, context))
+
+    async def frustration(self, message: str, *, context: Optional[dict] = None):
+        self.events.append(("frustration", message, context))
+
+    async def memory_note(self, message: str, *, context: Optional[dict] = None):
+        self.events.append(("memory_note", message, context))
 
 
 class ZeroRecordsWorkflow(RPAWorkflow):
@@ -162,6 +179,8 @@ class StrictPassMismatchWorkflow(PassMismatchWorkflow):
 async def test_one_pass_one_mismatch_fails_by_default_without_allow_mismatches(tmp_path):
     output_file = tmp_path / "strict_mismatches.xlsx"
     workflow = StrictPassMismatchWorkflow(_config(tmp_path, output_file=str(output_file)))
+    notifier = FakeNotifier()
+    workflow.notifier = notifier
 
     result = await _execute(workflow)
 
@@ -169,6 +188,7 @@ async def test_one_pass_one_mismatch_fails_by_default_without_allow_mismatches(t
     assert result.processed_records == 1
     assert result.failed_records == 1
     assert result.output_files == [str(output_file)]
+    assert any(event[0] == "failure" for event in notifier.events)
 
 
 class SkippedRecordWorkflow(RPAWorkflow):
@@ -214,6 +234,8 @@ class RetryWorkflow(RPAWorkflow):
 @pytest.mark.asyncio
 async def test_retryable_record_succeeds_on_second_attempt(tmp_path):
     workflow = RetryWorkflow(_config(tmp_path))
+    notifier = FakeNotifier()
+    workflow.notifier = notifier
 
     result = await _execute(workflow)
 
@@ -221,6 +243,11 @@ async def test_retryable_record_succeeds_on_second_attempt(tmp_path):
     assert result.processed_records == 1
     assert result.retried_records == 1
     assert workflow.calls == 2
+    assert ("frustration", "I had to retry a record before it passed.", {
+        "workflow": "retry_record_capability",
+        "record_id": "RETRY",
+        "attempts": 2,
+    }) in notifier.events
 
 
 @pytest.mark.asyncio

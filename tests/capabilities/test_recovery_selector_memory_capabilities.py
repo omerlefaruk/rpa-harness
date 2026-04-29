@@ -301,6 +301,23 @@ class FlakyTools:
         return {"tool": name, "arguments": arguments}
 
 
+class FakeNotifier:
+    def __init__(self):
+        self.events = []
+
+    async def question(self, question: str, *, context: dict = None):
+        self.events.append(("question", question, context))
+
+    async def failure(self, message: str, *, context: dict = None, topic: str = "failures"):
+        self.events.append(("failure", message, context))
+
+    async def frustration(self, message: str, *, context: dict = None):
+        self.events.append(("frustration", message, context))
+
+    async def memory_note(self, message: str, *, context: dict = None):
+        self.events.append(("memory_note", message, context))
+
+
 @pytest.mark.asyncio
 async def test_rpa_agent_step_execution_uses_mocked_tools_and_retries(monkeypatch):
     monkeypatch.setattr(HarnessLogger, "_setup_jsonl", lambda self, path: setattr(self, "_jsonl_path", path))
@@ -308,6 +325,8 @@ async def test_rpa_agent_step_execution_uses_mocked_tools_and_retries(monkeypatc
     agent = RPAAgent(config=HarnessConfig(enable_vision=False, agent_max_steps=2))
     tools = FlakyTools()
     agent.tools = tools
+    notifier = FakeNotifier()
+    agent.notifier = notifier
     step = PlanStep(
         id=1,
         action="click",
@@ -324,3 +343,12 @@ async def test_rpa_agent_step_execution_uses_mocked_tools_and_retries(monkeypatc
     assert result["success"] is True
     assert result["retries"] == 1
     assert tools.calls == 2
+    assert (
+        "frustration",
+        "I recovered this agent step after retrying it.",
+        {
+            "step": "Click deterministic button",
+            "tool": "browser_click",
+            "retries": 1,
+        },
+    ) in notifier.events

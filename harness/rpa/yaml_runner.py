@@ -17,6 +17,7 @@ import yaml
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
 from harness.memory.recorder import MemoryRecorder
+from harness.notifications import BotNotifier
 from harness.reporting.failure_report import FailureReport
 from harness.security import (
     redact_mapping,
@@ -41,6 +42,7 @@ class YamlWorkflowRunner:
         self.verifier = WorkflowVerifier()
         self.failure = FailureReport("./runs")
         self.memory = MemoryRecorder.from_harness_config(self.config)
+        self.notifier = BotNotifier.from_env(source="yaml-runner")
         self._drivers: Dict[str, Any] = {}
         self._inputs: Dict[str, Any] = {}
         self._variables: Dict[str, Any] = {}
@@ -79,6 +81,13 @@ class YamlWorkflowRunner:
 
         missing_secrets = self._missing_secrets()
         if missing_secrets:
+            await self.notifier.question(
+                "I cannot start this YAML workflow because required secrets are missing.",
+                context={
+                    "workflow": workflow_name,
+                    "missing": ", ".join(item["name"] for item in missing_secrets),
+                },
+            )
             return {
                 "status": "failed",
                 "failure_type": "config",
@@ -87,9 +96,17 @@ class YamlWorkflowRunner:
                 "steps": [],
             }
         self._secrets = self._load_secrets()
+        self.notifier.add_secret_values(self._secrets.values())
 
         unsupported = self._unsupported_runtime_actions(workflow)
         if unsupported:
+            await self.notifier.question(
+                "This YAML workflow has actions I do not know how to run yet.",
+                context={
+                    "workflow": workflow_name,
+                    "actions": ", ".join(unsupported),
+                },
+            )
             return {
                 "status": "failed",
                 "failure_type": "unsupported",
@@ -137,6 +154,24 @@ class YamlWorkflowRunner:
                 )
                 step_result["failure_report"] = report_path
                 await self.memory.summarize(memory_session_id, step_result)
+                await self.notifier.failure(
+                    "A YAML workflow step failed.",
+                    context={
+                        "workflow": workflow_name,
+                        "step": step["id"],
+                        "reason": step_result.get("error") or "Verification failed",
+                        "failure_report": report_path,
+                    },
+                )
+                if step_result.get("attempts", 0) > 1:
+                    await self.notifier.frustration(
+                        "I retried this YAML step and it still failed.",
+                        context={
+                            "workflow": workflow_name,
+                            "step": step["id"],
+                            "attempts": step_result.get("attempts"),
+                        },
+                    )
                 return {
                     "status": "failed",
                     "failure_type": "execution",
@@ -157,7 +192,16 @@ class YamlWorkflowRunner:
                 "steps": steps,
                 "duration_ms": (time.time() - start_time) * 1000,
             }
-            await self.memory.summarize(memory_session_id, result)
+            summary_result = await self.memory.summarize(memory_session_id, result)
+            if self._memory_write_succeeded(summary_result):
+                await self.notifier.memory_note(
+                    "I saved the YAML workflow summary.",
+                    context={
+                        "workflow": workflow_name,
+                        "status": result["status"],
+                        "steps_completed": result["steps_completed"],
+                    },
+                )
             return result
         finally:
             self.config.auto_heal_selectors = original_auto_heal
@@ -199,6 +243,11 @@ class YamlWorkflowRunner:
             if recovery_type == "retry":
                 max_attempts = int(recovery.get("max_attempts", 1))
                 while attempts < max_attempts:
+                    if attempts > 0:
+                        await self.notifier.frustration(
+                            "I am retrying a YAML step because the check did not pass.",
+                            context={"step": step_id, "attempt": attempts + 1},
+                        )
                     try:
                         action_result, check_results = await run_action_and_verify()
                         last_error = ""
@@ -211,6 +260,13 @@ class YamlWorkflowRunner:
                         )
 
             elif recovery_type == "wait":
+                await self.notifier.frustration(
+                    "I am waiting before checking this YAML step again.",
+                    context={
+                        "step": step_id,
+                        "wait_ms": recovery.get("ms", recovery.get("duration_ms", 1000)),
+                    },
+                )
                 await self._sleep_ms(int(recovery.get("ms", recovery.get("duration_ms", 1000))))
                 should_reexecute = bool(last_error) or action_type.startswith("api.")
                 if should_reexecute:
@@ -228,6 +284,10 @@ class YamlWorkflowRunner:
                     )
 
             elif recovery_type == "refresh_page":
+                await self.notifier.frustration(
+                    "I am refreshing the page to recover this YAML step.",
+                    context={"step": step_id},
+                )
                 browser = self._drivers.get("browser")
                 if browser and browser.page:
                     await browser.page.reload(wait_until="load")
@@ -246,7 +306,9 @@ class YamlWorkflowRunner:
             step_id, action_type, started_at, attempts, check_results, destructive
         )
         result["status"] = "failed"
-        result["error"] = last_error or self._verification_error(check_results)
+        result["error"] = self._redact_runtime_text(
+            last_error or self._verification_error(check_results)
+        )
         self._log_entry("ERROR", step_id, result["error"])
         return result
 
@@ -745,14 +807,19 @@ class YamlWorkflowRunner:
 
         def on_request_failed(request):
             try:
-                failure = request.failure or {}
+                failure = request.failure
+                if callable(failure):
+                    failure = failure()
+                error_text = (
+                    failure.get("errorText", "")
+                    if isinstance(failure, dict)
+                    else str(failure or "")
+                )
                 self._network_entries.append(
                     {
                         "url": sanitize_url(request.url),
                         "method": request.method,
-                        "error_text": redact_text(
-                            failure.get("errorText", ""), self._secrets.values(), 300
-                        ),
+                        "error_text": redact_text(error_text, self._secrets.values(), 300),
                     }
                 )
             except Exception:
@@ -798,7 +865,7 @@ class YamlWorkflowRunner:
         if strategy == "text":
             return page.get_by_text(value)
         if strategy == "id":
-            return page.locator(f"#{value}")
+            return page.locator(f"[id={json.dumps(value)}]")
         if strategy == "name":
             return page.locator(f"[name={json.dumps(value)}]")
         if strategy == "aria-label":
@@ -972,8 +1039,10 @@ class YamlWorkflowRunner:
             except Exception as exc:
                 evidence["screenshot_error"] = str(exc)
             try:
+                raw_dom = await browser.page.content()
+                redacted_dom = redact_text(raw_dom, self._secrets.values(), max_chars=200000)
                 evidence["dom_snapshot"] = self._relative_evidence_path(
-                    self.failure.save_dom(await browser.page.content())
+                    self.failure.save_artifact("dom_snapshot_redacted.html", redacted_dom)
                 )
             except Exception as exc:
                 evidence["dom_error"] = str(exc)
@@ -1017,6 +1086,13 @@ class YamlWorkflowRunner:
             ),
             object_hook=lambda obj: redact_mapping(obj, self._secrets.values(), max_chars=500),
         )
+
+    def _redact_runtime_text(self, value: Any, max_chars: int = 500) -> str:
+        return redacted_preview(value, self._secrets.values(), max_chars=max_chars)
+
+    @staticmethod
+    def _memory_write_succeeded(result: Any) -> bool:
+        return isinstance(result, dict) and result.get("status") == "stored"
 
     def _checks_passed(self, results: List[VerificationResult]) -> bool:
         return bool(results) and all(result.passed for result in results)

@@ -9,6 +9,23 @@ from harness.rpa.yaml_runner import YamlWorkflowRunner
 from harness.verification import validate_workflow
 
 
+class FakeNotifier:
+    def __init__(self):
+        self.events = []
+
+    async def question(self, question: str, *, context: dict = None):
+        self.events.append(("question", question, context))
+
+    async def failure(self, message: str, *, context: dict = None, topic: str = "failures"):
+        self.events.append(("failure", message, context))
+
+    async def frustration(self, message: str, *, context: dict = None):
+        self.events.append(("frustration", message, context))
+
+    async def memory_note(self, message: str, *, context: dict = None):
+        self.events.append(("memory_note", message, context))
+
+
 def _workflow(workflow_type: str, steps: list[dict], **extra: object) -> dict:
     data = {
         "id": f"{workflow_type}_capability",
@@ -224,6 +241,109 @@ def test_mixed_browser_and_api_workflow_is_schema_supported():
     )
 
     assert validate_workflow(workflow) == []
+
+
+def test_yaml_runner_id_selector_uses_literal_attribute_selector():
+    class Page:
+        def __init__(self):
+            self.selector = ""
+
+        def locator(self, selector):
+            self.selector = selector
+            return object()
+
+    runner = YamlWorkflowRunner()
+    page = Page()
+
+    runner._locator_from_selector(page, {"strategy": "id", "value": "ctl00:Main.login"})
+
+    assert page.selector == '[id="ctl00:Main.login"]'
+
+
+def test_yaml_runner_request_failed_accepts_string_failure():
+    class Page:
+        def __init__(self):
+            self.handlers = {}
+
+        def on(self, event, handler):
+            self.handlers[event] = handler
+
+    class Driver:
+        def __init__(self):
+            self.page = Page()
+
+    class Request:
+        url = "https://example.test/path?token=secret"
+        method = "GET"
+        failure = "net::ERR_FAILED token=secret"
+
+    runner = YamlWorkflowRunner()
+    runner._secrets = {"api_token": "secret"}
+    driver = Driver()
+
+    runner._attach_browser_evidence_handlers(driver)
+    driver.page.handlers["requestfailed"](Request())
+
+    assert runner._network_entries == [
+        {
+            "url": "https://example.test/path",
+            "method": "GET",
+            "error_text": "net::ERR_FAILED token=[REDACTED]",
+        }
+    ]
+
+
+def test_yaml_runner_redacts_runtime_errors_with_workflow_secrets():
+    runner = YamlWorkflowRunner()
+    runner._secrets = {"api_token": "super-secret-token"}
+
+    assert (
+        runner._redact_runtime_text("expected super-secret-token in response")
+        == "expected [REDACTED] in response"
+    )
+
+
+def test_yaml_runner_only_announces_successful_memory_writes():
+    assert YamlWorkflowRunner._memory_write_succeeded({"status": "stored", "id": 1}) is True
+    assert YamlWorkflowRunner._memory_write_succeeded({"status": "disabled"}) is False
+    assert YamlWorkflowRunner._memory_write_succeeded({"available": False}) is False
+
+
+@pytest.mark.asyncio
+async def test_yaml_runner_asks_question_when_required_secret_is_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("CAPABILITY_API_TOKEN", raising=False)
+    workflow = _workflow(
+        "api",
+        [
+            {
+                "id": "read_with_secret",
+                "action": {
+                    "type": "api.get",
+                    "url": "http://127.0.0.1:8765/read",
+                    "headers": {"Authorization": "Bearer ${secrets.api_token}"},
+                },
+                "success_check": [{"type": "status_code", "value": 200}],
+            }
+        ],
+        credentials={"api_token": "CAPABILITY_API_TOKEN"},
+    )
+    path = tmp_path / "missing_secret.yaml"
+    path.write_text(yaml.safe_dump(workflow), encoding="utf-8")
+    runner = YamlWorkflowRunner()
+    notifier = FakeNotifier()
+    runner.notifier = notifier
+
+    result = await runner.run(str(path))
+
+    assert result["status"] == "failed"
+    assert result["failure_type"] == "config"
+    assert notifier.events == [
+        (
+            "question",
+            "I cannot start this YAML workflow because required secrets are missing.",
+            {"workflow": "Api Capability", "missing": "api_token"},
+        )
+    ]
 
 
 @pytest.mark.asyncio

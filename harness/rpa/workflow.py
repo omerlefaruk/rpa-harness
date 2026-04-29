@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
+from harness.notifications import BotNotifier
 from harness.resilience.errors import RPAError
 
 
@@ -118,6 +119,7 @@ class RPAWorkflow:
         self.config = config
         self.result = WorkflowResult(name=self.name)
         self.logger = HarnessLogger(f"workflow.{self.name}")
+        self.notifier = BotNotifier.from_env(source=f"workflow.{self.name}")
         self._step_index = 0
         self._current_record: Optional[dict] = None
         self._batch_size: int = 1
@@ -203,6 +205,14 @@ class RPAWorkflow:
                         await self.on_skip(record, result.get("reason", ""))
                     else:
                         self.result.failed_records += 1
+                        await self.notifier.failure(
+                            "A record did not pass validation.",
+                            context={
+                                "workflow": self.name,
+                                "record_id": record_id,
+                                "reason": result.get("reason", "Validation failed"),
+                            },
+                        )
                         await self.on_mismatch(
                             record,
                             result.get("reason", "Validation failed"),
@@ -211,6 +221,14 @@ class RPAWorkflow:
                 except Exception as e:
                     self.result.failed_records += 1
                     self.log(f"  ERROR on {record_id}: {e}")
+                    await self.notifier.failure(
+                        "A record crashed while I was processing it.",
+                        context={
+                            "workflow": self.name,
+                            "record_id": record_id,
+                            "error": str(e),
+                        },
+                    )
                     await self.on_mismatch(
                         record, str(e), {"exception": traceback.format_exc()}
                     )
@@ -231,6 +249,10 @@ class RPAWorkflow:
             self.result.error_message = str(e)
             self.result.stack_trace = traceback.format_exc()
             self.log(f"WORKFLOW ERROR: {e}")
+            await self.notifier.failure(
+                "The workflow crashed before it could finish.",
+                context={"workflow": self.name, "error": str(e)},
+            )
 
         finally:
             try:
@@ -239,6 +261,10 @@ class RPAWorkflow:
                 self.step_done(teardown_step)
             except Exception as e:
                 self.log(f"TEARDOWN ERROR: {e}")
+                await self.notifier.frustration(
+                    "Cleanup failed after the workflow run.",
+                    context={"workflow": self.name, "error": str(e)},
+                )
 
             self.result.end_time = datetime.now()
             if self.result.start_time:
@@ -285,14 +311,46 @@ class RPAWorkflow:
                 },
             )
             self.result.retried_records += max(0, attempts - 1)
+            if attempts > 1:
+                await self.notifier.frustration(
+                    "I had to retry a record before it passed.",
+                    context={
+                        "workflow": self.name,
+                        "record_id": self._record_id(record),
+                        "attempts": attempts,
+                    },
+                )
             return result
         except RetryableRecordError as e:
             self.result.retried_records += max(0, attempts - 1)
+            if attempts > 1:
+                await self.notifier.frustration(
+                    "I retried a record and it still did not pass.",
+                    context={
+                        "workflow": self.name,
+                        "record_id": self._record_id(record),
+                        "attempts": attempts,
+                        "reason": str(e),
+                    },
+                )
             return e.result
         except Exception as e:
             self.result.retried_records += max(0, attempts - 1)
+            await self.notifier.frustration(
+                "The record retry path ended in an exception.",
+                context={
+                    "workflow": self.name,
+                    "record_id": self._record_id(record),
+                    "attempts": attempts,
+                    "error": str(e),
+                },
+            )
             return {"status": "failed", "reason": str(e)}
 
     @staticmethod
     def _is_retryable(status: str) -> bool:
         return status in ("failed", "error", "retry", "timeout")
+
+    @staticmethod
+    def _record_id(record: dict) -> str:
+        return str(record.get("id") or record.get("reservation_number") or "unknown")

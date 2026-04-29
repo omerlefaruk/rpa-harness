@@ -10,6 +10,7 @@ Usage:
     python main.py --autoresearch
     python main.py --autoresearch-supervisor-once
     python main.py --run-workflows --discover-wf ./tests/rpa
+    python main.py --browser-selector-swarm https://example.com/login
 """
 
 import argparse
@@ -35,6 +36,7 @@ Examples:
   python main.py --rpa-memory-serve --rpa-memory-port 37777
   python main.py --autoresearch
   python main.py --autoresearch-supervisor-once
+  python main.py --browser-selector-swarm https://example.com/login
         """,
     )
     parser.add_argument("--config", "-c", help="Path to YAML config file")
@@ -61,6 +63,43 @@ Examples:
     parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
     parser.add_argument("--rpa-memory-serve", action="store_true", help="Start RPA Memory service")
     parser.add_argument("--rpa-memory-port", type=int, default=37777)
+    parser.add_argument(
+        "--browser-selector-swarm",
+        help="Run browser selector swarm discovery for a URL",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-output",
+        default="runs/browser_recon",
+        help="Output directory for browser selector swarm artifacts",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-max-candidates",
+        type=int,
+        default=50,
+        help="Maximum selector candidates to validate",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-intent",
+        help="Element/action intent to prioritize, for example 'Save'",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-safe-click",
+        action="store_true",
+        help="Allow safe click validation; requires an expected URL or text check",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-expect-url-contains",
+        help="Expected URL fragment after safe click validation",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-expect-text",
+        help="Expected visible text after safe click validation",
+    )
+    parser.add_argument(
+        "--browser-selector-swarm-save-raw-html",
+        action="store_true",
+        help="Save a redacted DOM map artifact during browser selector swarm discovery",
+    )
     parser.add_argument(
         "--autoresearch",
         action="store_true",
@@ -210,6 +249,58 @@ async def main():
             return
         result = await channel.discover_chat_id(strict=True)
         print(json.dumps(result, indent=2, default=str))
+        return
+
+    if args.browser_selector_swarm:
+        import json
+
+        if args.browser_selector_swarm_safe_click and not (
+            args.browser_selector_swarm_expect_url_contains
+            or args.browser_selector_swarm_expect_text
+        ):
+            print(
+                "--browser-selector-swarm-safe-click requires "
+                "--browser-selector-swarm-expect-url-contains or "
+                "--browser-selector-swarm-expect-text",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        config = build_config(args)
+        from harness.selectors.browser_swarm import run_browser_selector_swarm
+
+        report = await run_browser_selector_swarm(
+            args.browser_selector_swarm,
+            output_dir=args.browser_selector_swarm_output,
+            browser_name=config.browser,
+            headless=config.headless,
+            max_candidates=args.browser_selector_swarm_max_candidates,
+            intent=args.browser_selector_swarm_intent,
+            safe_click=args.browser_selector_swarm_safe_click,
+            expect_url_contains=args.browser_selector_swarm_expect_url_contains,
+            expect_text=args.browser_selector_swarm_expect_text,
+            save_raw_html=args.browser_selector_swarm_save_raw_html,
+        )
+        print(
+            json.dumps(
+                {
+                    "status": report["status"],
+                    "url": report["url"],
+                    "interactive_elements": report["summary"]["interactive_elements"],
+                    "intent": report["summary"]["intent"],
+                    "candidates": report["summary"]["candidates"],
+                    "validated": report["summary"]["validated"],
+                    "winner": report["validation"]["winner"],
+                    "report": report["artifacts"]["report"],
+                    "html_report": report["artifacts"]["html_report"],
+                    "screenshot": report["artifacts"]["screenshot"],
+                },
+                indent=2,
+                default=str,
+            )
+        )
+        if not report["validation"]["winner"]:
+            sys.exit(1)
         return
 
     # Serve modes
@@ -396,13 +487,14 @@ async def main():
             args.autoresearch_supervisor,
             args.autoresearch_supervisor_once,
             args.autoresearch_supervisor_plan,
+            args.browser_selector_swarm,
         ]
     ):
         print(
             f"Discovered {len(harness.test_classes)} test(s), "
             f"{len(harness.workflow_classes)} workflow(s). "
             "Use --run, --run-workflows, --agent, --serve, --rpa-memory-serve, "
-            "or --autoresearch-supervisor."
+            "--browser-selector-swarm, or --autoresearch-supervisor."
         )
 
 
