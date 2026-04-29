@@ -100,6 +100,7 @@ def create_memory_app(db_path: str = "./data/rpa_memory.db") -> FastAPI:
     @app.get("/api/search")
     async def search(
         query: Optional[str] = None,
+        q: Optional[str] = None,
         project: Optional[str] = None,
         type: Optional[str] = None,
         obs_type: Optional[str] = None,
@@ -108,7 +109,7 @@ def create_memory_app(db_path: str = "./data/rpa_memory.db") -> FastAPI:
         orderBy: str = "date_desc",
     ):
         return store.search(
-            query=query,
+            query=query if query is not None else q,
             project=project,
             result_type=type,
             obs_type=obs_type,

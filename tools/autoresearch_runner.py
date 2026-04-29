@@ -11,6 +11,7 @@ time while this tool judges the outcome.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import math
 import os
@@ -21,6 +22,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.error import URLError
@@ -103,6 +105,10 @@ class AutoresearchConfig:
     def prompt_path(self) -> Path:
         return self.session_dir / "codex_prompt.md"
 
+    @property
+    def dashboard_path(self) -> Path:
+        return self.session_dir / "autoresearch_dashboard.html"
+
 
 def main() -> int:
     args = parse_args()
@@ -123,8 +129,28 @@ def main() -> int:
     if args.once:
         return run_once(config)
 
-    if not any((args.init, args.next_prompt, args.heartbeat, args.once)):
-        print("Nothing to do. Use --init, --next-prompt, --heartbeat, or --once.")
+    if args.dashboard:
+        output_path = write_dashboard(config, args.dashboard_output)
+        print(output_path)
+
+    if args.serve_dashboard:
+        serve_dashboard(config, host=args.dashboard_host, port=args.dashboard_port)
+        return 0
+
+    if not any(
+        (
+            args.init,
+            args.next_prompt,
+            args.heartbeat,
+            args.once,
+            args.dashboard,
+            args.serve_dashboard,
+        )
+    ):
+        print(
+            "Nothing to do. Use --init, --next-prompt, --heartbeat, --once, "
+            "--dashboard, or --serve-dashboard."
+        )
     return 0
 
 
@@ -137,6 +163,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--next-prompt", action="store_true", help="Write a scoped Codex prompt")
     parser.add_argument("--heartbeat", action="store_true", help="Run heartbeat checks only")
     parser.add_argument("--once", action="store_true", help="Run one benchmark/check/log iteration")
+    parser.add_argument("--dashboard", action="store_true", help="Write an HTML dashboard snapshot")
+    parser.add_argument("--dashboard-output", default=None, help="Optional dashboard HTML path")
+    parser.add_argument(
+        "--serve-dashboard",
+        action="store_true",
+        help="Serve a live autoresearch dashboard over localhost",
+    )
+    parser.add_argument("--dashboard-host", default="127.0.0.1")
+    parser.add_argument("--dashboard-port", type=int, default=8791)
     return parser.parse_args()
 
 
@@ -488,6 +523,7 @@ def build_run_entry(
         checks_passed=(checks_result.passed if checks_result else False),
         previous=previous,
         direction=config.direction,
+        metric_name=config.metric_name,
     )
     run_number = len(previous) + 1
     entry = {
@@ -500,7 +536,18 @@ def build_run_entry(
         "metrics": metrics,
         "direction": config.direction,
         "status": status,
-        "confidence": compute_confidence(previous + [{"metric": primary_metric or 0, "status": status}], config.direction),
+        "confidence": compute_confidence(
+            previous
+            + [
+                {
+                    "metric": primary_metric or 0,
+                    "metric_name": config.metric_name,
+                    "status": status,
+                }
+            ],
+            config.direction,
+            config.metric_name,
+        ),
         "heartbeat": serialize_checks(heartbeat),
         "benchmark": command_summary(benchmark),
         "checks": command_summary(checks_result) if checks_result else None,
@@ -515,12 +562,13 @@ def decide_status(
     checks_passed: bool,
     previous: list[dict[str, Any]],
     direction: str,
+    metric_name: str | None = None,
 ) -> str:
     if not benchmark_passed or metric is None:
         return "crash"
     if not checks_passed:
         return "checks_failed"
-    best = best_kept_metric(previous, direction)
+    best = best_kept_metric(previous, direction, metric_name)
     if best is None:
         return "keep"
     if is_better(metric, best, direction):
@@ -528,11 +576,16 @@ def decide_status(
     return "discard"
 
 
-def best_kept_metric(entries: list[dict[str, Any]], direction: str) -> float | None:
+def best_kept_metric(
+    entries: list[dict[str, Any]],
+    direction: str,
+    metric_name: str | None = None,
+) -> float | None:
     kept = [
         float(entry["metric"])
         for entry in entries
         if entry.get("status") == "keep" and isinstance(entry.get("metric"), (int, float))
+        and (metric_name is None or entry.get("metric_name") in {None, metric_name})
     ]
     if not kept:
         return None
@@ -543,11 +596,16 @@ def is_better(metric: float, best: float, direction: str) -> bool:
     return metric < best if direction == "lower" else metric > best
 
 
-def compute_confidence(entries: list[dict[str, Any]], direction: str) -> float | None:
+def compute_confidence(
+    entries: list[dict[str, Any]],
+    direction: str,
+    metric_name: str | None = None,
+) -> float | None:
     values = [
         float(entry["metric"])
         for entry in entries
         if isinstance(entry.get("metric"), (int, float)) and float(entry["metric"]) > 0
+        and (metric_name is None or entry.get("metric_name") in {None, metric_name})
     ]
     if len(values) < 3:
         return None
@@ -638,6 +696,344 @@ def save_to_memory(config: AutoresearchConfig, entry: dict[str, Any]) -> None:
     except (OSError, URLError, TimeoutError):
         if config.memory_required:
             raise
+
+
+def dashboard_data(config: AutoresearchConfig) -> dict[str, Any]:
+    entries = read_jsonl(config.jsonl_path)
+    heartbeat = run_heartbeat(config)
+    statuses = {name: 0 for name in ("keep", "discard", "crash", "checks_failed")}
+    metric_names: set[str] = {config.metric_name}
+    for entry in entries:
+        status = str(entry.get("status", "unknown"))
+        statuses[status] = statuses.get(status, 0) + 1
+        for name in (entry.get("metrics") or {}).keys():
+            metric_names.add(str(name))
+
+    best = best_entry(entries, config.direction, config.metric_name)
+    latest = entries[-1] if entries else None
+    series = [
+        {
+            "run": entry.get("run"),
+            "status": entry.get("status"),
+            "metric": entry.get("metric"),
+            "metrics": entry.get("metrics") or {},
+            "confidence": entry.get("confidence"),
+            "timestamp": entry.get("timestamp"),
+            "lesson": entry.get("lesson", ""),
+        }
+        for entry in entries
+    ]
+    implementations = [
+        {
+            "run": entry.get("run"),
+            "status": entry.get("status"),
+            "lesson": entry.get("lesson", ""),
+            "benchmark": (entry.get("benchmark") or {}).get("command", ""),
+            "checks": (entry.get("checks") or {}).get("exit_code"),
+        }
+        for entry in reversed(entries[-20:])
+    ]
+    return {
+        "objective": config.objective,
+        "metric_name": config.metric_name,
+        "metric_unit": config.metric_unit,
+        "direction": config.direction,
+        "run_count": len(entries),
+        "statuses": statuses,
+        "best": best,
+        "latest": latest,
+        "metric_names": sorted(metric_names),
+        "series": series,
+        "implementations": implementations,
+        "heartbeat": serialize_checks(heartbeat),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "session_dir": str(config.session_dir),
+    }
+
+
+def best_entry(
+    entries: list[dict[str, Any]],
+    direction: str,
+    metric_name: str | None = None,
+) -> dict[str, Any] | None:
+    kept = [
+        entry for entry in entries
+        if entry.get("status") == "keep" and isinstance(entry.get("metric"), (int, float))
+        and (metric_name is None or entry.get("metric_name") in {None, metric_name})
+    ]
+    if not kept:
+        return None
+    return min(kept, key=lambda entry: float(entry["metric"])) if direction == "lower" else max(
+        kept,
+        key=lambda entry: float(entry["metric"]),
+    )
+
+
+def write_dashboard(config: AutoresearchConfig, output_path: str | None = None) -> Path:
+    path = Path(output_path) if output_path else config.dashboard_path
+    if not path.is_absolute():
+        path = (config.workdir / path).resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_dashboard_html(config, dashboard_data(config), live=False), encoding="utf-8")
+    return path
+
+
+def serve_dashboard(config: AutoresearchConfig, host: str = "127.0.0.1", port: int = 8791) -> None:
+    class DashboardHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path in {"/", "/index.html"}:
+                self._send_html(render_dashboard_html(config, dashboard_data(config), live=True))
+                return
+            if self.path == "/data.json":
+                self._send_json(dashboard_data(config))
+                return
+            self.send_error(404)
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def _send_html(self, body: str) -> None:
+            raw = body.encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "text/html; charset=utf-8")
+            self.send_header("content-length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def _send_json(self, payload: dict[str, Any]) -> None:
+            raw = json.dumps(redact_value(payload), default=str).encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "application/json; charset=utf-8")
+            self.send_header("cache-control", "no-store")
+            self.send_header("content-length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+    server = ThreadingHTTPServer((host, port), DashboardHandler)
+    print(f"http://{host}:{port}")
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+
+
+def render_dashboard_html(
+    config: AutoresearchConfig,
+    data: dict[str, Any],
+    live: bool = True,
+) -> str:
+    initial_json = json.dumps(redact_value(data), default=str).replace("</", "<\\/")
+    title = html.escape(f"Autoresearch - {config.metric_name}")
+    live_badge = "LIVE" if live else "SNAPSHOT"
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #11100d;
+      --panel: #1d1b16;
+      --panel-2: #29251e;
+      --line: #474033;
+      --ink: #f4efe4;
+      --muted: #b8ac98;
+      --accent: #d7ff57;
+      --good: #7bd88f;
+      --bad: #ff6b5f;
+      --warn: #ffc857;
+      --cold: #66d9ef;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background:
+        linear-gradient(135deg, rgba(215,255,87,.08), transparent 28rem),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 1px, transparent 1px 72px),
+        var(--bg);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0;
+    }}
+    main {{ width: min(1400px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; }}
+    header {{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+    }}
+    h1 {{ margin: 0; font-size: clamp(24px, 4vw, 54px); line-height: .95; max-width: 980px; }}
+    h2 {{ margin: 0 0 12px; font-size: 14px; color: var(--muted); text-transform: uppercase; }}
+    .badge {{
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 8px 10px;
+      font-size: 12px;
+      min-width: 86px;
+      text-align: center;
+    }}
+    .subline {{ margin-top: 12px; color: var(--muted); max-width: 980px; line-height: 1.5; }}
+    .grid {{ display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-top: 16px; }}
+    .panel {{ background: color-mix(in srgb, var(--panel) 92%, black); border: 1px solid var(--line); padding: 14px; min-width: 0; }}
+    .metric {{ grid-column: span 3; min-height: 118px; }}
+    .wide {{ grid-column: span 8; }}
+    .side {{ grid-column: span 4; }}
+    .full {{ grid-column: 1 / -1; }}
+    .value {{ font-size: clamp(28px, 5vw, 50px); line-height: 1; font-weight: 800; }}
+    .label {{ color: var(--muted); font-size: 12px; margin-top: 10px; }}
+    .good {{ color: var(--good); }} .bad {{ color: var(--bad); }} .warn {{ color: var(--warn); }} .cold {{ color: var(--cold); }}
+    .chart {{ height: 230px; width: 100%; border: 1px solid var(--line); background: #15130f; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
+    th, td {{ text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }}
+    th {{ color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }}
+    tr:last-child td {{ border-bottom: 0; }}
+    code, .pill {{ background: var(--panel-2); border: 1px solid var(--line); padding: 2px 6px; }}
+    .pill {{ display: inline-block; margin: 2px 4px 2px 0; }}
+    .heartbeat {{ display: grid; gap: 8px; }}
+    .beat {{ display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--line); padding: 9px; background: #15130f; }}
+    .muted {{ color: var(--muted); }}
+    .footer {{ margin-top: 14px; color: var(--muted); font-size: 11px; }}
+    @media (max-width: 900px) {{
+      header {{ grid-template-columns: 1fr; }}
+      .metric, .wide, .side {{ grid-column: 1 / -1; }}
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Autoresearch Control</h1>
+        <div id="objective" class="subline"></div>
+      </div>
+      <div class="badge">{live_badge}</div>
+    </header>
+    <section class="grid">
+      <div class="panel metric"><div id="runCount" class="value">0</div><div class="label">runs logged</div></div>
+      <div class="panel metric"><div id="bestMetric" class="value good">-</div><div id="bestLabel" class="label">best metric</div></div>
+      <div class="panel metric"><div id="latestStatus" class="value cold">-</div><div class="label">latest status</div></div>
+      <div class="panel metric"><div id="confidence" class="value warn">-</div><div class="label">confidence</div></div>
+      <div class="panel wide">
+        <h2>Metric Trace</h2>
+        <canvas id="chart" class="chart" width="1000" height="260"></canvas>
+        <div id="metricNames" class="footer"></div>
+      </div>
+      <div class="panel side">
+        <h2>Heartbeat</h2>
+        <div id="heartbeat" class="heartbeat"></div>
+      </div>
+      <div class="panel full">
+        <h2>Runs</h2>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr><th>Run</th><th>Status</th><th>Metric</th><th>Checks</th><th>Lesson</th><th>Time</th></tr></thead>
+            <tbody id="runs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <div id="generated" class="footer"></div>
+  </main>
+  <script>
+    let state = {initial_json};
+    const live = {str(live).lower()};
+    function fmt(value) {{
+      if (value === null || value === undefined || value === "") return "-";
+      if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(3);
+      return String(value);
+    }}
+    function statusClass(status) {{
+      if (status === "keep" || status === "ok") return "good";
+      if (status === "warn" || status === "checks_failed") return "warn";
+      if (status === "crash" || status === "fail") return "bad";
+      return "cold";
+    }}
+    function escapeHtml(value) {{
+      return String(value ?? "").replace(/[&<>"']/g, char => ({{
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }}[char]));
+    }}
+    function render(data) {{
+      state = data;
+      document.getElementById("objective").textContent = data.objective || "";
+      document.getElementById("runCount").textContent = fmt(data.run_count);
+      document.getElementById("bestMetric").textContent = fmt(data.best && data.best.metric);
+      document.getElementById("bestLabel").textContent = `best ${{data.metric_name || "metric"}} (${{data.direction || "higher"}})`;
+      const latest = data.latest || {{}};
+      const latestStatus = latest.status || "-";
+      const latestStatusEl = document.getElementById("latestStatus");
+      latestStatusEl.textContent = latestStatus;
+      latestStatusEl.className = `value ${{statusClass(latestStatus)}}`;
+      document.getElementById("confidence").textContent = fmt(latest.confidence);
+      document.getElementById("metricNames").innerHTML = (data.metric_names || []).map(name => `<span class="pill">${{escapeHtml(name)}}</span>`).join("");
+      document.getElementById("heartbeat").innerHTML = (data.heartbeat || []).map(item => `
+        <div class="beat"><strong>${{escapeHtml(item.name)}}</strong><span class="${{statusClass(item.status)}}">${{escapeHtml(item.status)}}</span></div>
+        ${{item.detail ? `<div class="muted">${{escapeHtml(item.detail)}}</div>` : ""}}
+      `).join("");
+      document.getElementById("runs").innerHTML = [...(data.series || [])].reverse().map(run => `
+        <tr>
+          <td>${{fmt(run.run)}}</td>
+          <td class="${{statusClass(run.status)}}">${{escapeHtml(run.status || "-")}}</td>
+          <td><code>${{fmt(run.metric)}}</code></td>
+          <td>${{run.status === "checks_failed" ? "failed" : "ok"}}</td>
+          <td>${{escapeHtml(run.lesson || "")}}</td>
+          <td class="muted">${{escapeHtml(run.timestamp || "")}}</td>
+        </tr>
+      `).join("");
+      document.getElementById("generated").textContent = `generated ${{data.generated_at || ""}} from ${{data.session_dir || ""}}`;
+      drawChart(data.series || [], data.direction || "higher");
+    }}
+    function drawChart(series, direction) {{
+      const canvas = document.getElementById("chart");
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width, height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#15130f"; ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "#474033"; ctx.lineWidth = 1;
+      for (let i = 1; i < 5; i++) {{
+        const y = (height / 5) * i;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }}
+      const points = series.filter(run => typeof run.metric === "number");
+      if (!points.length) return;
+      const values = points.map(run => run.metric);
+      const min = Math.min(...values), max = Math.max(...values);
+      const span = max - min || 1;
+      ctx.strokeStyle = "#d7ff57"; ctx.lineWidth = 3; ctx.beginPath();
+      points.forEach((run, index) => {{
+        const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * (width - 48) + 24;
+        const y = height - 24 - ((run.metric - min) / span) * (height - 48);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }});
+      ctx.stroke();
+      points.forEach((run, index) => {{
+        const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * (width - 48) + 24;
+        const y = height - 24 - ((run.metric - min) / span) * (height - 48);
+        ctx.fillStyle = run.status === "keep" ? "#7bd88f" : run.status === "discard" ? "#b8ac98" : "#ff6b5f";
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+      }});
+    }}
+    async function refresh() {{
+      if (!live) return;
+      try {{
+        const response = await fetch("/data.json", {{ cache: "no-store" }});
+        if (response.ok) render(await response.json());
+      }} catch (_err) {{}}
+    }}
+    render(state);
+    if (live) setInterval(refresh, 3000);
+  </script>
+</body>
+</html>
+"""
 
 
 def build_codex_prompt(config: AutoresearchConfig) -> str:

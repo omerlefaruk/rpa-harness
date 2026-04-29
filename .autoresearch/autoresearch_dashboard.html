@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autoresearch - artifact_hygiene_score</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #11100d;
+      --panel: #1d1b16;
+      --panel-2: #29251e;
+      --line: #474033;
+      --ink: #f4efe4;
+      --muted: #b8ac98;
+      --accent: #d7ff57;
+      --good: #7bd88f;
+      --bad: #ff6b5f;
+      --warn: #ffc857;
+      --cold: #66d9ef;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        linear-gradient(135deg, rgba(215,255,87,.08), transparent 28rem),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 1px, transparent 1px 72px),
+        var(--bg);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0;
+    }
+    main { width: min(1400px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: clamp(24px, 4vw, 54px); line-height: .95; max-width: 980px; }
+    h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); text-transform: uppercase; }
+    .badge {
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 8px 10px;
+      font-size: 12px;
+      min-width: 86px;
+      text-align: center;
+    }
+    .subline { margin-top: 12px; color: var(--muted); max-width: 980px; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; margin-top: 16px; }
+    .panel { background: color-mix(in srgb, var(--panel) 92%, black); border: 1px solid var(--line); padding: 14px; min-width: 0; }
+    .metric { grid-column: span 3; min-height: 118px; }
+    .wide { grid-column: span 8; }
+    .side { grid-column: span 4; }
+    .full { grid-column: 1 / -1; }
+    .value { font-size: clamp(28px, 5vw, 50px); line-height: 1; font-weight: 800; }
+    .label { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); } .cold { color: var(--cold); }
+    .chart { height: 230px; width: 100%; border: 1px solid var(--line); background: #15130f; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
+    tr:last-child td { border-bottom: 0; }
+    code, .pill { background: var(--panel-2); border: 1px solid var(--line); padding: 2px 6px; }
+    .pill { display: inline-block; margin: 2px 4px 2px 0; }
+    .heartbeat { display: grid; gap: 8px; }
+    .beat { display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--line); padding: 9px; background: #15130f; }
+    .muted { color: var(--muted); }
+    .footer { margin-top: 14px; color: var(--muted); font-size: 11px; }
+    @media (max-width: 900px) {
+      header { grid-template-columns: 1fr; }
+      .metric, .wide, .side { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Autoresearch Control</h1>
+        <div id="objective" class="subline"></div>
+      </div>
+      <div class="badge">SNAPSHOT</div>
+    </header>
+    <section class="grid">
+      <div class="panel metric"><div id="runCount" class="value">0</div><div class="label">runs logged</div></div>
+      <div class="panel metric"><div id="bestMetric" class="value good">-</div><div id="bestLabel" class="label">best metric</div></div>
+      <div class="panel metric"><div id="latestStatus" class="value cold">-</div><div class="label">latest status</div></div>
+      <div class="panel metric"><div id="confidence" class="value warn">-</div><div class="label">confidence</div></div>
+      <div class="panel wide">
+        <h2>Metric Trace</h2>
+        <canvas id="chart" class="chart" width="1000" height="260"></canvas>
+        <div id="metricNames" class="footer"></div>
+      </div>
+      <div class="panel side">
+        <h2>Heartbeat</h2>
+        <div id="heartbeat" class="heartbeat"></div>
+      </div>
+      <div class="panel full">
+        <h2>Runs</h2>
+        <div style="overflow:auto">
+          <table>
+            <thead><tr><th>Run</th><th>Status</th><th>Metric</th><th>Checks</th><th>Lesson</th><th>Time</th></tr></thead>
+            <tbody id="runs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <div id="generated" class="footer"></div>
+  </main>
+  <script>
+    let state = {"objective": "Improve RPA Harness reliability with measured, reversible changes.", "metric_name": "artifact_hygiene_score", "metric_unit": "", "direction": "higher", "run_count": 9, "statuses": {"keep": 9, "discard": 0, "crash": 0, "checks_failed": 0}, "best": {"benchmark": {"command": "bash .autoresearch/autoresearch.sh", "duration_seconds": 0.604, "exit_code": 0, "tail_output": "METRIC artifact_hygiene_score=16\nMETRIC default_cli_seconds=0.565\n", "timed_out": false}, "checks": {"command": "bash .autoresearch/autoresearch.checks.sh", "duration_seconds": 0.557, "exit_code": 0, "tail_output": "..............................................                           [100%]\n46 passed in 0.32s\n", "timed_out": false}, "confidence": null, "direction": "higher", "heartbeat": [{"detail": "", "name": "session_files", "status": "ok"}, {"detail": "", "name": "memory", "status": "ok"}, {"detail": "8/25", "name": "budget", "status": "ok"}, {"detail": "", "name": "git_scope", "status": "ok"}, {"detail": "", "name": "secret_scan", "status": "ok"}], "lesson": "Accepted measured result for artifact_hygiene_score: 16.0", "metric": 16.0, "metric_name": "artifact_hygiene_score", "metrics": {"artifact_hygiene_score": 16.0, "default_cli_seconds": 0.565}, "objective": "Improve RPA Harness reliability with measured, reversible changes.", "run": 9, "status": "keep", "timestamp": "2026-04-29T07:54:16.797127+00:00", "type": "run"}, "latest": {"benchmark": {"command": "bash .autoresearch/autoresearch.sh", "duration_seconds": 0.604, "exit_code": 0, "tail_output": "METRIC artifact_hygiene_score=16\nMETRIC default_cli_seconds=0.565\n", "timed_out": false}, "checks": {"command": "bash .autoresearch/autoresearch.checks.sh", "duration_seconds": 0.557, "exit_code": 0, "tail_output": "..............................................                           [100%]\n46 passed in 0.32s\n", "timed_out": false}, "confidence": null, "direction": "higher", "heartbeat": [{"detail": "", "name": "session_files", "status": "ok"}, {"detail": "", "name": "memory", "status": "ok"}, {"detail": "8/25", "name": "budget", "status": "ok"}, {"detail": "", "name": "git_scope", "status": "ok"}, {"detail": "", "name": "secret_scan", "status": "ok"}], "lesson": "Accepted measured result for artifact_hygiene_score: 16.0", "metric": 16.0, "metric_name": "artifact_hygiene_score", "metrics": {"artifact_hygiene_score": 16.0, "default_cli_seconds": 0.565}, "objective": "Improve RPA Harness reliability with measured, reversible changes.", "run": 9, "status": "keep", "timestamp": "2026-04-29T07:54:16.797127+00:00", "type": "run"}, "metric_names": ["agent_plan_safety_score", "artifact_hygiene_score", "autoresearch_test_passes", "capability_pass_rate", "default_cli_seconds", "failure_report_score", "memory_retrieval_score", "memory_search_alias_compatibility", "yaml_runner_api_action_lines"], "series": [{"run": 1, "status": "keep", "metric": 1.0, "metrics": {"capability_pass_rate": 1.0, "default_cli_seconds": 0.507}, "confidence": null, "timestamp": "2026-04-28T20:20:15.553436+00:00", "lesson": "Accepted measured result for capability_pass_rate: 1.0"}, {"run": 2, "status": "keep", "metric": 31.0, "metrics": {"autoresearch_test_passes": 31.0, "default_cli_seconds": 0.435}, "confidence": null, "timestamp": "2026-04-29T07:34:45.682993+00:00", "lesson": "Accepted measured result for autoresearch_test_passes: 31.0"}, {"run": 3, "status": "keep", "metric": 32.0, "metrics": {"autoresearch_test_passes": 32.0, "default_cli_seconds": 0.408}, "confidence": null, "timestamp": "2026-04-29T07:36:08.199313+00:00", "lesson": "Accepted measured result for autoresearch_test_passes: 32.0"}, {"run": 4, "status": "keep", "metric": 1.0, "metrics": {"default_cli_seconds": 0.459, "memory_search_alias_compatibility": 1.0}, "confidence": null, "timestamp": "2026-04-29T07:39:41.642703+00:00", "lesson": "Accepted measured result for memory_search_alias_compatibility: 1.0"}, {"run": 5, "status": "keep", "metric": 14.0, "metrics": {"default_cli_seconds": 0.484, "failure_report_score": 14.0}, "confidence": null, "timestamp": "2026-04-29T07:46:28.857918+00:00", "lesson": "Accepted measured result for failure_report_score: 14.0"}, {"run": 6, "status": "keep", "metric": 1.0, "metrics": {"default_cli_seconds": 0.477, "memory_retrieval_score": 1.0}, "confidence": null, "timestamp": "2026-04-29T07:49:15.657753+00:00", "lesson": "Accepted measured result for memory_retrieval_score: 1.0"}, {"run": 7, "status": "keep", "metric": 26.0, "metrics": {"default_cli_seconds": 0.727, "yaml_runner_api_action_lines": 26.0}, "confidence": null, "timestamp": "2026-04-29T07:51:23.192072+00:00", "lesson": "Accepted measured result for yaml_runner_api_action_lines: 26.0"}, {"run": 8, "status": "keep", "metric": 1.0, "metrics": {"agent_plan_safety_score": 1.0, "default_cli_seconds": 0.542}, "confidence": null, "timestamp": "2026-04-29T07:52:52.001375+00:00", "lesson": "Accepted measured result for agent_plan_safety_score: 1.0"}, {"run": 9, "status": "keep", "metric": 16.0, "metrics": {"artifact_hygiene_score": 16.0, "default_cli_seconds": 0.565}, "confidence": null, "timestamp": "2026-04-29T07:54:16.797127+00:00", "lesson": "Accepted measured result for artifact_hygiene_score: 16.0"}], "implementations": [{"run": 9, "status": "keep", "lesson": "Accepted measured result for artifact_hygiene_score: 16.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 8, "status": "keep", "lesson": "Accepted measured result for agent_plan_safety_score: 1.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 7, "status": "keep", "lesson": "Accepted measured result for yaml_runner_api_action_lines: 26.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 6, "status": "keep", "lesson": "Accepted measured result for memory_retrieval_score: 1.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 5, "status": "keep", "lesson": "Accepted measured result for failure_report_score: 14.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 4, "status": "keep", "lesson": "Accepted measured result for memory_search_alias_compatibility: 1.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 3, "status": "keep", "lesson": "Accepted measured result for autoresearch_test_passes: 32.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 2, "status": "keep", "lesson": "Accepted measured result for autoresearch_test_passes: 31.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}, {"run": 1, "status": "keep", "lesson": "Accepted measured result for capability_pass_rate: 1.0", "benchmark": "bash .autoresearch/autoresearch.sh", "checks": 0}], "heartbeat": [{"name": "session_files", "status": "ok", "detail": ""}, {"name": "memory", "status": "ok", "detail": ""}, {"name": "budget", "status": "ok", "detail": "9/25"}, {"name": "git_scope", "status": "ok", "detail": ""}, {"name": "secret_scan", "status": "ok", "detail": ""}], "generated_at": "2026-04-29T07:54:26.006160+00:00", "session_dir": "[REDACTED]"};
+    const live = false;
+    function fmt(value) {
+      if (value === null || value === undefined || value === "") return "-";
+      if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(3);
+      return String(value);
+    }
+    function statusClass(status) {
+      if (status === "keep" || status === "ok") return "good";
+      if (status === "warn" || status === "checks_failed") return "warn";
+      if (status === "crash" || status === "fail") return "bad";
+      return "cold";
+    }
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[char]));
+    }
+    function render(data) {
+      state = data;
+      document.getElementById("objective").textContent = data.objective || "";
+      document.getElementById("runCount").textContent = fmt(data.run_count);
+      document.getElementById("bestMetric").textContent = fmt(data.best && data.best.metric);
+      document.getElementById("bestLabel").textContent = `best ${data.metric_name || "metric"} (${data.direction || "higher"})`;
+      const latest = data.latest || {};
+      const latestStatus = latest.status || "-";
+      const latestStatusEl = document.getElementById("latestStatus");
+      latestStatusEl.textContent = latestStatus;
+      latestStatusEl.className = `value ${statusClass(latestStatus)}`;
+      document.getElementById("confidence").textContent = fmt(latest.confidence);
+      document.getElementById("metricNames").innerHTML = (data.metric_names || []).map(name => `<span class="pill">${escapeHtml(name)}</span>`).join("");
+      document.getElementById("heartbeat").innerHTML = (data.heartbeat || []).map(item => `
+        <div class="beat"><strong>${escapeHtml(item.name)}</strong><span class="${statusClass(item.status)}">${escapeHtml(item.status)}</span></div>
+        ${item.detail ? `<div class="muted">${escapeHtml(item.detail)}</div>` : ""}
+      `).join("");
+      document.getElementById("runs").innerHTML = [...(data.series || [])].reverse().map(run => `
+        <tr>
+          <td>${fmt(run.run)}</td>
+          <td class="${statusClass(run.status)}">${escapeHtml(run.status || "-")}</td>
+          <td><code>${fmt(run.metric)}</code></td>
+          <td>${run.status === "checks_failed" ? "failed" : "ok"}</td>
+          <td>${escapeHtml(run.lesson || "")}</td>
+          <td class="muted">${escapeHtml(run.timestamp || "")}</td>
+        </tr>
+      `).join("");
+      document.getElementById("generated").textContent = `generated ${data.generated_at || ""} from ${data.session_dir || ""}`;
+      drawChart(data.series || [], data.direction || "higher");
+    }
+    function drawChart(series, direction) {
+      const canvas = document.getElementById("chart");
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width, height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#15130f"; ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "#474033"; ctx.lineWidth = 1;
+      for (let i = 1; i < 5; i++) {
+        const y = (height / 5) * i;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+      const points = series.filter(run => typeof run.metric === "number");
+      if (!points.length) return;
+      const values = points.map(run => run.metric);
+      const min = Math.min(...values), max = Math.max(...values);
+      const span = max - min || 1;
+      ctx.strokeStyle = "#d7ff57"; ctx.lineWidth = 3; ctx.beginPath();
+      points.forEach((run, index) => {
+        const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * (width - 48) + 24;
+        const y = height - 24 - ((run.metric - min) / span) * (height - 48);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      points.forEach((run, index) => {
+        const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * (width - 48) + 24;
+        const y = height - 24 - ((run.metric - min) / span) * (height - 48);
+        ctx.fillStyle = run.status === "keep" ? "#7bd88f" : run.status === "discard" ? "#b8ac98" : "#ff6b5f";
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+    async function refresh() {
+      if (!live) return;
+      try {
+        const response = await fetch("/data.json", { cache: "no-store" });
+        if (response.ok) render(await response.json());
+      } catch (_err) {}
+    }
+    render(state);
+    if (live) setInterval(refresh, 3000);
+  </script>
+</body>
+</html>

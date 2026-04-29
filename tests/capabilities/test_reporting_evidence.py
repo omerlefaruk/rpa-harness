@@ -84,6 +84,8 @@ def test_failure_report_includes_repro_command_and_evidence_paths(tmp_path):
         "python main.py --run-yaml workflows/capabilities/local_api_read.yaml"
     )
     assert report["evidence"]["api_response"] == "api_response.json"
+    assert report["evidence"]["artifact_paths"] == ["api_response.json"]
+    assert report["last_successful_step"] is None
     assert (Path(report_path).parent / "artifacts" / "api_response.json").exists()
 
 

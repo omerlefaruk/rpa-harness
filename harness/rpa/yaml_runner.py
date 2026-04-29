@@ -398,14 +398,18 @@ class YamlWorkflowRunner:
                 headers=headers,
             )
 
+        context = self._api_response_context(response)
+        self._last_api_context = context
+        return context
+
+    def _api_response_context(self, response: Any) -> Dict[str, Any]:
         body = response.text
-        response_json = None
         try:
             response_json = response.json()
         except Exception:
             response_json = None
 
-        context = {
+        return {
             "status_code": response.status_code,
             "response_body": body,
             "response_json": response_json,
@@ -413,8 +417,6 @@ class YamlWorkflowRunner:
             "body_preview": redacted_preview(body, self._secrets.values(), max_chars=4096),
             "url": sanitize_url(str(response.url)),
         }
-        self._last_api_context = context
-        return context
 
     async def _execute_desktop_action(self, action_type: str, action: dict) -> Dict[str, Any]:
         driver = await self._get_desktop_driver()

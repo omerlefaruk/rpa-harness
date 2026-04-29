@@ -4,7 +4,7 @@
 Improve RPA Harness reliability with measured, reversible changes.
 
 ## Primary Metric
-- `capability_pass_rate` (unitless, higher is better)
+- `artifact_hygiene_score` (unitless, higher is better)
 
 ## How To Run
 - Benchmark: `bash .autoresearch/autoresearch.sh`
@@ -14,6 +14,10 @@ Improve RPA Harness reliability with measured, reversible changes.
 - `tools/`
 - `tests/`
 - `docs/`
+- `harness/memory/`
+- `harness/reporting/`
+- `harness/rpa/`
+- `harness/ai/`
 - `.autoresearch/`
 
 ## Off Limits

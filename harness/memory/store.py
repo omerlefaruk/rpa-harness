@@ -506,8 +506,25 @@ class MemoryStore:
         sql = "SELECT * FROM observations"
         if where:
             sql += " WHERE " + " AND ".join(where)
-        sql += " ORDER BY created_at_epoch " + ("ASC" if order_by == "date_asc" else "DESC")
+        order_params: list[Any] = []
+        if query and order_by != "date_asc":
+            sql += """
+            ORDER BY
+                CASE
+                    WHEN title LIKE ? THEN 0
+                    WHEN concepts LIKE ? THEN 1
+                    WHEN narrative LIKE ? THEN 2
+                    WHEN text LIKE ? THEN 3
+                    ELSE 4
+                END,
+                created_at_epoch DESC
+            """
+            like = f"%{query}%"
+            order_params.extend([like, like, like, like])
+        else:
+            sql += " ORDER BY created_at_epoch " + ("ASC" if order_by == "date_asc" else "DESC")
         sql += " LIMIT ? OFFSET ?"
+        params.extend(order_params)
         params.extend([limit, offset])
         return [self._observation_index_dict(row) for row in self._conn.execute(sql, params).fetchall()]
 

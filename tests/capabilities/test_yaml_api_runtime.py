@@ -259,3 +259,21 @@ async def test_api_failure_report_has_sanitized_redacted_response_preview(tmp_pa
     assert api_response["headers"]["set-cookie"] == "[REDACTED]"
     assert "real-token-for-redaction" not in report_path.read_text()
     assert "real-token-for-redaction" not in api_response_path.read_text()
+
+
+def test_api_response_context_sanitizes_url_headers_and_body(monkeypatch):
+    monkeypatch.setenv("CAPABILITY_API_TOKEN", "real-token-for-redaction")
+    runner = YamlWorkflowRunner()
+    runner._secrets = {"api_token": "real-token-for-redaction"}
+    response = FakeResponse(
+        status_code=500,
+        text='{"error": "boom", "echo": "real-token-for-redaction"}',
+        url="http://127.0.0.1:8765/read?token=real-token-for-redaction&debug=true",
+    )
+
+    context = runner._api_response_context(response)
+
+    assert context["status_code"] == 500
+    assert context["url"] == "http://127.0.0.1:8765/read"
+    assert context["response_headers"]["set-cookie"] == "[REDACTED]"
+    assert "real-token-for-redaction" not in context["body_preview"]

@@ -65,6 +65,7 @@ class FailureReport:
         repro_command: str = "",
     ) -> str:
         run_id = self._current_run_id or self.start_run(workflow_id)
+        normalized_evidence = self._normalize_evidence(evidence or {})
 
         report = {
             "workflow_id": workflow_id,
@@ -77,9 +78,9 @@ class FailureReport:
             "error_type": error_type,
             "error_message": error_message,
             "error_category": error_category,
-            "last_successful_step": last_successful_step,
+            "last_successful_step": last_successful_step or None,
             "verification_failures": verification_failures or [],
-            "evidence": evidence or {},
+            "evidence": normalized_evidence,
             "suspected_causes": [],
             "recommended_patch": None,
             "repro_command": repro_command,
@@ -94,6 +95,17 @@ class FailureReport:
             report_path.write_text(json.dumps(redact_value(report), indent=2, default=str))
 
         return str(report_path) if report_path else ""
+
+    def _normalize_evidence(self, evidence: Dict[str, Any]) -> Dict[str, Any]:
+        normalized = dict(evidence)
+        artifact_paths = list(normalized.get("artifact_paths") or [])
+        for key in ("api_response", "console_logs", "network_logs"):
+            value = normalized.get(key)
+            if isinstance(value, str) and value and value not in artifact_paths:
+                artifact_paths.append(value)
+        if artifact_paths:
+            normalized["artifact_paths"] = artifact_paths
+        return normalized
 
     def log_entry(self, level: str, step: str, message: str, extra: dict = None):
         if not self._run_dir:

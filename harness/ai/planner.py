@@ -67,6 +67,26 @@ class Plan:
             and all(d in completed_step_ids for d in s.depends_on)
         ]
 
+    def safety_issues(self) -> List[str]:
+        issues: List[str] = []
+        for step in self.steps:
+            if step.is_critical and step.action not in {"verify", "wait", "done"}:
+                if not step.expected_result.strip():
+                    issues.append(f"step {step.id} missing expected_result")
+            if _uses_coordinate_first_args(step.tool_args):
+                issues.append(f"step {step.id} uses coordinate-first tool args")
+        if self.steps and self.steps[-1].action != "done":
+            issues.append("plan missing final done step")
+        return issues
+
+    @property
+    def safety_score(self) -> float:
+        if not self.steps:
+            return 0.0
+        possible = len(self.steps) + 1
+        issues = min(len(self.safety_issues()), possible)
+        return round((possible - issues) / possible, 3)
+
 
 class TaskPlanner:
     def __init__(self, config: Optional[HarnessConfig] = None, tools_description: str = ""):
@@ -141,6 +161,7 @@ Rules:
                 risk_assessment=data.get("risk_assessment", ""),
                 estimated_duration=data.get("estimated_duration", ""),
             )
+            plan = self._harden_plan(plan)
 
             self.logger.info(f"Plan created: {plan.step_count} steps, risk={plan.risk_assessment}")
             return plan
@@ -158,4 +179,31 @@ Rules:
             PlanStep(id=3, action="done", description=f"Complete: {task}",
                      expected_result="Task finished", max_retries=1),
         ]
-        return Plan(task=task, steps=steps, risk_assessment="low")
+        return self._harden_plan(Plan(task=task, steps=steps, risk_assessment="low"))
+
+    def _harden_plan(self, plan: Plan) -> Plan:
+        for step in plan.steps:
+            if step.is_critical and not step.expected_result.strip():
+                step.expected_result = f"{step.description} completed"
+        if plan.steps and plan.steps[-1].action != "done":
+            plan.steps.append(
+                PlanStep(
+                    id=max(step.id for step in plan.steps) + 1,
+                    action="done",
+                    description=f"Complete: {plan.task}",
+                    expected_result="Task finished",
+                    depends_on=[plan.steps[-1].id],
+                    is_critical=True,
+                )
+            )
+        plan.metadata["safety_score"] = plan.safety_score
+        plan.metadata["safety_issues"] = plan.safety_issues()
+        return plan
+
+
+def _uses_coordinate_first_args(tool_args: Dict[str, Any]) -> bool:
+    if not isinstance(tool_args, dict):
+        return False
+    has_coordinates = "coordinates" in tool_args or {"x", "y"}.issubset(tool_args.keys())
+    has_selector = any(key in tool_args for key in ("selector", "locator", "automation_id", "name"))
+    return has_coordinates and not has_selector

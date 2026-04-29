@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 
 import httpx
 import pytest
+from fastapi.testclient import TestClient
 
 
 def _memory_api():
@@ -70,6 +71,74 @@ def test_memory_server_imports_and_builds_app_with_current_dependency_stack():
     app = create_memory_app(":memory:")
 
     assert app.title == "RPA Memory"
+
+
+def test_memory_server_search_accepts_q_alias_for_query_parameter():
+    from harness.memory.server import create_memory_app
+
+    client = TestClient(create_memory_app(":memory:"))
+    client.post(
+        "/api/memory/save",
+        json={
+            "project": "rpa-harness",
+            "title": "Unique memory alias marker",
+            "text": "needle-q-alias-token",
+        },
+    )
+
+    aliased = client.get(
+        "/api/search",
+        params={"q": "needle-q-alias-token", "project": "rpa-harness", "limit": 5},
+    )
+    unmatched = client.get(
+        "/api/search",
+        params={"q": "definitely-not-present", "project": "rpa-harness", "limit": 5},
+    )
+
+    assert aliased.status_code == 200
+    assert [item["title"] for item in aliased.json()["results"]["observations"]] == [
+        "Unique memory alias marker"
+    ]
+    assert unmatched.json()["results"]["observations"] == []
+
+
+def test_memory_search_ranks_title_match_before_newer_body_match():
+    from harness.memory.store import MemoryStore
+
+    store = MemoryStore(":memory:")
+    try:
+        target = store.save_manual_memory(
+            title="API status_code recovery pattern",
+            text="Use retry evidence when api status_code recovery appears.",
+            project="rpa-harness",
+        )
+        noisy = store.save_manual_memory(
+            title="Recent noisy api note",
+            text="api status_code recovery words appear here but this is less specific.",
+            project="rpa-harness",
+        )
+        store._conn.execute(
+            "UPDATE observations SET created_at_epoch = ? WHERE id = ?",
+            (1000, target["id"]),
+        )
+        store._conn.execute(
+            "UPDATE observations SET created_at_epoch = ? WHERE id = ?",
+            (2000, noisy["id"]),
+        )
+        store._conn.commit()
+
+        result = store.search(
+            query="api status_code recovery",
+            project="rpa-harness",
+            limit=2,
+        )
+
+        assert [item["title"] for item in result["results"]["observations"]] == [
+            "API status_code recovery pattern",
+            "Recent noisy api note",
+        ]
+    finally:
+        store.close()
 
 
 @pytest.mark.asyncio
