@@ -28,6 +28,7 @@ def test_generated_artifact_paths_are_ignored_by_default():
         ".autoresearch/worktrees/",
         ".autoresearch/supervisor.jsonl",
         ".autoresearch/supervisor_plan.md",
+        ".autoresearch/review.md",
         ".autoresearch/review.json",
         ".autoresearch/autoresearch.learnings.md",
     }
