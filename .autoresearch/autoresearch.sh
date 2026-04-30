@@ -39,6 +39,7 @@ required = {
     ".env.local",
     "playwright-report/",
     "test-results/",
+    ".mypy_cache/",
     ".pytest_cache/",
     ".ruff_cache/",
     ".autoresearch/worktrees/",
