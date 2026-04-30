@@ -25,6 +25,7 @@ def test_generated_artifact_paths_are_ignored_by_default():
         "playwright-report/",
         "test-results/",
         ".pytest_cache/",
+        ".ruff_cache/",
         ".autoresearch/worktrees/",
         ".autoresearch/supervisor.jsonl",
         ".autoresearch/supervisor_plan.md",
