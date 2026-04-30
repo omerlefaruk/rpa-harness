@@ -27,6 +27,7 @@ def test_generated_artifact_paths_are_ignored_by_default():
         ".pytest_cache/",
         ".autoresearch/worktrees/",
         ".autoresearch/supervisor.jsonl",
+        ".autoresearch/review.json",
         ".autoresearch/autoresearch.learnings.md",
     }
 

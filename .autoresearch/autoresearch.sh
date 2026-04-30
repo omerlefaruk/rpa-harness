@@ -42,6 +42,7 @@ required = {
     ".pytest_cache/",
     ".autoresearch/worktrees/",
     ".autoresearch/supervisor.jsonl",
+    ".autoresearch/review.json",
     ".autoresearch/autoresearch.learnings.md",
 }
 score = sum(1 for pattern in required if pattern in patterns)
