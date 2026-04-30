@@ -41,6 +41,7 @@ required = {
     "test-results/",
     ".autoresearch/worktrees/",
     ".autoresearch/supervisor.jsonl",
+    ".autoresearch/autoresearch.learnings.md",
 }
 score = sum(1 for pattern in required if pattern in patterns)
 print(f"METRIC artifact_hygiene_score={score}")
