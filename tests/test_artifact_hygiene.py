@@ -24,6 +24,7 @@ def test_generated_artifact_paths_are_ignored_by_default():
         ".env.local",
         "playwright-report/",
         "test-results/",
+        ".venv/",
         ".mypy_cache/",
         ".pytest_cache/",
         ".ruff_cache/",
