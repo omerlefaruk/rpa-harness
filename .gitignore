@@ -1,0 +1,66 @@
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Data files
+data/*.xlsx
+data/*.csv
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite-*
+
+# Reports
+reports/
+runs/*
+!runs/.gitkeep
+screenshots/
+downloads/
+logs/
+.autoresearch/worktrees/
+.autoresearch/supervisor.jsonl
+.autoresearch/supervisor_plan.md
+.autoresearch/review.md
+.autoresearch/review.json
+.autoresearch/autoresearch.learnings.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Playwright
+playwright-report/
+test-results/
+
+# Mypy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Pytest
+.pytest_cache/
+.pytest_tmp/
+.autoresearch/tech_radar.state.json
+.autoresearch/tech_radar.jsonl
+.autoresearch/tech_radar_candidates.md
+.autoresearch/autoresearch.jsonl
+.autoresearch/autoresearch_dashboard.html
+.autoresearch/codex_prompt.md

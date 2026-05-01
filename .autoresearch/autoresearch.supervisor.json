@@ -1,0 +1,83 @@
+{
+  "interval_seconds": 3600,
+  "max_cycles": null,
+  "session_id": "sovereign",
+  "base_branch": "main",
+  "branch_prefix": "autoresearch",
+  "worktree_root": ".autoresearch/worktrees",
+  "git_binary": "/Users/rau/bin/codex-git-proxy",
+  "agent_command": "/Applications/Codex.app/Contents/Resources/codex exec --full-auto --cd . -",
+  "review_command": "/Applications/Codex.app/Contents/Resources/codex exec review --uncommitted --full-auto --output-last-message .autoresearch/review.md",
+  "post_merge_command": "bash .autoresearch/autoresearch.checks.sh",
+  "autonomy_level": "free",
+  "mutation_scope": "repository",
+  "require_review": false,
+  "auto_merge": true,
+  "push": true,
+  "git_user_name": "omerlefaruk",
+  "git_user_email": "23411283+omerlefaruk@users.noreply.github.com",
+  "memory_url": "http://127.0.0.1:37777",
+  "memory_required": false,
+  "min_confidence": null,
+  "max_artifact_bytes": 536870912,
+  "max_recent_rejections": 3,
+  "improvement_scouts": {
+    "enabled": true,
+    "max_parallel": 4,
+    "agents": [
+      {
+        "name": "code_explorer",
+        "focus": "Search the whole repository for reliability, maintainability, speed, evidence-quality, or autonomy improvements.",
+        "paths": ["harness/", "tools/", "tests/", "docs/", "scripts/", "subagents/", "workflows/", "config/", ".autoresearch/", ".agents/", "main.py", "README.md", "pyproject.toml"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 240
+      },
+      {
+        "name": "failure_analyst",
+        "focus": "Inspect recent runs, failure reports, autoresearch audit entries, memory-facing code, and workflow tests for recurring failure classes.",
+        "paths": ["runs/", ".autoresearch/", "harness/", "tests/", "workflows/"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 240
+      },
+      {
+        "name": "speed_optimizer",
+        "focus": "Find low-risk implementation and evaluation speed improvements without weakening correctness, evidence, or redaction.",
+        "paths": ["harness/", "tools/", "tests/", ".autoresearch/", "main.py"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 240
+      },
+      {
+        "name": "tech_radar_adopter",
+        "focus": "Use technology-radar candidates to propose concrete adoption, rejection, benchmarking, documentation, or integration changes.",
+        "paths": [".autoresearch/", "tools/", "docs/", "harness/", "tests/", "pyproject.toml", "requirements.txt"],
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "medium",
+        "timeout_seconds": 240
+      }
+    ]
+  },
+  "allowed_paths": [
+    "harness/",
+    "tools/",
+    "tests/",
+    "docs/",
+    "scripts/",
+    "subagents/",
+    "workflows/",
+    "config/",
+    ".autoresearch/",
+    ".agents/",
+    "main.py",
+    "README.md",
+    "PLAN.md",
+    "SKILL.md",
+    "AGENTS.md",
+    "pyproject.toml",
+    "requirements.txt",
+    ".gitignore",
+    ".gitattributes"
+  ]
+}

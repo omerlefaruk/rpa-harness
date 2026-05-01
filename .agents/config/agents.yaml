@@ -1,0 +1,54 @@
+# Subagent model assignments for RPA Harness
+models:
+  fast:
+    provider: openai-compatible
+    model: gpt-4o-mini
+    temperature: 0.1
+    max_tokens: 4000
+
+  powerful:
+    provider: openai-compatible
+    model: gpt-4o
+    temperature: 0.2
+    max_tokens: 8000
+
+  vision:
+    provider: openai-compatible
+    model: gpt-4o
+    temperature: 0.1
+    max_tokens: 4000
+
+subagents:
+  explorer:
+    model: fast
+    timeout_seconds: 30
+    max_parallel: 4
+    description: "File reading, codebase search, information gathering"
+
+  selector:
+    model: fast
+    timeout_seconds: 60
+    max_parallel: 2
+    description: "Browser reconnaissance — navigate, inspect DOM, discover selectors"
+    skills: ["playwright-automation"]
+
+  uia_tree:
+    model: fast
+    timeout_seconds: 60
+    max_parallel: 1
+    description: "Windows UIA tree walking and element naming"
+    skills: ["windows-ui-automation"]
+
+  planner:
+    model: powerful
+    timeout_seconds: 120
+    max_parallel: 1
+    description: "Task decomposition and dependency ordering"
+    skills: ["agent-delegation"]
+
+  memory:
+    model: fast
+    timeout_seconds: 30
+    max_parallel: 2
+    description: "Memory search for past selectors, workflows, and error patterns"
+    skills: ["memory-search"]
