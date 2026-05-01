@@ -1,6 +1,7 @@
 import pytest
+from fastapi.testclient import TestClient
 
-from harness.reporting.dashboard import serve_dashboard
+from harness.reporting.dashboard import create_dashboard, read_jsonl_tail, serve_dashboard
 
 
 @pytest.mark.asyncio
@@ -36,3 +37,30 @@ async def test_serve_dashboard_awaits_uvicorn_server(monkeypatch):
         "server_config": events["server_config"],
         "served": True,
     }
+
+
+def test_dashboard_status_reads_supervisor_events(tmp_path):
+    session_dir = tmp_path / ".autoresearch"
+    session_dir.mkdir()
+    (session_dir / "supervisor.jsonl").write_text(
+        '{"status":"experiment_rejected","timestamp":"2026-05-01T12:00:00Z"}\n',
+        encoding="utf-8",
+    )
+    app = create_dashboard(root_dir=tmp_path)
+    client = TestClient(app)
+
+    response = client.get("/api/autoresearch/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["supervisor"]["latest"]["status"] == "experiment_rejected"
+    assert "git" in payload
+
+
+def test_read_jsonl_tail_skips_invalid_lines(tmp_path):
+    path = tmp_path / "events.jsonl"
+    path.write_text('{"status":"ok"}\nnot-json\n{"status":"fail"}\n', encoding="utf-8")
+
+    entries = read_jsonl_tail(path, limit=3)
+
+    assert [entry["status"] for entry in entries] == ["ok", "fail"]

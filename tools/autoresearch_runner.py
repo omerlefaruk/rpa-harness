@@ -16,6 +16,7 @@ import json
 import math
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -204,8 +205,12 @@ def load_config(config_path: str | None, workdir: Path) -> AutoresearchConfig:
         metric_name=data.get("metric_name", "capability_pass_rate"),
         metric_unit=data.get("metric_unit", ""),
         direction=data.get("direction", "higher"),
-        benchmark_command=data.get("benchmark_command", "bash .autoresearch/autoresearch.sh"),
-        checks_command=data.get("checks_command", "bash .autoresearch/autoresearch.checks.sh"),
+        benchmark_command=resolve_bash_command(
+            data.get("benchmark_command", "bash .autoresearch/autoresearch.sh")
+        ),
+        checks_command=resolve_bash_command(
+            data.get("checks_command", "bash .autoresearch/autoresearch.checks.sh")
+        ),
         timeout_seconds=int(data.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)),
         checks_timeout_seconds=int(
             data.get("checks_timeout_seconds", DEFAULT_CHECKS_TIMEOUT_SECONDS)
@@ -215,6 +220,29 @@ def load_config(config_path: str | None, workdir: Path) -> AutoresearchConfig:
         memory_required=bool(data.get("memory_required", False)),
         allowed_paths=list(data.get("allowed_paths", ["tools/", "tests/", "docs/"])),
     )
+
+
+def resolve_bash_command(command: str) -> str:
+    if os.name != "nt" or not command.startswith("bash "):
+        return command
+    bash = find_bash()
+    if not bash:
+        return command
+    return subprocess.list2cmdline([bash, *command.split()[1:]])
+
+
+def find_bash() -> str | None:
+    env_bash = os.getenv("AUTORESEARCH_BASH")
+    if env_bash:
+        return env_bash
+    candidates = [
+        Path(os.getenv("ProgramFiles", "C:/Program Files")) / "Git" / "bin" / "bash.exe",
+        Path(os.getenv("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Git" / "bin" / "bash.exe",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return shutil.which("bash")
 
 
 def init_session(config: AutoresearchConfig, force: bool = False) -> None:
