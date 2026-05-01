@@ -236,6 +236,17 @@ def test_run_improvement_scouts_disabled_reports_each_agent(tmp_path):
     assert results[0]["status"] == "disabled"
 
 
+def test_audit_progress_writes_live_supervisor_event(tmp_path):
+    config = _supervisor_config(tmp_path)
+
+    supervisor.audit_progress(config, "running:scouts", "Running scouts.", {"candidate_count": 2})
+
+    entries = supervisor.read_supervisor_audit(config.audit_path)
+    assert entries[0]["type"] == "supervisor_progress"
+    assert entries[0]["status"] == "running:scouts"
+    assert entries[0]["candidate_count"] == 2
+
+
 def test_run_improvement_scouts_unavailable_keeps_cycle_deterministic(tmp_path, monkeypatch):
     config = _supervisor_config(tmp_path)
     config.scout_enabled = True

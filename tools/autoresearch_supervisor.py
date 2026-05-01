@@ -475,6 +475,7 @@ def run_daemon(config: SupervisorConfig) -> int:
 
 def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
     autoresearch_config = load_config_for_supervisor(config)
+    audit_progress(config, "running:heartbeat", "Running supervisor heartbeat checks.")
     heartbeat = run_supervisor_heartbeat(config, autoresearch_config)
     hard_failures = [check for check in heartbeat if check["status"] == "fail"]
     if hard_failures:
@@ -485,8 +486,20 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         )
 
     candidates = discover_improvements(config, autoresearch_config)
+    audit_progress(
+        config,
+        "running:scouts",
+        f"Running {len(config.scout_agents)} read-only scout agents.",
+        {"candidate_count": len(candidates)},
+    )
     scout_results = run_improvement_scouts(config, autoresearch_config, candidates)
     candidates = merge_scout_candidates(candidates, scout_results)
+    audit_progress(
+        config,
+        "running:prompt",
+        "Building supervisor prompt from candidates and scout output.",
+        {"candidate_count": len(candidates)},
+    )
     prompt = build_supervisor_prompt(
         config,
         autoresearch_config,
@@ -512,6 +525,7 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         )
 
     worktree_result = ensure_worktree(config)
+    audit_progress(config, "running:worktree", "Preparing isolated worktree.")
     if not worktree_result.passed:
         return audit_and_return(
             config,
@@ -528,6 +542,7 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         )
 
     sync_autoresearch_files(config)
+    audit_progress(config, "running:agent", "Running coding agent in isolated worktree.")
     agent_result = run_prompt_command(config.agent_command, config.worktree_path, prompt, 1800)
     if not agent_result.passed:
         return reset_worktree_and_audit(
@@ -543,6 +558,7 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         candidates,
         agent_manifest=agent_manifest,
     )
+    audit_progress(config, "running:benchmark", "Running deterministic autoresearch benchmark.")
     experiment_result = run_command(
         shell_join([sys.executable, "tools/autoresearch_runner.py", "--once"]),
         config.worktree_path,
@@ -570,6 +586,7 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         )
 
     gate = integration_gate(config, autoresearch_config)
+    audit_progress(config, "running:gate", "Running integration gate.")
     if gate["status"] != "ok":
         return reset_worktree_and_audit(config, autoresearch_config, gate)
 
@@ -581,6 +598,7 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         review = write_skipped_review_report(config)
 
     commit_result = commit_worktree(config, latest_entry)
+    audit_progress(config, "running:commit", "Committing accepted worktree changes.")
     if not commit_result.passed:
         return reset_worktree_and_audit(
             config,
@@ -608,6 +626,7 @@ def run_supervisor_cycle(config: SupervisorConfig) -> dict[str, Any]:
         )
 
     pre_merge_sha = git_output(config.git_binary, ["rev-parse", config.base_branch], config.workdir)
+    audit_progress(config, "running:merge", "Fast-forwarding accepted commit into main.")
     merge_result = merge_to_main(config)
     if not merge_result.passed:
         return audit_and_return(
@@ -1768,6 +1787,27 @@ def audit_and_return(
     run_hook(config, "after", entry)
     save_to_memory(autoresearch_config, memory_entry_for_supervisor(entry))
     return redact_value(entry)
+
+
+def audit_progress(
+    config: SupervisorConfig,
+    status: str,
+    detail: str,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    entry = {
+        "type": "supervisor_progress",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "session_id": config.session_id,
+        "branch": config.branch_name,
+        "worktree": str(config.worktree_path),
+        "status": status,
+        "detail": detail,
+        **(extra or {}),
+    }
+    config.session_dir.mkdir(parents=True, exist_ok=True)
+    with config.audit_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(redact_value(entry), sort_keys=True) + "\n")
 
 
 def memory_entry_for_supervisor(entry: dict[str, Any]) -> dict[str, Any]:
