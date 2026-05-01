@@ -145,7 +145,7 @@ def start_autoresearch_once(root_path: Path) -> subprocess.Popen[str]:
     env.setdefault("PYTHONIOENCODING", "utf-8")
     RUN_ONCE_STARTED_AT = time.time()
     RUN_ONCE_PROCESS = subprocess.Popen(
-        [sys.executable, "main.py", "--self-improve-once"],
+        [sys.executable, "-u", "main.py", "--self-improve-once"],
         cwd=root_path,
         text=True,
         encoding="utf-8",
