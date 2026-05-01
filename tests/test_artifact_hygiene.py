@@ -8,6 +8,7 @@ def test_generated_artifact_paths_are_ignored_by_default():
     patterns = set((repo / ".gitignore").read_text(encoding="utf-8").splitlines())
 
     required_patterns = {
+        "__pycache__/",
         "reports/",
         "runs/*",
         "!runs/.gitkeep",

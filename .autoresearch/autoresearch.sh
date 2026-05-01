@@ -23,6 +23,7 @@ start = float("$start")
 end = float("$end")
 patterns = set(Path(".gitignore").read_text().splitlines())
 required = {
+    "__pycache__/",
     "reports/",
     "runs/*",
     "!runs/.gitkeep",
