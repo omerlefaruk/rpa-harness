@@ -61,6 +61,9 @@ class AutomationTestCase:
         self.config = config
         self.result = TestResult(name=self.name)
         self._step_index = 0
+        self._step_records: List[dict] = []
+        self._current_step: Optional[dict] = None
+        self._last_successful_step: Optional[dict] = None
         self._skipped = False
 
     async def setup(self):
@@ -73,12 +76,37 @@ class AutomationTestCase:
         pass
 
     def step(self, description: str):
+        self._mark_current_step("passed")
         self._step_index += 1
+        self._current_step = {"index": self._step_index, "description": description}
+        self._step_records.append({**self._current_step, "status": "running"})
+        self._sync_step_metadata()
         msg = f"Step {self._step_index}: {description}"
         self.result.logs.append(msg)
         return self._step_index
 
+    def _mark_current_step(self, status: str):
+        if not self._current_step:
+            return
+        for record in reversed(self._step_records):
+            if record["index"] == self._current_step["index"]:
+                record["status"] = status
+                break
+        if status == "passed":
+            self._last_successful_step = dict(self._current_step)
+        elif status == "failed":
+            self.result.metadata["failed_step"] = dict(self._current_step)
+        self._sync_step_metadata()
+
+    def _sync_step_metadata(self):
+        self.result.metadata["steps"] = [dict(record) for record in self._step_records]
+        self.result.metadata["current_step"] = dict(self._current_step) if self._current_step else None
+        self.result.metadata["last_successful_step"] = (
+            dict(self._last_successful_step) if self._last_successful_step else None
+        )
+
     def skip(self, reason: str):
+        self._mark_current_step("skipped")
         self._skipped = True
         self.result.status = TestStatus.SKIPPED
         self.result.logs.append(f"SKIPPED: {reason}")
@@ -91,6 +119,7 @@ class AutomationTestCase:
     async def _execute(self) -> TestResult:
         self.result.start_time = datetime.now()
         self.result.status = TestStatus.RUNNING
+        self._sync_step_metadata()
 
         if self._skipped:
             self.result.end_time = datetime.now()
@@ -100,8 +129,11 @@ class AutomationTestCase:
             await self.setup()
             if not self._skipped:
                 await self.run()
-                self.result.status = TestStatus.PASSED
+                if not self._skipped:
+                    self._mark_current_step("passed")
+                    self.result.status = TestStatus.PASSED
         except Exception as e:
+            self._mark_current_step("failed")
             self.result.status = TestStatus.FAILED
             self.result.error_message = str(e)
             self.result.stack_trace = traceback.format_exc()

@@ -45,6 +45,77 @@ class HelperOnly:
     assert [test.name for test in discovered] == ["discovered_capability"]
 
 
+def test_discovery_supports_dataclass_helpers_with_future_annotations(tmp_path):
+    test_file = tmp_path / "dataclass_tests.py"
+    test_file.write_text(
+        """
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from harness.test_case import AutomationTestCase
+
+
+@dataclass
+class DataclassHelper:
+    label: Optional[str] = None
+    values: List[str] = field(default_factory=list)
+
+
+class DataclassCapabilityTest(AutomationTestCase):
+    name = "dataclass_capability"
+    tags = ["capability", "discovery"]
+
+    async def run(self):
+        self.step(DataclassHelper(label="ok").label or "missing")
+""",
+        encoding="utf-8",
+    )
+    harness = AutomationHarness(_config(tmp_path))
+
+    discovered = harness.discover_tests(str(tmp_path))
+
+    assert [test.name for test in discovered] == ["dataclass_capability"]
+
+
+def test_workflow_discovery_supports_dataclass_helpers_with_future_annotations(tmp_path):
+    workflow_file = tmp_path / "dataclass_workflows.py"
+    workflow_file.write_text(
+        """
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import ClassVar
+
+from harness.rpa.workflow import RPAWorkflow
+
+
+@dataclass
+class WorkflowHelper:
+    kind: ClassVar[str] = "helper"
+    label: str = "ok"
+
+
+class DataclassWorkflow(RPAWorkflow):
+    name = "dataclass_workflow"
+    tags = ["rpa", "capability", "discovery"]
+
+    def get_records(self):
+        return iter([])
+
+    async def process_record(self, record):
+        return {"status": WorkflowHelper().label}
+""",
+        encoding="utf-8",
+    )
+    harness = AutomationHarness(_config(tmp_path))
+
+    discovered = harness.discover_workflows(str(tmp_path))
+
+    assert [workflow.name for workflow in discovered] == ["dataclass_workflow"]
+
+
 @pytest.mark.asyncio
 async def test_tags_and_test_name_filters_select_expected_tests(tmp_path):
     events: list[str] = []
@@ -130,6 +201,51 @@ async def test_setup_run_teardown_order_and_step_logs(tmp_path):
     assert result.passed
     assert events == ["setup", "run", "teardown"]
     assert result.logs == ["Step 1: first action", "Step 2: second action"]
+    assert result.metadata["last_successful_step"] == {"index": 2, "description": "second action"}
+    assert result.metadata["steps"] == [
+        {"index": 1, "description": "first action", "status": "passed"},
+        {"index": 2, "description": "second action", "status": "passed"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_failed_test_records_failed_and_last_successful_step_context(tmp_path):
+    class StepContextFailureTest(AutomationTestCase):
+        name = "step_context_failure"
+        tags = ["capability"]
+
+        async def run(self):
+            self.step("open application")
+            self.step("submit form")
+            raise RuntimeError("submit failed")
+
+    result = await AutomationHarness(_config(tmp_path))._run_single(StepContextFailureTest)
+
+    assert not result.passed
+    assert result.metadata["last_successful_step"] == {"index": 1, "description": "open application"}
+    assert result.metadata["failed_step"] == {"index": 2, "description": "submit form"}
+    assert result.metadata["steps"] == [
+        {"index": 1, "description": "open application", "status": "passed"},
+        {"index": 2, "description": "submit form", "status": "failed"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_skip_during_run_preserves_skipped_status_and_step_context(tmp_path):
+    class SkippedDuringRunTest(AutomationTestCase):
+        name = "skipped_during_run"
+        tags = ["capability"]
+
+        async def run(self):
+            self.step("check precondition")
+            self.skip("precondition unavailable")
+
+    result = await AutomationHarness(_config(tmp_path))._run_single(SkippedDuringRunTest)
+
+    assert result.status == result.status.SKIPPED
+    assert result.metadata["steps"] == [
+        {"index": 1, "description": "check precondition", "status": "skipped"},
+    ]
 
 
 @pytest.mark.asyncio
