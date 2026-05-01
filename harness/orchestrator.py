@@ -5,10 +5,14 @@ Workflows: discovers, executes, reports.
 Agent: plans and executes tasks with AI loop.
 """
 
+import hashlib
+import importlib.util
 import inspect
 import os
+import sys
 import time
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Dict, List, Optional, Type
 
 from harness.config import HarnessConfig
@@ -20,6 +24,30 @@ from harness.reporting import HTMLReporter, JSONReporter
 
 
 EXTERNAL_TEST_TAGS = {"external", "public-site"}
+
+
+def _discovery_module_name(file_path: Path) -> str:
+    digest = hashlib.sha1(str(file_path.resolve()).encode("utf-8")).hexdigest()
+    return f"_rpa_discovery_{file_path.stem}_{digest}"
+
+
+def _load_discovery_module(file_path: Path) -> Optional[ModuleType]:
+    spec = importlib.util.spec_from_file_location(_discovery_module_name(file_path), str(file_path))
+    if not spec or not spec.loader:
+        return None
+
+    module = importlib.util.module_from_spec(spec)
+    previous_module = sys.modules.get(spec.name)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        if previous_module is None:
+            sys.modules.pop(spec.name, None)
+        else:
+            sys.modules[spec.name] = previous_module
+        raise
+    return module
 
 
 class AutomationHarness:
@@ -43,16 +71,13 @@ class AutomationHarness:
             self.logger.warning(f"Test directory not found: {path}")
             return discovered
 
-        import importlib.util
         for file_path in test_dir.rglob(pattern):
             if file_path.name.startswith("_"):
                 continue
             try:
-                spec = importlib.util.spec_from_file_location(file_path.stem, str(file_path))
-                if not spec or not spec.loader:
+                module = _load_discovery_module(file_path)
+                if module is None:
                     continue
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
 
                 for name, obj in inspect.getmembers(module):
                     if (
@@ -78,16 +103,13 @@ class AutomationHarness:
             self.logger.warning(f"Workflow directory not found: {path}")
             return discovered
 
-        import importlib.util
         for file_path in wf_dir.rglob(pattern):
             if file_path.name.startswith("_"):
                 continue
             try:
-                spec = importlib.util.spec_from_file_location(file_path.stem, str(file_path))
-                if not spec or not spec.loader:
+                module = _load_discovery_module(file_path)
+                if module is None:
                     continue
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
 
                 for name, obj in inspect.getmembers(module):
                     if (
