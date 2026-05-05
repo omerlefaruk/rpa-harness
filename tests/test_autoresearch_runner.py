@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tools import autoresearch_runner as runner
 from tools.autoresearch_runner import (
     AutoresearchConfig,
     CommandResult,
@@ -18,6 +19,7 @@ from tools.autoresearch_runner import (
     decide_status,
     heartbeat_secret_scan,
     parse_metric_lines,
+    prepare_bash_command,
     read_jsonl,
     render_dashboard_html,
     run_command,
@@ -40,6 +42,32 @@ def _write_session_files(config: AutoresearchConfig) -> None:
     config.session_dir.mkdir(parents=True, exist_ok=True)
     config.markdown_path.write_text("# Autoresearch\n", encoding="utf-8")
     (config.session_dir / "autoresearch.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+
+def test_prepare_bash_command_uses_git_bash_compatible_path(tmp_path, monkeypatch):
+    script = tmp_path / "check.sh"
+    script.write_text("#!/usr/bin/env bash\necho ok\n", encoding="utf-8")
+    monkeypatch.setattr(runner.os, "name", "nt")
+
+    def fail_wsl_path(path):
+        raise AssertionError("Git Bash should not receive WSL /mnt paths")
+
+    monkeypatch.setattr(runner, "wsl_path", fail_wsl_path)
+
+    prepared = prepare_bash_command(str(script), bash_path="C:/Program Files/Git/bin/bash.exe")
+
+    assert "/mnt/" not in prepared
+    assert script.resolve().as_posix() in prepared
+
+
+def test_prepare_bash_command_uses_wsl_path_for_system32_bash(tmp_path, monkeypatch):
+    script = tmp_path / "check.sh"
+    script.write_text("#!/usr/bin/env bash\necho ok\n", encoding="utf-8")
+    monkeypatch.setattr(runner.os, "name", "nt")
+    monkeypatch.setattr(runner, "wsl_path", lambda path: "/mnt/c/tmp/check.sh")
+
+    prepared = prepare_bash_command(str(script), bash_path="C:/Windows/System32/bash.exe")
+
+    assert "/mnt/c/tmp/check.sh" in prepared
 
 
 def test_parse_metric_lines_accepts_finite_metrics_and_rejects_polluting_names():

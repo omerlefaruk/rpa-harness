@@ -75,23 +75,37 @@ class CommandResult:
 
 
 def shell_command_args(command: str) -> tuple[str | list[str], bool, str | None]:
-    prepared = prepare_bash_command(command)
     if os.name == "nt":
         bash = shutil.which("bash")
         if bash:
+            prepared = prepare_bash_command(command, bash_path=bash)
             return [bash, "-lc", prepared], False, None
         return command, True, None
-    return prepared, True, "/bin/bash"
+    return command, True, "/bin/bash"
 
 
-def prepare_bash_command(command: str) -> str:
+def prepare_bash_command(command: str, bash_path: str | None = None) -> str:
     if os.name != "nt":
         return command
-    stripped = command.strip().strip('"')
+    stripped = command.strip().strip('"').strip("'")
     path = Path(stripped)
     if path.exists() and path.suffix == ".sh":
-        return f"bash <(tr -d '\\r' < {shlex.quote(wsl_path(path))})"
+        script_path = bash_script_path(path, bash_path)
+        return f"bash <(tr -d '\\r' < {shlex.quote(script_path)})"
     return command
+
+
+def bash_script_path(path: Path, bash_path: str | None = None) -> str:
+    if is_wsl_bash(bash_path):
+        return wsl_path(path)
+    return path.resolve().as_posix()
+
+
+def is_wsl_bash(bash_path: str | None) -> bool:
+    if not bash_path:
+        return False
+    normalized = Path(bash_path).as_posix().lower()
+    return "windows/system32/bash.exe" in normalized
 
 
 def wsl_path(path: Path) -> str:

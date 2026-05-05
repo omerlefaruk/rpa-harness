@@ -6,7 +6,7 @@ import pytest
 
 from harness.config import HarnessConfig
 from harness.orchestrator import AutomationHarness
-from harness.rpa.workflow import RPAWorkflow
+from harness.rpa.workflow import RPAWorkflow, WorkflowResult, WorkflowStatus
 from harness.test_case import AutomationTestCase
 
 
@@ -238,3 +238,21 @@ async def test_workflow_summary_counts_setup_failures(tmp_path):
     assert results[0].error_message == "missing fixture"
     assert summary["workflows"]["failed"] == 1
     assert summary["workflows"]["failed_records"] == 0
+
+
+def test_summary_duration_includes_workflow_only_runs(tmp_path):
+    harness = AutomationHarness(_config(tmp_path))
+    harness.workflow_results = [
+        WorkflowResult(
+            name="duration_workflow",
+            status=WorkflowStatus.PASSED,
+            duration_ms=321.4,
+        )
+    ]
+
+    assert harness.summary()["total_duration_ms"] == 321.4
+
+    harness._start_time = 10.0
+    harness._end_time = 12.5
+
+    assert harness.summary()["total_duration_ms"] == 2500.0

@@ -31,6 +31,8 @@ from harness.verification.checks import CheckRunner
 INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 VARIABLE_REF_RE = re.compile(r"\$\{variables\.([A-Za-z_][A-Za-z0-9_]*)\}")
 SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
+PWD_FILE_REF_RE = re.compile(r"file://(?:\$\{PWD\}|\$PWD(?![A-Za-z0-9_]))")
+PWD_REF_RE = re.compile(r"\$\{PWD\}|\$PWD(?![A-Za-z0-9_])")
 
 SUPPORTED_RUNTIME_PREFIXES = ("browser.", "api.", "desktop.", "excel.")
 
@@ -983,12 +985,8 @@ class YamlWorkflowRunner:
             cwd_path = Path.cwd()
             cwd_posix = cwd_path.as_posix()
             cwd_uri = cwd_path.as_uri()
-            result = (
-                result.replace("file://${PWD}", cwd_uri)
-                .replace("file://$PWD", cwd_uri)
-                .replace("${PWD}", cwd_posix)
-                .replace("$PWD", cwd_posix)
-            )
+            result = PWD_FILE_REF_RE.sub(cwd_uri, result)
+            result = PWD_REF_RE.sub(cwd_posix, result)
         return os.path.expandvars(result)
 
     def _store_output(self, action: dict, value: Any):

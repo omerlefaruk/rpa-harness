@@ -306,6 +306,7 @@ class AutomationHarness:
     def summary(self) -> Dict[str, Any]:
         passed = sum(1 for r in self.results if r.passed)
         failed = sum(1 for r in self.results if not r.passed)
+        total_duration_ms = self._total_duration_ms()
 
         wf_summary = None
         if self.workflow_results:
@@ -326,5 +327,14 @@ class AutomationHarness:
                 "pass_rate": round(passed / len(self.results) * 100, 2) if self.results else 0,
             },
             "workflows": wf_summary,
-            "total_duration_ms": round(sum(r.duration_ms for r in self.results), 2),
+            "total_duration_ms": total_duration_ms,
         }
+
+    def _total_duration_ms(self) -> float:
+        if self._start_time is not None and self._end_time is not None:
+            return round((self._end_time - self._start_time) * 1000, 2)
+        return round(
+            sum(r.duration_ms for r in self.results)
+            + sum(w.duration_ms for w in self.workflow_results),
+            2,
+        )
