@@ -1,0 +1,89 @@
+{
+  "issue": "SYM-5",
+  "generated_at": "2026-05-05T21:27:00+03:00",
+  "summary": "Completion evidence for the RPA harness capability validation and review handoff.",
+  "tests": [
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python -m pytest tests/test_config.py tests/test_retry.py tests/test_verification.py tests/test_memory.py tests/test_selector_strategy.py tests/test_workflow_schema.py tests/test_repair_loop.py\"",
+      "status": "passed",
+      "summary": "85 passed in 21.80s"
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python -m pytest tests/capabilities/test_harness_discovery.py tests/test_cli_summary.py tests/test_telegram_notifications.py\"",
+      "status": "passed",
+      "summary": "19 passed in 47.61s"
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python -m pytest tests/test_autoresearch_runner.py tests/test_workflow_schema.py tests/capabilities/test_harness_discovery.py tests/test_cli_summary.py tests/test_telegram_notifications.py\"",
+      "status": "passed",
+      "summary": "57 passed in 74.45s"
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python -m pytest -q\"",
+      "status": "passed",
+      "summary": "257 passed, 5 skipped in 155.37s"
+    }
+  ],
+  "manual_qa": [
+    {
+      "flow": "Review handoff gate",
+      "status": "passed",
+      "summary": "PR #1 is open, mergeable cleanly, labeled symphony, and has no top-level PR comments. The three Copilot inline comments each have owner replies tied to commit 15548b1."
+    },
+    {
+      "flow": "Runtime workflow coverage review",
+      "status": "passed",
+      "summary": "Capability plan covered YAML validation, workflow discovery/reporting, local browser YAML runtime, and opt-in browser integration paths. No UI or Canvas changes were made, so screenshots and video are not applicable."
+    }
+  ],
+  "run_commands": [
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python scripts\\bootstrap_playwright.py --check\"",
+      "status": "passed",
+      "summary": "Playwright Python package is installed."
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python main.py --validate-yaml workflows/capabilities/local_browser_form.yaml\"",
+      "status": "passed",
+      "summary": "VALID: local_browser_form (12 steps)"
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python main.py --validate-yaml workflows/capabilities/local_api_read.yaml\"",
+      "status": "passed",
+      "summary": "VALID: local_api_read (1 steps)"
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python main.py --validate-yaml workflows/capabilities/local_api_write.yaml\"",
+      "status": "passed",
+      "summary": "VALID: local_api_write (1 steps)"
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python main.py --discover ./tests --run --report html,json --headless --no-vision\"",
+      "status": "passed",
+      "summary": "1/1 passed; external public-site tests skipped by default."
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python main.py --run-workflows --discover-wf ./tests/rpa --report html,json\"",
+      "status": "passed",
+      "summary": "2 records processed, 0 mismatches, 0 failed workflows; external workflows skipped by default."
+    },
+    {
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python main.py --run-yaml workflows/capabilities/local_browser_form.yaml --headless --no-vision\"",
+      "status": "passed",
+      "summary": "Passed all 12 steps."
+    },
+    {
+      "command": "pwsh -Command \"[Environment]::SetEnvironmentVariable('RPA_RUN_INTEGRATION','1','Process'); .\\.venv\\Scripts\\python -m pytest -q tests/test_yaml_runner_integration.py\"",
+      "status": "passed",
+      "summary": "1 passed in 10.52s"
+    },
+    {
+      "command": "pwsh -Command \"[Environment]::SetEnvironmentVariable('RPA_RUN_INTEGRATION','1','Process'); .\\.venv\\Scripts\\python -m pytest -q tests/capabilities/test_yaml_browser_runtime.py\"",
+      "status": "passed",
+      "summary": "4 passed in 65.70s"
+    }
+  ],
+  "screenshots": [],
+  "videos": [],
+  "canvas_runs": []
+}
