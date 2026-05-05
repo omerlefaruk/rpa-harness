@@ -16,7 +16,7 @@ Completed in the first gap-fix pass:
 - YAML Excel actions now execute against temp XLSX files, and desktop YAML now reaches an explicit Windows-only runtime boundary instead of failing opaquely.
 - Mixed browser+API YAML workflows now have an end-to-end runtime smoke using a local browser fixture and fake API driver.
 - The memory server module imports and builds a FastAPI app under the current dependency stack.
-- Public-site browser examples are tagged `external`/`public-site` and excluded from default harness runs. A local deterministic browser example covers normal CLI discovery.
+- Public-site browser and workflow examples are tagged `external`/`public-site` and excluded from default harness runs. Local deterministic examples cover normal CLI discovery.
 - Playwright browser setup has a bootstrap command: `python3 scripts/bootstrap_playwright.py`.
 - `json_path_equals` now uses `jsonpath-ng` and supports wildcards, filters, and quoted keys.
 
@@ -90,7 +90,7 @@ Remaining implementation plan:
 | J. Memory/AI layer | Transient tool failure retries | `tests/capabilities/test_recovery_selector_memory_capabilities.py` | Agent retries transient tool failure and succeeds | Assertion passes | supported | Calls = 2, retries = 1 | None | None |
 | K. Reporting/CLI | `--validate-yaml` | `workflows/capabilities/*.yaml` | CLI validates workflow files | Browser/API read/API write validate | supported | CLI `VALID` output | None | None |
 | K. Reporting/CLI | `--run-yaml local_browser_form` | `workflows/capabilities/local_browser_form.yaml` | CLI can run real browser workflow | Passes locally | supported | CLI run passed all 12 steps | None | None |
-| K. Reporting/CLI | `--discover ./tests --run --report html,json` | Existing tests plus capability tests | CLI can discover/run tests and write reports without public-site dependency | Passes locally | supported | CLI run passes deterministic local browser example by default | External public-site examples require `--tags external` or `RPA_RUN_EXTERNAL_TESTS=1` | Keep public-site tests opt-in |
+| K. Reporting/CLI | `--discover ./tests --run --report html,json` | Existing tests plus capability tests | CLI can discover/run tests and write reports without public-site dependency | Passes locally | supported | CLI run passes deterministic local browser example by default | External public-site tests/workflows require `--tags external` or `RPA_RUN_EXTERNAL_TESTS=1` | Keep public-site tests opt-in |
 | K. Reporting/CLI | `--run-workflows --discover-wf ./tests/rpa --report html,json` | `tests/rpa/example_verification.py` | Python workflow discovery/reporting | Passes locally | supported | CLI workflow run processed 2 records | Example still writes ignored report/data artifacts | Use temp-path fixtures for stricter CI proof |
 | K. Reporting/CLI | Reports include metadata | `tests/capabilities/test_reporting_evidence.py` | JSON reports include test and workflow metadata | Assertion passes | supported | JSON report in temp dir | None | None |
 | K. Reporting/CLI | Failure report includes repro_command | `tests/capabilities/test_reporting_evidence.py`, API failure tests | Failure reports are actionable | Assertion passes | supported | `failure_report.json` | None | Add command with `--headless --no-vision` when applicable |
@@ -141,7 +141,7 @@ J. Memory and AI:
 
 K. Reporting and CLI:
 - Verify YAML validation, JSON report metadata, failure report repro commands, and report redaction.
-- CLI browser run is covered by a deterministic local browser example. Public-site browser examples are opt-in external tests.
+- CLI browser run is covered by a deterministic local browser example. Public-site browser and workflow examples are opt-in external runs.
 
 ## Fixtures Needed
 
@@ -187,7 +187,7 @@ Use `python3 -m pytest` if the `pytest` executable is not installed on `PATH`.
 
 1. Desktop YAML runtime cannot be fully proven on this macOS machine because it requires Windows UIAutomation.
 2. Memory now has both an HTTP client contract and a bundled FastAPI SQLite worker. Both import and test, but the intended deployment mode should be made explicit.
-3. Public-site browser examples still depend on external websites by design, but they are now opt-in and no longer part of the default CLI proof.
+3. Public-site browser and workflow examples still depend on external websites or fixture workbooks by design, but they are now opt-in and no longer part of the default CLI proof.
 
 ## Recommended Design Improvements Ranked By Impact
 

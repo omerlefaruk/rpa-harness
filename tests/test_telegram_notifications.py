@@ -86,7 +86,7 @@ async def test_run_report_formats_summary_and_report_paths():
         suite_name="capability-suite",
         summary={
             "tests": {"total": 2, "passed": 1},
-            "workflows": {"processed_records": 4, "failed_records": 1},
+            "workflows": {"processed_records": 4, "failed_records": 1, "failed": 0},
             "total_duration_ms": 250,
         },
         report_paths={"json": "./reports/report.json"},
@@ -95,7 +95,7 @@ async def test_run_report_formats_summary_and_report_paths():
     text = client.posts[0]["json"]["text"]
     assert "Heads up, capability-suite needs attention." in text
     assert "Tests: 1/2 passed" in text
-    assert "Workflows: 4 records processed, 1 failed" in text
+    assert "Workflows: 4 records processed, 1 failed record(s), 0 failed workflow(s)" in text
     assert "- json: ./reports/report.json" in text
     assert client.posts[0]["json"]["message_thread_id"] == 9
 
@@ -167,3 +167,25 @@ async def test_long_message_is_clamped_to_telegram_limit():
     await channel.send_message("x" * (MAX_MESSAGE_LENGTH + 100), strict=True)
 
     assert len(client.posts[0]["json"]["text"]) == MAX_MESSAGE_LENGTH
+
+
+@pytest.mark.asyncio
+async def test_run_report_counts_failed_workflows_without_failed_records():
+    client = _FakeClient()
+    channel = TelegramBotChannel(
+        TelegramNotificationConfig(enabled=True, bot_token="token", chat_id="chat"),
+        client=client,
+    )
+
+    await channel.send_run_report(
+        suite_name="workflow-suite",
+        summary={
+            "tests": {"total": 0, "passed": 0, "failed": 0},
+            "workflows": {"processed_records": 0, "failed_records": 0, "failed": 1},
+            "total_duration_ms": 10,
+        },
+    )
+
+    text = client.posts[0]["json"]["text"]
+    assert "Heads up, workflow-suite needs attention." in text
+    assert "0 failed record(s), 1 failed workflow(s)" in text

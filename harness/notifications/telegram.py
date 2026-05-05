@@ -124,7 +124,8 @@ class TelegramBotChannel:
         workflows = summary.get("workflows") or {}
         failed_tests = tests.get("failed", 0)
         failed_records = workflows.get("failed_records", 0)
-        if failed_tests or failed_records:
+        failed_workflows = workflows.get("failed", 0)
+        if failed_tests or failed_records or failed_workflows:
             opener = f"Heads up, {suite_name} needs attention."
         else:
             opener = f"{suite_name} is done."
@@ -137,7 +138,8 @@ class TelegramBotChannel:
             lines.append(
                 "Workflows: "
                 f"{workflows.get('processed_records', 0)} records processed, "
-                f"{workflows.get('failed_records', 0)} failed"
+                f"{workflows.get('failed_records', 0)} failed record(s), "
+                f"{workflows.get('failed', 0)} failed workflow(s)"
             )
         lines.append(f"Duration: {summary.get('total_duration_ms', 0)} ms")
 
