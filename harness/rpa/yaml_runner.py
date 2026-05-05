@@ -784,8 +784,8 @@ class YamlWorkflowRunner:
         driver = WindowsUIDriver(config=self.config)
         if not getattr(driver, "_pywinauto", None):
             raise RuntimeError(
-                "Desktop YAML runtime requires pywinauto. Install the Windows optional "
-                "dependencies before running desktop workflows."
+                "Desktop YAML runtime requires Windows UIAutomation via pywinauto. "
+                "Install the Windows optional dependencies before running desktop workflows."
             )
         self._drivers["desktop"] = driver
         return driver
@@ -979,6 +979,16 @@ class YamlWorkflowRunner:
         result = INPUT_REF_RE.sub(replace_input, result)
         result = VARIABLE_REF_RE.sub(replace_variable, result)
         result = SECRET_REF_RE.sub(replace_secret, result)
+        if "PWD" not in os.environ:
+            cwd_path = Path.cwd()
+            cwd_posix = cwd_path.as_posix()
+            cwd_uri = cwd_path.as_uri()
+            result = (
+                result.replace("file://${PWD}", cwd_uri)
+                .replace("file://$PWD", cwd_uri)
+                .replace("${PWD}", cwd_posix)
+                .replace("$PWD", cwd_posix)
+            )
         return os.path.expandvars(result)
 
     def _store_output(self, action: dict, value: Any):

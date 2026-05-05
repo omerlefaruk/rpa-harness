@@ -13,6 +13,28 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
+class SafeStreamHandler(logging.StreamHandler):
+    def emit(self, record: logging.LogRecord):
+        try:
+            message = self.format(record)
+            stream = self.stream
+            stream.write(message + self.terminator)
+            self.flush()
+        except UnicodeEncodeError:
+            try:
+                encoding = getattr(self.stream, "encoding", None) or "utf-8"
+                safe_message = message.encode(
+                    encoding,
+                    errors="backslashreplace",
+                ).decode(encoding, errors="replace")
+                self.stream.write(safe_message + self.terminator)
+                self.flush()
+            except Exception:
+                self.handleError(record)
+        except Exception:
+            self.handleError(record)
+
+
 class HarnessLogger:
     _file_handler: Optional[logging.FileHandler] = None
     _jsonl_path: Optional[Path] = None
@@ -28,7 +50,7 @@ class HarnessLogger:
         self.logger.setLevel(getattr(logging, level.upper(), logging.INFO))
 
         if not self.logger.handlers:
-            handler = logging.StreamHandler(sys.stdout)
+            handler = SafeStreamHandler(sys.stdout)
             formatter = logging.Formatter(
                 "%(asctime)s | %(levelname)-8s | [%(cid)s] %(name)s | %(message)s",
                 datefmt="%H:%M:%S",

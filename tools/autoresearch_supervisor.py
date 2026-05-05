@@ -41,6 +41,7 @@ from tools.autoresearch_runner import (  # noqa: E402
     run_command,
     run_heartbeat,
     save_to_memory,
+    shell_command_args,
 )  # noqa: E402
 
 DEFAULT_CODEX = "/Applications/Codex.app/Contents/Resources/codex"
@@ -1493,11 +1494,12 @@ def secret_scan_files(root: Path, paths: list[str]) -> list[str]:
 def run_prompt_command(command: str, cwd: Path, prompt: str, timeout_seconds: int) -> CommandResult:
     started = time.time()
     try:
+        args, shell, executable = shell_command_args(command)
         completed = subprocess.run(
-            command,
+            args,
             cwd=cwd,
-            shell=True,
-            executable="/bin/bash",
+            shell=shell,
+            executable=executable,
             text=True,
             input=prompt,
             capture_output=True,

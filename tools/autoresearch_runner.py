@@ -16,6 +16,8 @@ import json
 import math
 import os
 import re
+import shlex
+import shutil
 import statistics
 import subprocess
 import sys
@@ -70,6 +72,35 @@ class CommandResult:
 
     def combined_output(self) -> str:
         return "\n".join(part for part in (self.stdout, self.stderr) if part)
+
+
+def shell_command_args(command: str) -> tuple[str | list[str], bool, str | None]:
+    prepared = prepare_bash_command(command)
+    if os.name == "nt":
+        bash = shutil.which("bash")
+        if bash:
+            return [bash, "-lc", prepared], False, None
+        return command, True, None
+    return prepared, True, "/bin/bash"
+
+
+def prepare_bash_command(command: str) -> str:
+    if os.name != "nt":
+        return command
+    stripped = command.strip().strip('"')
+    path = Path(stripped)
+    if path.exists() and path.suffix == ".sh":
+        return f"bash <(tr -d '\\r' < {shlex.quote(wsl_path(path))})"
+    return command
+
+
+def wsl_path(path: Path) -> str:
+    resolved = path.resolve()
+    drive = resolved.drive.rstrip(":").lower()
+    posix_path = resolved.as_posix()
+    if drive and posix_path[1:3] == ":/":
+        return f"/mnt/{drive}{posix_path[2:]}"
+    return posix_path
 
 
 @dataclass
@@ -464,11 +495,12 @@ def heartbeat_secret_scan(config: AutoresearchConfig) -> HeartbeatCheck:
 def run_command(command: str, cwd: Path, timeout_seconds: int) -> CommandResult:
     started = time.time()
     try:
+        args, shell, executable = shell_command_args(command)
         completed = subprocess.run(
-            command,
+            args,
             cwd=cwd,
-            shell=True,
-            executable="/bin/bash",
+            shell=shell,
+            executable=executable,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

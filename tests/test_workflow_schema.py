@@ -152,6 +152,22 @@ def test_yaml_runner_workflow_inputs_override_default_config_variables():
     assert resolved["base_url"] == "https://workflow.example"
 
 
+def test_yaml_runner_resolves_pwd_when_env_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("PWD", raising=False)
+    monkeypatch.chdir(tmp_path)
+    runner = YamlWorkflowRunner()
+
+    assert runner._resolve_string("file://${PWD}/fixture.html") == (
+        f"{tmp_path.as_uri()}/fixture.html"
+    )
+    assert runner._resolve_string("file://$PWD/fixture.html") == (
+        f"{tmp_path.as_uri()}/fixture.html"
+    )
+    assert runner._resolve_string("${PWD}/fixture.html") == (
+        f"{tmp_path.as_posix()}/fixture.html"
+    )
+
+
 @pytest.mark.asyncio
 async def test_yaml_runner_load():
     wf_path = Path(__file__).parent.parent / "workflows" / "examples" / "minimal_example.yaml"
