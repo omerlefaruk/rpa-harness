@@ -207,6 +207,25 @@ Examples:
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
     parser.add_argument("--audit-workflow", help="Audit a YAML workflow against the RPA rulebook")
+    parser.add_argument("--new-workflow", help="Create a workflow YAML file from a template")
+    parser.add_argument(
+        "--workflow-template",
+        default="browser_login_export",
+        help="Template for --new-workflow",
+    )
+    parser.add_argument("--workflow-id", help="Workflow id for --new-workflow")
+    parser.add_argument("--workflow-owner", default="ops", help="Workflow owner for templates")
+    parser.add_argument("--target-system", default="target-system", help="Target system for templates")
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Prompt interactively for --new-workflow fields",
+    )
+    parser.add_argument("--render-failure-report", help="Render failure_report.json to HTML")
+    parser.add_argument("--failure-report-output", help="Output path for rendered failure HTML")
+    parser.add_argument("--bundle-run", help="Create a zip evidence bundle from a run directory")
+    parser.add_argument("--bundle-output", help="Output path for --bundle-run")
+    parser.add_argument("--resume-ledger-status", help="Show resume ledger summary JSON")
     parser.add_argument(
         "--telegram-message",
         help="Send one Telegram bot message using RPA_TELEGRAM_BOT_TOKEN and RPA_TELEGRAM_CHAT_ID",
@@ -412,6 +431,48 @@ async def main():
         code = tech_radar_main(tech_radar_args)
         if code:
             sys.exit(code)
+        return
+
+    if args.new_workflow:
+        from harness.rpa.templates import prompt_for_workflow, write_workflow_template
+
+        if args.interactive:
+            path = prompt_for_workflow(args.new_workflow)
+        else:
+            workflow_id = args.workflow_id or Path(args.new_workflow).stem
+            path = write_workflow_template(
+                args.new_workflow,
+                template=args.workflow_template,
+                workflow_id=workflow_id,
+                owner=args.workflow_owner,
+                target_system=args.target_system,
+            )
+        print(f"Workflow written: {path}")
+        return
+
+    if args.render_failure_report:
+        from harness.reporting.failure_html import render_failure_report_html
+
+        output = render_failure_report_html(
+            args.render_failure_report,
+            output_path=args.failure_report_output,
+        )
+        print(f"Failure HTML written: {output}")
+        return
+
+    if args.bundle_run:
+        from harness.reporting.evidence_bundle import bundle_run
+
+        output = bundle_run(args.bundle_run, output_path=args.bundle_output)
+        print(f"Evidence bundle written: {output}")
+        return
+
+    if args.resume_ledger_status:
+        import json
+
+        from harness.rpa.ledger import ResumeLedger
+
+        print(json.dumps(ResumeLedger(args.resume_ledger_status).summary(), indent=2))
         return
 
     # Serve modes

@@ -62,8 +62,10 @@ def create_dashboard(
 
     @app.get("/api/reports")
     async def list_reports():
+        run_path = root_path / "runs"
+        run_reports = collect_run_reports(run_path)
         if not report_path.exists():
-            return {"reports": []}
+            return {"reports": [], "runs": run_reports}
         reports = sorted(
             list(report_path.glob("*.html")) + list(report_path.glob("*.json")),
             key=lambda p: p.stat().st_mtime,
@@ -77,7 +79,8 @@ def create_dashboard(
                     "modified": datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
                 }
                 for p in reports
-            ]
+            ],
+            "runs": run_reports,
         }
 
     return app
@@ -130,8 +133,40 @@ def collect_autoresearch_status(root_path: Path, report_path: Path) -> dict[str,
         },
         "reports": {
             "count": len(list(report_path.glob("*.html"))) if report_path.exists() else 0,
+            "recent_failures": collect_run_reports(root_path / "runs")[:8],
         },
     }
+
+
+def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]:
+    if not run_path.exists():
+        return []
+    reports = sorted(
+        run_path.glob("*/failure_report.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )[:limit]
+    entries: list[dict[str, Any]] = []
+    for report in reports:
+        try:
+            data = json.loads(report.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        entries.append(
+            {
+                "run_id": data.get("run_id") or report.parent.name,
+                "workflow": data.get("workflow_name"),
+                "status": data.get("status"),
+                "error_class": data.get("error_class"),
+                "current_stage": data.get("current_stage"),
+                "failed_step_id": data.get("failed_step_id"),
+                "human_review_required": data.get("human_review_required"),
+                "report": str(report),
+                "html_report": str(report.with_suffix(".html")) if report.with_suffix(".html").exists() else "",
+                "modified": datetime.fromtimestamp(report.stat().st_mtime).isoformat(),
+            }
+        )
+    return entries
 
 
 def start_autoresearch_once(root_path: Path) -> subprocess.Popen[str]:

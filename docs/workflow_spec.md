@@ -79,7 +79,50 @@ python main.py --audit-workflow workflows/capabilities/local_browser_form.yaml
 ```
 
 The audit prints JSON containing normal schema validation status plus
-`rulebook_audit.score`, missing fields, warnings, and production readiness.
+`rulebook_audit.score`, missing fields, warnings, fix suggestions, and
+production readiness.
+
+## Authoring Templates
+
+Use `--new-workflow` to create a rulebook-shaped YAML starting point:
+
+```bash
+python main.py --new-workflow workflows/new_api.yaml --workflow-template api_read_write --workflow-id new_api
+```
+
+Available templates:
+
+- `browser_login_export`
+- `excel_row_loop`
+- `api_read_write`
+- `desktop_form_fill`
+- `browser_scrape`
+- `reconciliation`
+
+## Resume Ledger
+
+Python `RPAWorkflow` subclasses can opt into an append-only record resume ledger
+by setting `config.variables["resume_ledger_path"]`. Each terminal record writes
+record id, status, stage, retry metadata, external reference id, and evidence
+path when provided.
+
+```bash
+python main.py --resume-ledger-status runs/resume/my_workflow.jsonl
+```
+
+## Failure Artifacts
+
+Render a failed run into a compact HTML investigation page:
+
+```bash
+python main.py --render-failure-report runs/<run_id>/failure_report.json
+```
+
+Bundle a run directory for handoff:
+
+```bash
+python main.py --bundle-run runs/<run_id>
+```
 
 ## Example — Minimal
 

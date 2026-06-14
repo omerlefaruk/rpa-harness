@@ -227,7 +227,24 @@ def classify_failure(
     classification = dict(_CLASS_DEFAULTS[error_class])
     classification["error_class"] = error_class
     classification["root_observation"] = root_observation or _extract_root_observation(error)
+    classification["recommended_route"] = recommended_failure_route(classification)
     return classification
+
+
+def recommended_failure_route(classification: Dict[str, Any]) -> str:
+    error_class = str(classification.get("error_class") or "unknown")
+    if error_class == "transient" and classification.get("retry_allowed"):
+        return "retry"
+    if error_class in {"data", "business"}:
+        return "skip_or_needs_review"
+    if error_class in {
+        "authorization_config",
+        "automation_defect",
+        "external_system",
+        "security_privacy",
+    }:
+        return "stop_and_escalate"
+    return "stop_with_evidence"
 
 
 def legacy_category_to_error_class(category: str) -> str:

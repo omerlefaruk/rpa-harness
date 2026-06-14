@@ -99,3 +99,23 @@ derive it: current stage, intended action, expected vs actual result, target
 system, retry attempt, taxonomy class, side-effect risk, and escalation status.
 Absent values are serialized as `null`; raw credentials and sensitive payloads
 must remain redacted.
+
+## HTML And Bundles
+
+Render a JSON failure report to an HTML investigation page:
+
+```bash
+python main.py --render-failure-report runs/{run_id}/failure_report.json
+```
+
+Create a portable zip containing the run directory and a redacted manifest:
+
+```bash
+python main.py --bundle-run runs/{run_id}
+```
+
+Browser selector failures may include `evidence.selector_repair`, a JSON
+artifact with the failed selector, current URL, intended action, and a selector
+swarm command to generate a verified replacement selector. Desktop failures may
+include `evidence.uia_tree` plus window/app metadata when Windows UIAutomation
+is available.

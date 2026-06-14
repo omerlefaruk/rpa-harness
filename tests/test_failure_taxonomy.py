@@ -44,12 +44,14 @@ def test_structured_classification_for_rpa_errors():
         "side_effect_risk": "low",
         "human_review_required": False,
         "root_observation": "loading spinner remained visible",
+        "recommended_route": "retry",
     }
 
     auth_config = classify_failure(AuthenticationError("Login denied"))
     assert auth_config["error_class"] == "authorization_config"
     assert auth_config["retry_allowed"] is False
     assert auth_config["human_review_required"] is True
+    assert auth_config["recommended_route"] == "stop_and_escalate"
 
     data = classify_failure(ValidationError("Missing required account identifier"))
     assert data["error_class"] == "data"

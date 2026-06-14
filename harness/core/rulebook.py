@@ -47,6 +47,7 @@ class RulebookAuditResult:
     score: int
     warnings: list[str] = field(default_factory=list)
     missing_fields: list[str] = field(default_factory=list)
+    suggestions: list[dict[str, str]] = field(default_factory=list)
     summary: str = ""
 
     @property
@@ -58,6 +59,7 @@ class RulebookAuditResult:
             "score": self.score,
             "warnings": list(self.warnings),
             "missing_fields": list(self.missing_fields),
+            "suggestions": list(self.suggestions),
             "summary": self.summary,
             "ready_for_unattended_production": self.ready_for_unattended_production,
         }
@@ -163,12 +165,72 @@ def audit_workflow_rulebook(workflow: dict[str, Any]) -> RulebookAuditResult:
 
     score = _score(present, total)
     summary = _summary(score, missing_fields, warnings)
+    suggestions = suggest_rulebook_fixes(workflow, missing_fields, warnings)
     return RulebookAuditResult(
         score=score,
         warnings=warnings,
         missing_fields=missing_fields,
+        suggestions=suggestions,
         summary=summary,
     )
+
+
+def suggest_rulebook_fixes(
+    workflow: dict[str, Any],
+    missing_fields: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> list[dict[str, str]]:
+    """Return concrete, machine-readable rulebook hardening suggestions."""
+
+    suggestions: list[dict[str, str]] = []
+    for field_name in missing_fields or []:
+        suggestions.append(
+            {
+                "field": field_name,
+                "severity": "warning",
+                "suggestion": _field_suggestion(field_name),
+            }
+        )
+
+    for index, step in enumerate(workflow.get("steps", []) or []):
+        if not isinstance(step, dict):
+            continue
+        action_type = _get_text(_as_dict(step.get("action")), "type") or "unknown"
+        if _has_retry_policy(step) and not retry_policy_is_safe(step):
+            suggestions.append(
+                {
+                    "field": f"steps[{index}].recovery",
+                    "severity": "error",
+                    "suggestion": (
+                        f"Retry on {action_type} needs failure_class: transient and an "
+                        "idempotency_key, duplicate_check, side_effect_check, or "
+                        "verify_before_retry guard."
+                    ),
+                }
+            )
+        if action_has_side_effect(action_type) and not _has_value(step.get("proof")):
+            suggestions.append(
+                {
+                    "field": f"steps[{index}].proof",
+                    "severity": "warning",
+                    "suggestion": (
+                        f"Add business-state proof for side-effecting action {action_type}, "
+                        "such as an API response id, file checksum, database row, or visible "
+                        "confirmation."
+                    ),
+                }
+            )
+
+    if not workflow.get("steps"):
+        suggestions.append(
+            {
+                "field": "steps",
+                "severity": "error",
+                "suggestion": "Add at least one workflow step with an action and success_check.",
+            }
+        )
+
+    return suggestions
 
 
 def _audit_step(
@@ -312,3 +374,37 @@ def _summary(score: int, missing_fields: list[str], warnings: list[str]) -> str:
     if score >= 3:
         return f"Rulebook contract is partially ready with {len(missing_fields)} missing fields."
     return f"Rulebook contract is not production-ready; {len(missing_fields)} fields are missing."
+
+
+def _field_suggestion(field_name: str) -> str:
+    if field_name == "workflow.owner":
+        return "Set owner to the team or person responsible for production operation."
+    if field_name == "workflow.target_systems":
+        return "List the external apps, APIs, files, or databases touched by this workflow."
+    if field_name == "workflow.input_schema":
+        return "Declare required input columns/fields and their expected types."
+    if field_name == "workflow.success_condition":
+        return "Describe the final verified business state, not just runner completion."
+    if field_name == "workflow.safe_test_case":
+        return "Name a safe record or fixture that can be used before production runs."
+    if field_name == "workflow.allowed_side_effects":
+        return "List exactly which writes, sends, uploads, exports, or updates are allowed."
+    if field_name == "workflow.rerun_policy":
+        return "Explain when reruns are safe and what idempotency checks are required."
+    if field_name == "workflow.escalation_owner":
+        return "Set who should review ambiguous or unsafe failures."
+    if field_name == "workflow.output_destination/system_of_record":
+        return "Identify the output location or authoritative system to verify after the run."
+    if field_name.endswith(".intent"):
+        return "Add the business result this step is meant to produce."
+    if field_name.endswith(".current_stage"):
+        return "Use a business-readable stage name such as open_customer_record or verify_export_file."
+    if field_name.endswith(".preconditions"):
+        return "List what must be true before the step performs side effects."
+    if field_name.endswith(".failure_path"):
+        return "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+    if field_name.endswith(".postconditions"):
+        return "Add the expected state that must become true after the action."
+    if field_name.endswith(".proof"):
+        return "Identify the evidence source proving the postcondition."
+    return "Fill this rulebook field with a concrete, auditable value."

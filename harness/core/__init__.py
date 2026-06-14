@@ -9,6 +9,7 @@ from harness.core.rulebook import (
     action_has_side_effect,
     audit_workflow_rulebook,
     retry_policy_is_safe,
+    suggest_rulebook_fixes,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "action_has_side_effect",
     "audit_workflow_rulebook",
     "retry_policy_is_safe",
+    "suggest_rulebook_fixes",
 ]

@@ -14,6 +14,7 @@ from harness.config import HarnessConfig
 from harness.core import ExecutionTrace
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
+from harness.rpa.ledger import ResumeLedger
 from harness.resilience.errors import RPAError
 from harness.security import redact_value, redacted_preview
 
@@ -130,6 +131,7 @@ class RPAWorkflow:
         self.current_stage: Optional[str] = None
         self._last_record_attempts: int = 0
         self._pending_record_evidence: list[dict] = []
+        self._resume_ledger = self._build_resume_ledger()
 
     async def setup(self):
         pass
@@ -437,6 +439,22 @@ class RPAWorkflow:
         if self._pending_record_evidence:
             entry["evidence_events"] = list(self._pending_record_evidence)
         self.result.data.setdefault("records", []).append(entry)
+        if self._resume_ledger:
+            ledger_entry = self._resume_ledger.record_item(
+                workflow=self.name,
+                record_id=entry["record_id"],
+                status=entry["status"],
+                stage=entry.get("stage"),
+                idempotency_key=result.get("idempotency_key"),
+                external_reference_id=result.get("external_reference_id"),
+                evidence_path=result.get("evidence_path"),
+                details={
+                    "reason": entry.get("reason"),
+                    "attempts": entry.get("attempts"),
+                    "retried": entry.get("retried"),
+                },
+            )
+            self.result.data.setdefault("resume_ledger_entries", []).append(ledger_entry)
         return entry
 
     def _refresh_record_summary(self) -> dict:
@@ -469,3 +487,10 @@ class RPAWorkflow:
         }
         self.result.data["record_summary"] = summary
         return summary
+
+    def _build_resume_ledger(self) -> Optional[ResumeLedger]:
+        variables = getattr(self.config, "variables", {}) or {}
+        path = variables.get("resume_ledger_path")
+        if not path:
+            return None
+        return ResumeLedger(path)

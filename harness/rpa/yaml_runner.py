@@ -21,6 +21,7 @@ from harness.memory.recorder import MemoryRecorder
 from harness.notifications import BotNotifier
 from harness.reporting.failure_report import FailureReport
 from harness.resilience.errors import classify_failure
+from harness.selectors.repair import selector_repair_plan
 from harness.security import (
     redact_mapping,
     redact_text,
@@ -321,6 +322,7 @@ class YamlWorkflowRunner:
         result["error"] = self._redact_runtime_text(
             last_error or self._verification_error(check_results)
         )
+        result["failure_route"] = classify_failure(result["error"]).get("recommended_route")
         self._log_entry("ERROR", step_id, result["error"])
         return result
 
@@ -1041,7 +1043,7 @@ class YamlWorkflowRunner:
     ) -> str:
         self.failure.start_run(workflow["id"])
         self._flush_pending_logs()
-        evidence = await self._capture_failure_evidence()
+        evidence = await self._capture_failure_evidence(step=step, step_result=step_result)
         verification_failures = [
             check for check in step_result.get("checks", []) if not check.get("passed")
         ]
@@ -1079,12 +1081,16 @@ class YamlWorkflowRunner:
             human_review_required=bool(classification.get("human_review_required")),
             first_failed_stage=current_stage,
             last_known_good_stage=last_successful_step or None,
-            escalation_status="notified",
+            escalation_status=str(classification.get("recommended_route") or "notified"),
             error_class=str(step.get("failure_class") or classification.get("error_class")),
         )
         return str(Path(report_path).resolve()) if report_path else ""
 
-    async def _capture_failure_evidence(self) -> Dict[str, Any]:
+    async def _capture_failure_evidence(
+        self,
+        step: dict | None = None,
+        step_result: dict | None = None,
+    ) -> Dict[str, Any]:
         evidence: Dict[str, Any] = {}
 
         browser = self._drivers.get("browser")
@@ -1114,6 +1120,18 @@ class YamlWorkflowRunner:
                 evidence["network_logs"] = self._relative_evidence_path(
                     self.failure.save_artifact("network.jsonl", self._jsonl(self._network_entries))
                 )
+            if self._needs_selector_repair(step, step_result):
+                plan = selector_repair_plan(
+                    workflow_path=self._workflow_path,
+                    step=step or {},
+                    current_url=sanitize_url(browser.page.url),
+                )
+                evidence["selector_repair"] = self._relative_evidence_path(
+                    self.failure.save_artifact(
+                        "selector_repair_suggestion.json",
+                        json.dumps(plan, indent=2, default=str),
+                    )
+                )
 
         if self._last_api_context:
             api_preview = {
@@ -1125,6 +1143,21 @@ class YamlWorkflowRunner:
             evidence["api_response"] = self._relative_evidence_path(
                 self.failure.save_artifact("api_response.json", json.dumps(api_preview, indent=2))
             )
+
+        desktop = self._drivers.get("desktop")
+        if desktop:
+            try:
+                tree = await desktop.dump_tree(max_depth=3)
+                evidence["uia_tree"] = self._relative_evidence_path(
+                    self.failure.save_artifact("uia_tree.json", json.dumps(tree, indent=2))
+                )
+            except Exception as exc:
+                evidence["uia_tree_error"] = str(exc)
+            evidence["desktop"] = {
+                "driver": getattr(desktop, "driver_type", "windows_ui"),
+                "app_name": getattr(desktop, "_app_name", None),
+                "connected": getattr(desktop, "_connected", None),
+            }
 
         return evidence
 
@@ -1175,6 +1208,16 @@ class YamlWorkflowRunner:
             if isinstance(recovery, dict) and recovery.get("type") == "retry":
                 attempts = max(attempts, int(recovery.get("max_attempts", 1)))
         return attempts
+
+    @staticmethod
+    def _needs_selector_repair(step: dict | None, step_result: dict | None) -> bool:
+        if not step or not isinstance(step, dict):
+            return False
+        action = step.get("action", {})
+        if not isinstance(action, dict) or "selector" not in action:
+            return False
+        result_text = json.dumps(step_result or {}, default=str).lower()
+        return "selector" in result_text or "element" in result_text or "not found" in result_text
 
     def _is_browser_check(self, check_type: CheckType) -> bool:
         return check_type in {

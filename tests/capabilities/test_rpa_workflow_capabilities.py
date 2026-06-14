@@ -242,7 +242,10 @@ class StructuredRecordEvidenceWorkflow(RPAWorkflow):
 
 @pytest.mark.asyncio
 async def test_record_evidence_rows_and_summary_counts_reconcile(tmp_path):
-    workflow = StructuredRecordEvidenceWorkflow(_config(tmp_path))
+    ledger_path = tmp_path / "resume" / "records.jsonl"
+    workflow = StructuredRecordEvidenceWorkflow(
+        _config(tmp_path, resume_ledger_path=str(ledger_path))
+    )
     workflow.notifier = FakeNotifier()
 
     result = await _execute(workflow)
@@ -279,6 +282,9 @@ async def test_record_evidence_rows_and_summary_counts_reconcile(tmp_path):
         "status_counts": {"passed": 1, "skipped": 1, "failed": 1},
         "reconciled": True,
     }
+    assert ledger_path.exists()
+    assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
+    assert result.data["resume_ledger_entries"][0]["record_id"] == "PASS"
 
 
 class RetryWorkflow(RPAWorkflow):
