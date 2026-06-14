@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AI-powered RPA automation harness with Playwright, Windows UIAutomation, and agentic AI loop"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "RPA Harness" }]
 
 dependencies = [
@@ -45,12 +45,12 @@ dev = [
     "mypy>=1.0.0",
 ]
 
-[project.urls]
-Repository = ""
-
 [build-system]
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["harness*", "subagents*"]
 
 [tool.ruff]
 line-length = 100

@@ -273,6 +273,7 @@ class AutomationHarness:
                 "enable_agent": self.config.enable_agent,
             },
             "run_duration_sec": round(self._end_time - self._start_time, 2) if self._end_time else None,
+            "rpa_memory": self.memory.status_snapshot(),
         }
 
         all_results = list(self.results)

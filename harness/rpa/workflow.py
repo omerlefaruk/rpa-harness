@@ -11,9 +11,11 @@ from enum import Enum
 from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
+from harness.core import ExecutionTrace
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
 from harness.resilience.errors import RPAError
+from harness.security import redact_value, redacted_preview
 
 
 class StepStatus(Enum):
@@ -101,6 +103,7 @@ class WorkflowResult:
             "screenshots": self.screenshots,
             "output_files": self.output_files,
             "logs": self.logs,
+            "data": self.data,
         }
 
     @property
@@ -123,6 +126,10 @@ class RPAWorkflow:
         self._step_index = 0
         self._current_record: Optional[dict] = None
         self._batch_size: int = 1
+        self._trace = ExecutionTrace()
+        self.current_stage: Optional[str] = None
+        self._last_record_attempts: int = 0
+        self._pending_record_evidence: list[dict] = []
 
     async def setup(self):
         pass
@@ -134,15 +141,15 @@ class RPAWorkflow:
         raise NotImplementedError("Subclasses must implement process_record()")
 
     async def on_mismatch(self, record: dict, reason: str, details: dict = None):
-        self.log(f"MISMATCH: {reason} | Record: {record}")
+        self.log(f"MISMATCH: {reason} | Record: {redacted_preview(record)}")
         if details:
-            self.log(f"Details: {details}")
+            self.log(f"Details: {redacted_preview(details)}")
 
     async def on_success(self, record: dict, details: dict = None):
         pass
 
     async def on_skip(self, record: dict, reason: str):
-        self.log(f"SKIPPED: {reason} | Record: {record}")
+        self.log(f"SKIPPED: {reason} | Record: {redacted_preview(record)}")
 
     async def teardown(self):
         pass
@@ -151,14 +158,39 @@ class RPAWorkflow:
         self.result.logs.append(message)
         self.logger.info(message)
 
+    def set_current_stage(self, stage: str) -> str:
+        self.current_stage = stage
+        self.result.data["current_stage"] = stage
+        return stage
+
+    def record_evidence(
+        self,
+        evidence: dict,
+        record: Optional[dict] = None,
+        stage: Optional[str] = None,
+    ) -> dict:
+        target_record = record or self._current_record or {}
+        entry = {
+            "record_id": self._record_id(target_record),
+            "stage": stage or self.current_stage,
+            "evidence": redact_value(evidence, max_chars=1000),
+        }
+        self.result.data.setdefault("record_evidence", []).append(entry)
+        if target_record is self._current_record or record is None:
+            self._pending_record_evidence.append(entry)
+        return entry
+
     def step(self, name: str, input_data: dict = None) -> WorkflowStep:
         self._step_index += 1
+        self.set_current_stage(name)
         step = WorkflowStep(
             name=f"Step {self._step_index}: {name}",
             start_time=datetime.now(),
             input_data=input_data or {},
         )
         self.result.steps.append(step)
+        self._trace.start_step(name, index=self._step_index)
+        self.result.data["execution_trace"] = self._trace.to_metadata()
         self.logger.info(f"  {step.name}")
         return step
 
@@ -171,6 +203,8 @@ class RPAWorkflow:
         if step.start_time:
             delta = step.end_time - step.start_time
             step.duration_ms = delta.total_seconds() * 1000
+        self._trace.finish_current(status.value, error=error)
+        self.result.data["execution_trace"] = self._trace.to_metadata()
 
     async def _execute(self) -> WorkflowResult:
         self.result.start_time = datetime.now()
@@ -183,11 +217,14 @@ class RPAWorkflow:
 
             records = list(self.get_records())
             self.result.total_records = len(records)
+            self._refresh_record_summary()
             self.log(f"Processing {len(records)} records...")
 
             processing_step = self.step("Process Records")
             for idx, record in enumerate(records, 1):
                 self._current_record = record
+                self._last_record_attempts = 0
+                self._pending_record_evidence = []
                 record_id = record.get("id") or record.get(
                     "reservation_number"
                 ) or f"record_{idx}"
@@ -218,6 +255,7 @@ class RPAWorkflow:
                             result.get("reason", "Validation failed"),
                             result.get("details", {}),
                         )
+                    self._record_terminal_outcome(record, record_id, result)
                 except Exception as e:
                     self.result.failed_records += 1
                     self.log(f"  ERROR on {record_id}: {e}")
@@ -232,6 +270,17 @@ class RPAWorkflow:
                     await self.on_mismatch(
                         record, str(e), {"exception": traceback.format_exc()}
                     )
+                    self._record_terminal_outcome(
+                        record,
+                        record_id,
+                        {
+                            "status": "failed",
+                            "reason": str(e),
+                            "details": {"exception": traceback.format_exc()},
+                        },
+                    )
+                finally:
+                    self._refresh_record_summary()
 
             self.step_done(processing_step)
 
@@ -311,6 +360,7 @@ class RPAWorkflow:
                 },
             )
             self.result.retried_records += max(0, attempts - 1)
+            self._last_record_attempts = attempts
             if attempts > 1:
                 await self.notifier.frustration(
                     "I had to retry a record before it passed.",
@@ -323,6 +373,7 @@ class RPAWorkflow:
             return result
         except RetryableRecordError as e:
             self.result.retried_records += max(0, attempts - 1)
+            self._last_record_attempts = attempts
             if attempts > 1:
                 await self.notifier.frustration(
                     "I retried a record and it still did not pass.",
@@ -336,6 +387,7 @@ class RPAWorkflow:
             return e.result
         except Exception as e:
             self.result.retried_records += max(0, attempts - 1)
+            self._last_record_attempts = attempts
             await self.notifier.frustration(
                 "The record retry path ended in an exception.",
                 context={
@@ -354,3 +406,66 @@ class RPAWorkflow:
     @staticmethod
     def _record_id(record: dict) -> str:
         return str(record.get("id") or record.get("reservation_number") or "unknown")
+
+    @staticmethod
+    def _terminal_record_status(status: str) -> str:
+        if status in ("passed", "skipped", "needs_review"):
+            return status
+        return "failed"
+
+    def _record_terminal_outcome(
+        self,
+        record: dict,
+        record_id: str,
+        result: dict,
+    ) -> dict:
+        raw_status = str(result.get("status", "passed"))
+        attempts = int(result.get("attempts") or self._last_record_attempts or 1)
+        entry = {
+            "record_id": str(result.get("record_id") or record_id or self._record_id(record)),
+            "status": self._terminal_record_status(raw_status),
+            "raw_status": raw_status,
+            "reason": result.get("reason"),
+            "attempts": attempts,
+            "retried": bool(result.get("retried") or attempts > 1),
+            "stage": self.current_stage,
+        }
+        if result.get("details") is not None:
+            entry["details"] = redact_value(result.get("details"), max_chars=1000)
+        if result.get("evidence") is not None:
+            entry["evidence"] = redact_value(result.get("evidence"), max_chars=1000)
+        if self._pending_record_evidence:
+            entry["evidence_events"] = list(self._pending_record_evidence)
+        self.result.data.setdefault("records", []).append(entry)
+        return entry
+
+    def _refresh_record_summary(self) -> dict:
+        records = self.result.data.setdefault("records", [])
+        status_counts: Dict[str, int] = {}
+        for record in records:
+            status = str(record.get("status", "unknown"))
+            status_counts[status] = status_counts.get(status, 0) + 1
+
+        terminal_records = len(records)
+        counted_terminal = (
+            self.result.processed_records
+            + self.result.failed_records
+            + self.result.skipped_records
+        )
+        summary = {
+            "total": self.result.total_records,
+            "passed": self.result.processed_records,
+            "failed": self.result.failed_records,
+            "skipped": self.result.skipped_records,
+            "retried": self.result.retried_records,
+            "needs_review": status_counts.get("needs_review", 0),
+            "terminal_records": terminal_records,
+            "unprocessed": max(self.result.total_records - terminal_records, 0),
+            "status_counts": status_counts,
+            "reconciled": (
+                terminal_records == counted_terminal
+                and terminal_records == self.result.total_records
+            ),
+        }
+        self.result.data["record_summary"] = summary
+        return summary

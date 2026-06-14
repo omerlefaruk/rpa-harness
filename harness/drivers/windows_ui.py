@@ -106,6 +106,10 @@ class WindowsUIDriver(AbstractBaseDriver):
         self.logger.info(f"Click: name={name}, id={automation_id}")
 
         if coordinates:
+            if not getattr(self.config, "allow_coordinate_fallback", False):
+                raise RuntimeError(
+                    "Coordinate desktop click requires allow_coordinate_fallback=True"
+                )
             await self._click_at(*coordinates)
             return
 
@@ -138,6 +142,11 @@ class WindowsUIDriver(AbstractBaseDriver):
         if el and el.native_element:
             await asyncio.to_thread(el.native_element.type_keys, text, with_spaces=with_spaces)
         else:
+            if not getattr(self.config, "allow_desktop_global_input_fallback", False):
+                raise RuntimeError(
+                    "Desktop global typing fallback requires "
+                    "allow_desktop_global_input_fallback=True"
+                )
             import pyautogui
             pyautogui.typewrite(text, interval=0.01)
 

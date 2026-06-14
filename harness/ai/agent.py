@@ -201,8 +201,9 @@ class RPAAgent:
                         )
                         if not verified:
                             self.logger.warning(f"Verification: {reasoning}")
+                            raise RuntimeError(f"Agent verification failed: {reasoning}")
                 except Exception:
-                    pass
+                    raise
 
             return {
                 "tool_name": tool_name,
@@ -284,7 +285,7 @@ class RPAAgent:
                     },
                 )
         else:
-            result["success"] = True
+            result["success"] = self._execution_succeeded(execution)
             result["output"] = execution["output"]
 
         result["retries"] = max(0, attempts - 1)
@@ -315,6 +316,14 @@ class RPAAgent:
         self.logger.step_result(step.id, result["success"], result["duration_ms"])
 
         return result
+
+    def _execution_succeeded(self, execution: Dict[str, Any]) -> bool:
+        output = execution.get("output")
+        if isinstance(output, dict):
+            status = str(output.get("status", "")).lower()
+            if status in {"failed", "failure", "error"}:
+                return False
+        return True
 
     async def _decide(self, step: PlanStep, plan: Plan, last_result: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
         context = self.history.get_context_for_prompt(max_entries=10)

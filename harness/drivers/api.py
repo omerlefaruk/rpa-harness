@@ -13,7 +13,7 @@ import httpx
 from harness.config import HarnessConfig
 from harness.drivers.base import AbstractBaseDriver
 from harness.logger import HarnessLogger
-from harness.security import sanitize_url
+from harness.security import redact_value, sanitize_url
 
 
 class APIDriver(AbstractBaseDriver):
@@ -51,8 +51,14 @@ class APIDriver(AbstractBaseDriver):
         path = Path(report_dir) / filename
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        content = str(self._last_response.json() if self._last_response else "No response captured")
-        path.write_text(json.dumps(json.loads(content) if isinstance(content, str) else content, indent=2))
+        if self._last_response is None:
+            content: Any = "No response captured"
+        else:
+            try:
+                content = self._last_response.json()
+            except Exception:
+                content = self._last_response.text
+        path.write_text(json.dumps(redact_value(content), indent=2, default=str))
 
         self._screenshots.append(str(path))
         self.logger.info(f"Response saved: {path}")

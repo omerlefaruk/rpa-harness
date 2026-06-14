@@ -26,6 +26,8 @@ class MemoryRecorder:
         self.client = client or MemoryClient(self.config)
         self.logger = logger or HarnessLogger("rpa-memory-recorder")
         self.available = self.config.enabled
+        self.status = "unknown" if self.config.enabled else "disabled"
+        self.last_error: str | None = None
 
     @classmethod
     def from_harness_config(cls, harness_config: Any) -> "MemoryRecorder":
@@ -39,6 +41,7 @@ class MemoryRecorder:
             self.available = False
             return False
         result = await self.client.health()
+        self._note_result(result)
         self.available = not (
             isinstance(result, dict)
             and (result.get("status") == "unavailable" or result.get("available") is False)
@@ -54,13 +57,15 @@ class MemoryRecorder:
         project: str | None = None,
         custom_title: str | None = None,
     ) -> dict[str, Any]:
-        return await self.client.start_session(
+        result = await self.client.start_session(
             content_session_id=content_session_id,
             project=project or self.config.project,
             prompt=prompt,
             platform_source="rpa-harness",
             custom_title=custom_title,
         )
+        self._note_result(result)
+        return result
 
     async def record_observation(
         self,
@@ -71,7 +76,7 @@ class MemoryRecorder:
         cwd: str | None = None,
         tool_use_id: str | None = None,
     ) -> dict[str, Any]:
-        return await self.client.record_observation(
+        result = await self.client.record_observation(
             content_session_id=content_session_id,
             tool_name=tool_name,
             tool_input=redact_value(tool_input or {}),
@@ -80,13 +85,17 @@ class MemoryRecorder:
             platform_source="rpa-harness",
             tool_use_id=tool_use_id,
         )
+        self._note_result(result)
+        return result
 
     async def summarize(self, content_session_id: str, summary: Any) -> dict[str, Any]:
-        return await self.client.summarize(
+        result = await self.client.summarize(
             content_session_id=content_session_id,
             last_assistant_message=str(redact_value(summary)),
             platform_source="rpa-harness",
         )
+        self._note_result(result)
+        return result
 
     async def record_test_result(self, content_session_id: str, result: Any) -> None:
         await self.record_observation(
@@ -123,3 +132,26 @@ class MemoryRecorder:
             project=project or self.config.project,
             limit=self.config.semantic_inject_limit,
         )
+
+    def status_snapshot(self) -> dict[str, Any]:
+        return {
+            "enabled": self.config.enabled,
+            "required": self.config.required,
+            "status": self.status,
+            "worker_url": self.config.worker_url,
+            "last_error": self.last_error,
+        }
+
+    def _note_result(self, result: Any) -> None:
+        if not self.config.enabled:
+            self.available = False
+            self.status = "disabled"
+            return
+        if isinstance(result, dict) and result.get("available") is False:
+            self.available = False
+            self.status = "unavailable"
+            self.last_error = str(result.get("error") or "memory unavailable")
+            return
+        self.available = True
+        self.status = "available"
+        self.last_error = None

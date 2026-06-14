@@ -26,6 +26,13 @@ from harness.config import HarnessConfig
 from harness.orchestrator import AutomationHarness
 
 
+def configure_console_encoding():
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="RPA Harness — AI-powered automation",
@@ -199,6 +206,7 @@ Examples:
     )
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
+    parser.add_argument("--audit-workflow", help="Audit a YAML workflow against the RPA rulebook")
     parser.add_argument(
         "--telegram-message",
         help="Send one Telegram bot message using RPA_TELEGRAM_BOT_TOKEN and RPA_TELEGRAM_CHAT_ID",
@@ -282,6 +290,7 @@ def _strip_env_quotes(value: str) -> str:
 
 
 async def main():
+    configure_console_encoding()
     args = parse_args()
     load_local_env()
 
@@ -409,6 +418,29 @@ async def main():
     if args.serve:
         from harness.reporting.dashboard import serve_dashboard
         await serve_dashboard(port=args.port)
+        return
+
+    if args.audit_workflow:
+        import json
+        import yaml
+
+        from harness.core import audit_workflow_rulebook
+        from harness.verification import validate_workflow
+
+        with open(args.audit_workflow) as f:
+            wf = yaml.safe_load(f) or {}
+        validation_errors = validate_workflow(wf)
+        audit = audit_workflow_rulebook(wf).to_dict()
+        result = {
+            "workflow_id": wf.get("id", "unknown"),
+            "workflow_name": wf.get("name", wf.get("id", "unknown")),
+            "validation_status": "invalid" if validation_errors else "valid",
+            "validation_errors": validation_errors,
+            "rulebook_audit": audit,
+        }
+        print(json.dumps(result, indent=2, default=str))
+        if validation_errors:
+            sys.exit(1)
         return
 
     if args.validate_yaml:

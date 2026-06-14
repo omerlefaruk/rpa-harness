@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional
 from harness.config import HarnessConfig
 from harness.drivers.base import AbstractBaseDriver
 from harness.logger import HarnessLogger
+from harness.security import redacted_preview
 
 
 class PlaywrightDriver(AbstractBaseDriver):
@@ -94,7 +95,7 @@ class PlaywrightDriver(AbstractBaseDriver):
         timeout = timeout or 10000
         try:
             await self.page.fill(selector, value, timeout=timeout)
-            self.logger.info(f"Filled {selector}: '{str(value)[:50]}'")
+            self.logger.info(f"Filled {selector}: '{redacted_preview(value, max_chars=50)}'")
         except Exception as e:
             self.logger.warning(f"Fill failed for {selector}: {e}")
             if self.config and self.config.auto_heal_selectors:

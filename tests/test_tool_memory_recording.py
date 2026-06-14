@@ -114,3 +114,54 @@ async def test_tool_registry_does_not_record_memory_tool_calls():
     await registry.execute("mem_search", {"query": "selector"})
 
     assert recorder.calls == []
+
+
+@pytest.mark.asyncio
+async def test_tool_registry_blocks_unapproved_tool_before_handler_runs():
+    recorder = FakeMemoryRecorder()
+    registry = ToolRegistry(memory_recorder=recorder, memory_session_id="agent-1")
+    called = False
+
+    async def handler():
+        nonlocal called
+        called = True
+
+    registry.register(
+        Tool(
+            name="desktop_click",
+            description="Click desktop",
+            parameters={},
+            handler=handler,
+            category="desktop",
+            requires_approval=True,
+        )
+    )
+
+    with pytest.raises(PermissionError):
+        await registry.execute("desktop_click", {})
+
+    assert called is False
+    assert recorder.calls[0]["tool_response"]["success"] is False
+
+
+@pytest.mark.asyncio
+async def test_tool_registry_runs_approved_tool():
+    registry = ToolRegistry(approval_policy=lambda tool, arguments: arguments["ticket"] == "ok")
+
+    async def handler(ticket: str):
+        return {"status": "ok", "ticket": ticket}
+
+    registry.register(
+        Tool(
+            name="api_call",
+            description="Call API",
+            parameters={},
+            handler=handler,
+            category="api",
+            requires_approval=True,
+        )
+    )
+
+    result = await registry.execute("api_call", {"ticket": "ok"})
+
+    assert result == {"status": "ok", "ticket": "ok"}

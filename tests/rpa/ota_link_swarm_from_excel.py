@@ -301,7 +301,8 @@ def render_html_report(result: dict, *, result_path: str = DEFAULT_HTML) -> str:
 
 def relative_or_raw(path: str, *, result_path: str) -> str:
     try:
-        return os.path.relpath(Path(path).resolve(), Path(result_path).resolve().parent)
+        relative = os.path.relpath(Path(path).resolve(), Path(result_path).resolve().parent)
+        return relative.replace(os.sep, "/").replace("\\", "/")
     except Exception:
         return path
 

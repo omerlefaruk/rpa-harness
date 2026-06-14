@@ -9,6 +9,8 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
+from harness.core import ExecutionTrace
+
 
 class TestStatus(Enum):
     PENDING = "pending"
@@ -65,6 +67,7 @@ class AutomationTestCase:
         self._current_step: Optional[dict] = None
         self._last_successful_step: Optional[dict] = None
         self._skipped = False
+        self._trace = ExecutionTrace()
 
     async def setup(self):
         pass
@@ -78,6 +81,7 @@ class AutomationTestCase:
     def step(self, description: str):
         self._mark_current_step("passed")
         self._step_index += 1
+        self._trace.start_step(description, index=self._step_index)
         self._current_step = {"index": self._step_index, "description": description}
         self._step_records.append({**self._current_step, "status": "running"})
         self._sync_step_metadata()
@@ -88,6 +92,7 @@ class AutomationTestCase:
     def _mark_current_step(self, status: str):
         if not self._current_step:
             return
+        self._trace.finish_current(status)
         for record in reversed(self._step_records):
             if record["index"] == self._current_step["index"]:
                 record["status"] = status
@@ -104,6 +109,7 @@ class AutomationTestCase:
         self.result.metadata["last_successful_step"] = (
             dict(self._last_successful_step) if self._last_successful_step else None
         )
+        self.result.metadata["execution_trace"] = self._trace.to_metadata()
 
     def skip(self, reason: str):
         self._mark_current_step("skipped")
@@ -112,6 +118,13 @@ class AutomationTestCase:
         self.result.logs.append(f"SKIPPED: {reason}")
 
     def expect(self, condition: bool, message: str = ""):
+        self._trace.record_check(
+            passed=bool(condition),
+            message=message,
+            expected=True,
+            actual=bool(condition),
+        )
+        self._sync_step_metadata()
         if not condition:
             self.result.logs.append(f"ASSERT FAILED: {message}")
             raise AssertionError(message)

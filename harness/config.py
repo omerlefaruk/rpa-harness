@@ -60,6 +60,8 @@ class HarnessConfig:
     desktop_platform: str = "windows"
     app_launch_timeout: int = 30
     element_find_timeout: int = 10
+    allow_coordinate_fallback: bool = False
+    allow_desktop_global_input_fallback: bool = False
 
     # AI / Vision
     enable_vision: bool = True
@@ -106,6 +108,12 @@ class HarnessConfig:
             max_workers=int(os.getenv("RPA_MAX_WORKERS", "4")),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_API_BASE"),
+            allow_coordinate_fallback=os.getenv(
+                "RPA_ALLOW_COORDINATE_FALLBACK", "false"
+            ).lower() == "true",
+            allow_desktop_global_input_fallback=os.getenv(
+                "RPA_ALLOW_DESKTOP_GLOBAL_INPUT_FALLBACK", "false"
+            ).lower() == "true",
             memory=MemoryConfig.from_env(),
         )
 

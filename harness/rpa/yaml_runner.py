@@ -15,10 +15,12 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from harness.config import HarnessConfig
+from harness.core import audit_workflow_rulebook
 from harness.logger import HarnessLogger
 from harness.memory.recorder import MemoryRecorder
 from harness.notifications import BotNotifier
 from harness.reporting.failure_report import FailureReport
+from harness.resilience.errors import classify_failure
 from harness.security import (
     redact_mapping,
     redact_text,
@@ -70,6 +72,7 @@ class YamlWorkflowRunner:
         workflow = self.load(workflow_path)
         workflow_id = workflow["id"]
         workflow_name = workflow.get("name", workflow_id)
+        rulebook_audit = audit_workflow_rulebook(workflow).to_dict()
         self._last_api_context = None
         self._console_entries = []
         self._network_entries = []
@@ -94,6 +97,8 @@ class YamlWorkflowRunner:
                 "reason": "Missing required secrets",
                 "missing_secrets": missing_secrets,
                 "steps": [],
+                "rulebook_audit": rulebook_audit,
+                "rpa_memory": self.memory.status_snapshot(),
             }
         self._secrets = self._load_secrets()
         self.notifier.add_secret_values(self._secrets.values())
@@ -113,6 +118,8 @@ class YamlWorkflowRunner:
                 "reason": "Workflow contains actions not supported by YAML execution v1",
                 "unsupported_actions": unsupported,
                 "steps": [],
+                "rulebook_audit": rulebook_audit,
+                "rpa_memory": self.memory.status_snapshot(),
             }
 
         start_time = time.time()
@@ -154,6 +161,7 @@ class YamlWorkflowRunner:
                 )
                 step_result["failure_report"] = report_path
                 await self.memory.summarize(memory_session_id, step_result)
+                memory_status = self.memory.status_snapshot()
                 await self.notifier.failure(
                     "A YAML workflow step failed.",
                     context={
@@ -182,6 +190,8 @@ class YamlWorkflowRunner:
                     "failure_report": report_path,
                     "steps": steps,
                     "duration_ms": (time.time() - start_time) * 1000,
+                    "rulebook_audit": rulebook_audit,
+                    "rpa_memory": memory_status,
                 }
 
             result = {
@@ -191,8 +201,10 @@ class YamlWorkflowRunner:
                 "steps_completed": len(steps),
                 "steps": steps,
                 "duration_ms": (time.time() - start_time) * 1000,
+                "rulebook_audit": rulebook_audit,
             }
             summary_result = await self.memory.summarize(memory_session_id, result)
+            result["rpa_memory"] = self.memory.status_snapshot()
             if self._memory_write_succeeded(summary_result):
                 await self.notifier.memory_note(
                     "I saved the YAML workflow summary.",
@@ -234,7 +246,7 @@ class YamlWorkflowRunner:
 
         if self._checks_passed(check_results):
             return self._step_result(
-                step_id, action_type, started_at, attempts, check_results, destructive
+                step, step_id, action_type, started_at, attempts, check_results, destructive
             )
 
         for recovery in step.get("recovery", []) or []:
@@ -256,7 +268,7 @@ class YamlWorkflowRunner:
                         check_results = []
                     if self._checks_passed(check_results):
                         return self._step_result(
-                            step_id, action_type, started_at, attempts, check_results, destructive
+                            step, step_id, action_type, started_at, attempts, check_results, destructive
                         )
 
             elif recovery_type == "wait":
@@ -280,7 +292,7 @@ class YamlWorkflowRunner:
                     check_results = await self._verify_step(step, action_result)
                 if self._checks_passed(check_results):
                     return self._step_result(
-                        step_id, action_type, started_at, attempts, check_results, destructive
+                        step, step_id, action_type, started_at, attempts, check_results, destructive
                     )
 
             elif recovery_type == "refresh_page":
@@ -299,11 +311,11 @@ class YamlWorkflowRunner:
                     check_results = []
                 if self._checks_passed(check_results):
                     return self._step_result(
-                        step_id, action_type, started_at, attempts, check_results, destructive
+                        step, step_id, action_type, started_at, attempts, check_results, destructive
                     )
 
         result = self._step_result(
-            step_id, action_type, started_at, attempts, check_results, destructive
+            step, step_id, action_type, started_at, attempts, check_results, destructive
         )
         result["status"] = "failed"
         result["error"] = self._redact_runtime_text(
@@ -314,6 +326,7 @@ class YamlWorkflowRunner:
 
     def _step_result(
         self,
+        step: dict,
         step_id: str,
         action_type: str,
         started_at: float,
@@ -327,6 +340,11 @@ class YamlWorkflowRunner:
             "status": "passed" if self._checks_passed(check_results) else "failed",
             "duration_ms": (time.time() - started_at) * 1000,
             "attempts": attempts,
+            "max_attempts": self._step_max_attempts(step),
+            "current_stage": step.get("current_stage") or step_id,
+            "intent": step.get("intent") or step.get("description", ""),
+            "proof": step.get("proof") or "",
+            "failure_path": step.get("failure_path") or "",
             "checks": [self._redact_check_result(result) for result in check_results],
             "destructive": destructive,
             "error": "",
@@ -963,6 +981,9 @@ class YamlWorkflowRunner:
 
     def _resolve_string(self, value: str) -> str:
         result = value
+        cwd = Path.cwd().resolve()
+        result = result.replace("file://${PWD}", cwd.as_uri())
+        result = result.replace("${PWD}", str(cwd))
 
         def replace_input(match):
             return str(self._inputs.get(match.group(1), match.group(0)))
@@ -979,6 +1000,8 @@ class YamlWorkflowRunner:
         result = INPUT_REF_RE.sub(replace_input, result)
         result = VARIABLE_REF_RE.sub(replace_variable, result)
         result = SECRET_REF_RE.sub(replace_secret, result)
+        result = result.replace("file://${PWD}", cwd.as_uri())
+        result = result.replace("${PWD}", str(cwd))
         return os.path.expandvars(result)
 
     def _store_output(self, action: dict, value: Any):
@@ -996,6 +1019,18 @@ class YamlWorkflowRunner:
                 unsupported.append(action_type)
         return unsupported
 
+    @staticmethod
+    def _target_system(workflow: dict) -> Optional[str]:
+        target_systems = workflow.get("target_systems")
+        if isinstance(target_systems, list) and target_systems:
+            return ", ".join(str(item) for item in target_systems)
+        if isinstance(target_systems, str):
+            return target_systems
+        system_of_record = workflow.get("system_of_record")
+        if system_of_record:
+            return str(system_of_record)
+        return workflow.get("type")
+
     async def _record_failure(
         self,
         workflow: dict,
@@ -1007,6 +1042,16 @@ class YamlWorkflowRunner:
         self.failure.start_run(workflow["id"])
         self._flush_pending_logs()
         evidence = await self._capture_failure_evidence()
+        verification_failures = [
+            check for check in step_result.get("checks", []) if not check.get("passed")
+        ]
+        first_failure = verification_failures[0] if verification_failures else {}
+        error_message = step_result.get("error") or "Step verification failed"
+        classification = classify_failure(
+            error_message,
+            root_observation=first_failure.get("message") or error_message,
+        )
+        current_stage = step.get("current_stage") or step["id"]
         report_path = self.failure.generate(
             workflow_id=workflow["id"],
             workflow_name=workflow.get("name", workflow["id"]),
@@ -1014,15 +1059,28 @@ class YamlWorkflowRunner:
             failed_step_description=step.get("description", step["id"]),
             action_type=step.get("action", {}).get("type", "unknown"),
             error_type="WorkflowStepFailed",
-            error_message=step_result.get("error") or "Step verification failed",
+            error_message=error_message,
             error_category="unknown",
             last_successful_step=last_successful_step,
-            verification_failures=[
-                check for check in step_result.get("checks", []) if not check.get("passed")
-            ],
+            verification_failures=verification_failures,
             evidence=evidence,
             duration_ms=(time.time() - started_at) * 1000,
             repro_command=f"python main.py --run-yaml {self._workflow_path}",
+            current_stage=current_stage,
+            intended_action=step.get("intent") or step.get("description", step["id"]),
+            expected_result=self._redact_optional(first_failure.get("expected")),
+            actual_result=self._redact_optional(first_failure.get("actual")),
+            input_record_id=step.get("record_id"),
+            target_system=self._target_system(workflow),
+            retry_attempt=step_result.get("attempts"),
+            max_attempts=step_result.get("max_attempts"),
+            retry_allowed=bool(classification.get("retry_allowed")),
+            side_effect_risk=str(classification.get("side_effect_risk")),
+            human_review_required=bool(classification.get("human_review_required")),
+            first_failed_stage=current_stage,
+            last_known_good_stage=last_successful_step or None,
+            escalation_status="notified",
+            error_class=str(step.get("failure_class") or classification.get("error_class")),
         )
         return str(Path(report_path).resolve()) if report_path else ""
 
@@ -1090,6 +1148,11 @@ class YamlWorkflowRunner:
     def _redact_runtime_text(self, value: Any, max_chars: int = 500) -> str:
         return redacted_preview(value, self._secrets.values(), max_chars=max_chars)
 
+    def _redact_optional(self, value: Any, max_chars: int = 500) -> Optional[str]:
+        if value is None:
+            return None
+        return self._redact_runtime_text(value, max_chars=max_chars)
+
     @staticmethod
     def _memory_write_succeeded(result: Any) -> bool:
         return isinstance(result, dict) and result.get("status") == "stored"
@@ -1104,6 +1167,14 @@ class YamlWorkflowRunner:
         return "; ".join(
             result.message or f"{result.check_type.value} failed" for result in failures
         )
+
+    @staticmethod
+    def _step_max_attempts(step: dict) -> int:
+        attempts = 1
+        for recovery in step.get("recovery", []) or []:
+            if isinstance(recovery, dict) and recovery.get("type") == "retry":
+                attempts = max(attempts, int(recovery.get("max_attempts", 1)))
+        return attempts
 
     def _is_browser_check(self, check_type: CheckType) -> bool:
         return check_type in {

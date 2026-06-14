@@ -86,7 +86,58 @@ def test_failure_report_includes_repro_command_and_evidence_paths(tmp_path):
     assert report["evidence"]["api_response"] == "api_response.json"
     assert report["evidence"]["artifact_paths"] == ["api_response.json"]
     assert report["last_successful_step"] is None
+    assert report["error_class"] == "unknown"
     assert (Path(report_path).parent / "artifacts" / "api_response.json").exists()
+
+
+def test_failure_report_includes_rulebook_failure_fields(tmp_path):
+    failure = FailureReport(str(tmp_path / "runs"))
+    failure.start_run("rulebook_failure")
+
+    report_path = failure.generate(
+        workflow_id="rulebook_failure",
+        workflow_name="Rulebook Failure",
+        failed_step_id="submit_invoice",
+        failed_step_description="Submit invoice",
+        action_type="browser.click",
+        error_type="AuthenticationError",
+        error_message="Login denied",
+        error_category="permanent",
+        current_stage="submit invoice",
+        intended_action="Create invoice in target system",
+        expected_result="Invoice confirmation is visible",
+        actual_result="Login denied banner is visible",
+        input_record_id="row-42",
+        target_system="billing_portal",
+        retry_attempt=1,
+        max_attempts=1,
+        retry_allowed=False,
+        side_effect_risk="medium",
+        human_review_required=True,
+        first_failed_stage="submit invoice",
+        last_known_good_stage="open invoice form",
+        escalation_status="needs_operator_review",
+        error_class="authorization_config",
+    )
+
+    report = json.loads(Path(report_path).read_text())
+
+    assert report["current_stage"] == "submit invoice"
+    assert report["intended_action"] == "Create invoice in target system"
+    assert report["expected_result"] == "Invoice confirmation is visible"
+    assert report["actual_result"] == "Login denied banner is visible"
+    assert report["input_record_id"] == "row-42"
+    assert report["target_system"] == "billing_portal"
+    assert report["retry_attempt"] == 1
+    assert report["max_attempts"] == 1
+    assert report["retry_allowed"] is False
+    assert report["side_effect_risk"] == "medium"
+    assert report["human_review_required"] is True
+    assert report["first_failed_stage"] == "submit invoice"
+    assert report["last_known_good_stage"] == "open invoice form"
+    assert report["escalation_status"] == "needs_operator_review"
+    assert report["error_class"] == "authorization_config"
+    assert report["error_category"] == "permanent"
 
 
 def test_json_report_redacts_secret_like_log_values(tmp_path):

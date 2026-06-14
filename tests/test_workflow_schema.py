@@ -1,6 +1,8 @@
 """Tests for YAML workflow validation and execution."""
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -143,6 +145,61 @@ def test_validate_destructive_api_requires_allow_destructive():
     assert any("allow_destructive" in error for error in errors)
 
 
+def test_validate_side_effecting_retry_requires_idempotency_guard():
+    wf = {
+        "id": "bad_retry",
+        "name": "Bad Retry",
+        "version": "1.0",
+        "type": "api",
+        "allow_destructive": True,
+        "steps": [
+            {
+                "id": "write",
+                "failure_class": "transient",
+                "action": {
+                    "type": "api.post",
+                    "url": "https://example.com",
+                    "json_data": {"ok": True},
+                },
+                "success_check": [{"type": "status_code", "value": 201}],
+                "recovery": [{"type": "retry", "max_attempts": 2}],
+            }
+        ],
+    }
+
+    errors = validate_workflow(wf)
+
+    assert any("retry requires transient failure class" in error for error in errors)
+
+
+def test_validate_side_effecting_retry_allows_idempotency_guard():
+    wf = {
+        "id": "safe_retry",
+        "name": "Safe Retry",
+        "version": "1.0",
+        "type": "api",
+        "allow_destructive": True,
+        "steps": [
+            {
+                "id": "write",
+                "failure_class": "transient",
+                "idempotency_key": "request_id",
+                "action": {
+                    "type": "api.post",
+                    "url": "https://example.com",
+                    "json_data": {"ok": True},
+                },
+                "success_check": [{"type": "status_code", "value": 201}],
+                "recovery": [{"type": "retry", "max_attempts": 2}],
+            }
+        ],
+    }
+
+    errors = validate_workflow(wf)
+
+    assert errors == []
+
+
 def test_yaml_runner_workflow_inputs_override_default_config_variables():
     config = HarnessConfig(variables={"base_url": "https://default.example"})
     runner = YamlWorkflowRunner(config=config)
@@ -182,6 +239,36 @@ steps:
     result = await runner.run(str(wf_path))
     assert result["status"] == "passed"
     assert result["steps_completed"] > 0
+    assert "rulebook_audit" in result
+    assert result["rulebook_audit"]["score"] < 5
+
+
+def test_audit_workflow_cli_outputs_rulebook_json(tmp_path):
+    wf_path = tmp_path / "noop.yaml"
+    wf_path.write_text("""
+id: noop_cli_audit
+name: Noop CLI Audit
+version: "1.0"
+type: api
+steps:
+  - id: done
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    completed = subprocess.run(
+        [sys.executable, "main.py", "--audit-workflow", str(wf_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["workflow_id"] == "noop_cli_audit"
+    assert payload["validation_status"] == "valid"
+    assert "rulebook_audit" in payload
 
 
 @pytest.mark.asyncio

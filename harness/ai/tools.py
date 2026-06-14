@@ -6,7 +6,7 @@ with async handler functions.
 
 import time
 from typing import Any, Callable, Dict, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from harness.logger import HarnessLogger
 from harness.security import redact_mapping, redacted_preview, redact_value
@@ -38,11 +38,13 @@ class ToolRegistry:
         logger: Optional[HarnessLogger] = None,
         memory_recorder=None,
         memory_session_id: Optional[str] = None,
+        approval_policy: Optional[Callable[[Tool, dict], bool]] = None,
     ):
         self.logger = logger or HarnessLogger("tools")
         self._tools: Dict[str, Tool] = {}
         self.memory_recorder = memory_recorder
         self.memory_session_id = memory_session_id
+        self.approval_policy = approval_policy
 
     def bind_memory(self, memory_recorder=None, memory_session_id: Optional[str] = None) -> None:
         self.memory_recorder = memory_recorder
@@ -80,6 +82,17 @@ class ToolRegistry:
         )
 
         started_at = time.perf_counter()
+        if tool.requires_approval and not self._is_approved(tool, arguments or {}):
+            error = PermissionError(f"Tool requires approval before execution: {name}")
+            await self._record_tool_call(
+                tool=tool,
+                arguments=arguments,
+                started_at=started_at,
+                success=False,
+                error=error,
+            )
+            raise error
+
         try:
             result = await tool.handler(**arguments)
             self.logger.debug(f"Tool result: {name} → {str(result)[:100]}")
@@ -101,6 +114,15 @@ class ToolRegistry:
                 error=e,
             )
             raise
+
+    def _is_approved(self, tool: Tool, arguments: dict) -> bool:
+        if self.approval_policy is None:
+            return False
+        try:
+            return bool(self.approval_policy(tool, arguments))
+        except Exception as exc:
+            self.logger.warning(f"Approval policy failed for {tool.name}: {exc}")
+            return False
 
     async def _record_tool_call(
         self,
@@ -175,6 +197,22 @@ def build_default_tools(
 ) -> List[Tool]:
 
     tools = []
+
+    async def api_call(method, path, json_data=None, params=None):
+        method_name = str(method).lower()
+        if method_name == "get":
+            return await api_driver.get(path, params=params)
+        if method_name == "delete":
+            return await api_driver.delete(path, params=params)
+        if method_name in {"post", "put"}:
+            return await getattr(api_driver, method_name)(
+                path,
+                json_data=json_data,
+                params=params,
+            )
+        if method_name == "patch":
+            return await api_driver.patch(path, json_data=json_data)
+        raise ValueError(f"Unsupported API method: {method}")
 
     # Browser tools
     if playwright_driver:
@@ -342,6 +380,7 @@ def build_default_tools(
                 },
                 handler=windows_driver.click,
                 category="desktop",
+                requires_approval=True,
             ),
             Tool(
                 name="desktop_type",
@@ -356,6 +395,7 @@ def build_default_tools(
                 },
                 handler=windows_driver.type_keys,
                 category="desktop",
+                requires_approval=True,
             ),
             Tool(
                 name="desktop_get_text",
@@ -416,9 +456,9 @@ def build_default_tools(
                     },
                     "required": ["method", "path"],
                 },
-                handler=lambda method, path, json_data=None, params=None:
-                    getattr(api_driver, method.lower())(path, json_data=json_data, params=params),
+                handler=api_call,
                 category="api",
+                requires_approval=True,
             ),
         ])
 

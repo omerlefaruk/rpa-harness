@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from harness.core import retry_policy_is_safe
 from harness.security import is_sensitive_key
 
 
@@ -225,6 +226,11 @@ def validate_workflow_step(step: dict) -> List[str]:
             errors.append(f"schema: Step '{step_id}' recovery[{i}]: unsupported type '{rtype}'")
         if rtype == "retry" and "max_attempts" not in recovery:
             errors.append(f"schema: Step '{step_id}' recovery[{i}]: retry requires max_attempts")
+        if rtype == "retry" and not retry_policy_is_safe(step):
+            errors.append(
+                f"schema: Step '{step_id}' retry requires transient failure class and "
+                "idempotency/side-effect guard for side-effecting actions"
+            )
         if rtype == "wait" and not ("ms" in recovery or "duration_ms" in recovery):
             errors.append(f"schema: Step '{step_id}' recovery[{i}]: wait requires ms")
     return errors

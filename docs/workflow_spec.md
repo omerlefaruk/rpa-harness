@@ -15,12 +15,36 @@ credentials: {}
 steps: []
 ```
 
+## Rulebook Contract Fields
+
+Legacy workflows remain valid without these fields, but `--audit-workflow`
+reports warnings and a 0-5 readiness score when they are missing.
+
+```yaml
+owner: string
+target_systems: [string]
+input_schema: {}
+output_destination: string
+system_of_record: string
+success_condition: string
+safe_test_case: string
+allowed_side_effects: [string]
+rerun_policy: string
+escalation_owner: string
+```
+
 ## Step Definition
 
 ```yaml
 steps:
   - id: string              # unique within workflow
     description: string     # human-readable
+    current_stage: string   # business-readable stage name
+    intent: string          # intended business result
+    preconditions: []       # conditions checked before side effects
+    postconditions: []      # expected business state after action
+    proof: string           # evidence source for the postcondition
+    failure_path: string    # stop/skip/escalate behavior when proof is absent
     action:
       type: string          # browser.goto, browser.click, browser.fill, api.get, desktop.click, etc.
       url: string           # optional, with ${inputs.var} or ${secrets.VAR}
@@ -38,8 +62,24 @@ steps:
     recovery:
       - type: retry | refresh_page | fallback | skip
         max_attempts: integer
+    failure_class: transient | data | business | authorization_config | automation_defect | external_system | security_privacy | unknown
+    idempotency_key: string  # required for retrying side-effecting actions
     allow_without_success_check: false  # only for no_op steps
 ```
+
+Side-effecting retries are intentionally strict. Actions such as `api.post`,
+`api.put`, `api.patch`, `api.delete`, submit, upload, send, create, write, or
+update must declare a transient failure class and an idempotency or side-effect
+guard before a retry policy is accepted.
+
+## CLI Audit
+
+```bash
+python main.py --audit-workflow workflows/capabilities/local_browser_form.yaml
+```
+
+The audit prints JSON containing normal schema validation status plus
+`rulebook_audit.score`, missing fields, warnings, and production readiness.
 
 ## Example — Minimal
 

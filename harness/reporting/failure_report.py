@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from harness.resilience.errors import RULEBOOK_FAILURE_CLASSES, legacy_category_to_error_class
 from harness.security import redact_value
 
 
@@ -63,21 +64,53 @@ class FailureReport:
         evidence: Dict[str, Any] = None,
         duration_ms: float = 0,
         repro_command: str = "",
+        *,
+        current_stage: Optional[str] = None,
+        intended_action: Optional[str] = None,
+        expected_result: Optional[str] = None,
+        actual_result: Optional[str] = None,
+        input_record_id: Optional[str] = None,
+        target_system: Optional[str] = None,
+        retry_attempt: Optional[int] = None,
+        max_attempts: Optional[int] = None,
+        retry_allowed: Optional[bool] = None,
+        side_effect_risk: Optional[str] = None,
+        human_review_required: Optional[bool] = None,
+        first_failed_stage: Optional[str] = None,
+        last_known_good_stage: Optional[str] = None,
+        escalation_status: Optional[str] = None,
+        error_class: Optional[str] = None,
     ) -> str:
         run_id = self._current_run_id or self.start_run(workflow_id)
         normalized_evidence = self._normalize_evidence(evidence or {})
+        normalized_error_class = self._normalize_error_class(error_class, error_category)
 
         report = {
             "workflow_id": workflow_id,
             "workflow_name": workflow_name,
             "run_id": run_id,
             "status": "failed",
+            "current_stage": current_stage,
             "failed_step_id": failed_step_id,
             "failed_step_description": failed_step_description,
             "action_type": action_type,
+            "intended_action": intended_action,
+            "expected_result": expected_result,
+            "actual_result": actual_result,
+            "input_record_id": input_record_id,
+            "target_system": target_system,
             "error_type": error_type,
             "error_message": error_message,
             "error_category": error_category,
+            "error_class": normalized_error_class,
+            "retry_attempt": retry_attempt,
+            "max_attempts": max_attempts,
+            "retry_allowed": retry_allowed,
+            "side_effect_risk": side_effect_risk,
+            "human_review_required": human_review_required,
+            "first_failed_stage": first_failed_stage,
+            "last_known_good_stage": last_known_good_stage,
+            "escalation_status": escalation_status,
             "last_successful_step": last_successful_step or None,
             "verification_failures": verification_failures or [],
             "evidence": normalized_evidence,
@@ -95,6 +128,12 @@ class FailureReport:
             report_path.write_text(json.dumps(redact_value(report), indent=2, default=str))
 
         return str(report_path) if report_path else ""
+
+    def _normalize_error_class(self, error_class: Optional[str], error_category: str) -> str:
+        if error_class:
+            normalized = error_class.lower().replace("-", "_").replace(" ", "_")
+            return normalized if normalized in RULEBOOK_FAILURE_CLASSES else "unknown"
+        return legacy_category_to_error_class(error_category)
 
     def _normalize_evidence(self, evidence: Dict[str, Any]) -> Dict[str, Any]:
         normalized = dict(evidence)

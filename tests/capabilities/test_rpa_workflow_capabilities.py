@@ -9,6 +9,7 @@ import pytest
 from harness.config import HarnessConfig
 from harness.rpa.excel import ExcelHandler
 from harness.rpa.workflow import RPAWorkflow, WorkflowStatus
+from harness.security import REDACTED
 from harness.verification import CheckRunner, CheckType, SuccessCheck
 
 
@@ -211,6 +212,75 @@ async def test_skipped_record_is_counted_without_failure(tmp_path):
     assert result.failed_records == 0
 
 
+class StructuredRecordEvidenceWorkflow(RPAWorkflow):
+    name = "structured_record_evidence_capability"
+    tags = ["rpa", "capability"]
+
+    def get_records(self):
+        return iter([{"id": "PASS"}, {"id": "SKIP"}, {"id": "MISS"}])
+
+    async def process_record(self, record):
+        self.record_evidence(
+            {"proof": f"{record['id']} observed", "api_token": "secret-token"},
+            record,
+            stage="process_test_record",
+        )
+        if record["id"] == "PASS":
+            return {
+                "status": "passed",
+                "details": {"confirmation": "ok", "password": "secret"},
+                "evidence": {"artifact": "pass.txt"},
+            }
+        if record["id"] == "SKIP":
+            return {"status": "skipped", "reason": "No action required"}
+        return {
+            "status": "mismatch",
+            "reason": "Expected and actual differ",
+            "details": {"expected": "A", "actual": "B"},
+        }
+
+
+@pytest.mark.asyncio
+async def test_record_evidence_rows_and_summary_counts_reconcile(tmp_path):
+    workflow = StructuredRecordEvidenceWorkflow(_config(tmp_path))
+    workflow.notifier = FakeNotifier()
+
+    result = await _execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.processed_records == 1
+    assert result.skipped_records == 1
+    assert result.failed_records == 1
+    assert result.to_dict()["data"] is result.data
+
+    records = result.data["records"]
+    assert [(record["record_id"], record["status"]) for record in records] == [
+        ("PASS", "passed"),
+        ("SKIP", "skipped"),
+        ("MISS", "failed"),
+    ]
+    assert records[0]["details"]["password"] == REDACTED
+    assert records[0]["evidence"] == {"artifact": "pass.txt"}
+    assert records[0]["evidence_events"][0]["stage"] == "process_test_record"
+    assert records[0]["evidence_events"][0]["evidence"]["api_token"] == REDACTED
+    assert records[1]["reason"] == "No action required"
+    assert records[2]["reason"] == "Expected and actual differ"
+
+    summary = result.data["record_summary"]
+    assert summary == {
+        "total": 3,
+        "passed": 1,
+        "failed": 1,
+        "skipped": 1,
+        "retried": 0,
+        "needs_review": 0,
+        "terminal_records": 3,
+        "unprocessed": 0,
+        "status_counts": {"passed": 1, "skipped": 1, "failed": 1},
+        "reconciled": True,
+    }
+
+
 class RetryWorkflow(RPAWorkflow):
     name = "retry_record_capability"
     tags = ["rpa", "capability"]
@@ -242,6 +312,18 @@ async def test_retryable_record_succeeds_on_second_attempt(tmp_path):
     assert result.status == WorkflowStatus.PASSED
     assert result.processed_records == 1
     assert result.retried_records == 1
+    assert result.data["records"] == [
+        {
+            "record_id": "RETRY",
+            "status": "passed",
+            "raw_status": "passed",
+            "reason": None,
+            "attempts": 2,
+            "retried": True,
+            "stage": "Process Records",
+        }
+    ]
+    assert result.data["record_summary"]["reconciled"] is True
     assert workflow.calls == 2
     assert ("frustration", "I had to retry a record before it passed.", {
         "workflow": "retry_record_capability",
@@ -260,6 +342,11 @@ async def test_retryable_record_exhausts_attempts_and_fails_when_no_record_passe
     assert result.processed_records == 0
     assert result.failed_records == 1
     assert result.retried_records == 1
+    assert result.data["records"][0]["status"] == "failed"
+    assert result.data["records"][0]["raw_status"] == "retry"
+    assert result.data["records"][0]["attempts"] == 2
+    assert result.data["records"][0]["retried"] is True
+    assert result.data["record_summary"]["reconciled"] is True
     assert workflow.calls == 2
 
 

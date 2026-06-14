@@ -1,5 +1,6 @@
 """Capability characterization for YAML schema boundaries."""
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -374,4 +375,7 @@ async def test_desktop_yaml_is_schema_supported_but_platform_blocked_on_non_wind
 
     assert result["status"] == "failed"
     assert result["failure_type"] == "execution"
-    assert "Desktop YAML runtime requires Windows UIAutomation" in result["reason"]
+    if sys.platform.startswith("win"):
+        assert "Desktop YAML runtime requires pywinauto" in result["reason"]
+    else:
+        assert "Desktop YAML runtime requires Windows UIAutomation" in result["reason"]
