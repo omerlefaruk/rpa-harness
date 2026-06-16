@@ -205,6 +205,11 @@ Examples:
         help="Scan only N technology sources this run and advance a persistent cursor",
     )
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
+    parser.add_argument("--preflight-yaml", help="Run YAML workflow preflight only")
+    parser.add_argument("--phase", help="Run only steps in this YAML phase")
+    parser.add_argument("--pause-before", help="Pause before this YAML step id")
+    parser.add_argument("--pause-after-phase", help="Pause after this YAML phase")
+    parser.add_argument("--until-step", help="Stop after this YAML step id")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
     parser.add_argument("--audit-workflow", help="Audit a YAML workflow against the RPA rulebook")
     parser.add_argument("--new-workflow", help="Create a workflow YAML file from a template")
@@ -225,6 +230,8 @@ Examples:
     parser.add_argument("--failure-report-output", help="Output path for rendered failure HTML")
     parser.add_argument("--bundle-run", help="Create a zip evidence bundle from a run directory")
     parser.add_argument("--bundle-output", help="Output path for --bundle-run")
+    parser.add_argument("--runs-list", action="store_true", help="List recent YAML run folders")
+    parser.add_argument("--runs-show", help="Show run_manifest.json for a run id or run directory")
     parser.add_argument("--resume-ledger-status", help="Show resume ledger summary JSON")
     parser.add_argument(
         "--telegram-message",
@@ -467,6 +474,14 @@ async def main():
         print(f"Evidence bundle written: {output}")
         return
 
+    if args.runs_list:
+        _print_runs_list()
+        return
+
+    if args.runs_show:
+        _print_run_manifest(args.runs_show)
+        return
+
     if args.resume_ledger_status:
         import json
 
@@ -523,12 +538,33 @@ async def main():
             )
         return
 
+    if args.preflight_yaml:
+        import json
+
+        config = build_config(args)
+        from harness.rpa.yaml_runner import YamlWorkflowRunner
+
+        result = await YamlWorkflowRunner(config).preflight(args.preflight_yaml)
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") != "passed":
+            sys.exit(1)
+        return
+
     if args.run_yaml:
         config = build_config(args)
         from harness.rpa.yaml_runner import YamlWorkflowRunner
         runner = YamlWorkflowRunner(config)
-        result = await runner.run(args.run_yaml)
+        result = await runner.run(
+            args.run_yaml,
+            phase=args.phase,
+            pause_before=args.pause_before,
+            pause_after_phase=args.pause_after_phase,
+            until_step=args.until_step,
+        )
         print(f"\nStatus: {result['status']}")
+        if result.get("run_dir"):
+            print(f"Run folder: {result['run_dir']}")
+            print(f"Report: {Path(result['run_dir']) / 'report.html'}")
         for step in result.get("steps", []):
             status = "PASS" if step.get("status") == "passed" else "FAIL"
             checks = len(step.get("checks", []))
@@ -694,6 +730,9 @@ async def main():
             args.run_workflows,
             args.serve,
             args.rpa_memory_serve,
+            args.preflight_yaml,
+            args.runs_list,
+            args.runs_show,
             args.autoresearch_supervisor,
             args.autoresearch_supervisor_once,
             args.autoresearch_supervisor_plan,
@@ -727,6 +766,44 @@ def _telegram_channel_or_skip():
         )
         return None, telegram_config
     return TelegramBotChannel(telegram_config), telegram_config
+
+
+def _print_runs_list(runs_dir: str = "runs", limit: int = 20):
+    import json
+
+    root = Path(runs_dir)
+    rows = []
+    for manifest in sorted(root.glob("*/run_manifest.json"), reverse=True):
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        rows.append(data)
+        if len(rows) >= limit:
+            break
+    if not rows:
+        print("No runs found.")
+        return
+    for row in rows:
+        summary = row.get("summary") or {}
+        print(
+            f"{row.get('run_id')}  {row.get('status')}  {row.get('workflow')}  "
+            f"steps {summary.get('passed_steps', 0)}/{summary.get('total_steps', 0)}  "
+            f"report {row.get('run_directory')}/report.html"
+        )
+
+
+def _print_run_manifest(run: str):
+    import json
+
+    path = Path(run)
+    if not path.exists():
+        path = Path("runs") / run
+    manifest = path / "run_manifest.json" if path.is_dir() else path
+    if not manifest.exists():
+        print(f"Run manifest not found: {run}", file=sys.stderr)
+        sys.exit(1)
+    print(json.dumps(json.loads(manifest.read_text(encoding="utf-8")), indent=2, default=str))
 
 
 async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict[str, str]):

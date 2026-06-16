@@ -9,6 +9,8 @@ import json
 import os
 import re
 import time
+import html
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -26,6 +28,7 @@ from harness.security import (
     SecretValue,
     redact_mapping,
     redact_text,
+    redact_value,
     redacted_preview,
     sanitize_url,
 )
@@ -79,7 +82,46 @@ class YamlWorkflowRunner:
         workflow = load_workflow_yaml(path)
         return self.verifier.validate(workflow)
 
-    async def run(self, workflow_path: str) -> Dict[str, Any]:
+    async def preflight(self, workflow_path: str) -> Dict[str, Any]:
+        self._workflow_path = str(workflow_path)
+        workflow = self.load(workflow_path)
+        workflow_id = workflow["id"]
+        workflow_name = workflow.get("name", workflow_id)
+        self.failure.start_run(workflow_id)
+        started_at = self._now()
+        self._inputs = self._resolve_inputs(workflow.get("inputs", {}))
+        self._secret_env_names = self._resolve_secret_env_names(workflow.get("credentials", {}))
+
+        self._write_manifest(workflow, "running", started_at=started_at)
+        self._write_redacted_workflow(workflow)
+        self._timeline(workflow, "run.started", status="running")
+        self._timeline(workflow, "preflight.started")
+        preflight = preflight_workflow(workflow, inputs=self._inputs)
+        self._write_preflight(preflight, workflow, started_at)
+        status = "passed" if preflight["status"] == "passed" else "failed"
+        self._timeline(workflow, f"preflight.{status}", status=status)
+        self._timeline(workflow, "run.finished", status=status)
+        result = {
+            "status": status,
+            "workflow_id": workflow_id,
+            "workflow_name": workflow_name,
+            "preflight": preflight,
+            "run_id": self.failure._current_run_id,
+            "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
+        }
+        self._write_manifest(workflow, status, started_at=started_at, finished_at=self._now(), result=result)
+        self._write_run_report(workflow, result)
+        return result
+
+    async def run(
+        self,
+        workflow_path: str,
+        *,
+        phase: Optional[str] = None,
+        pause_before: Optional[str] = None,
+        pause_after_phase: Optional[str] = None,
+        until_step: Optional[str] = None,
+    ) -> Dict[str, Any]:
         self._workflow_path = str(workflow_path)
         workflow = self.load(workflow_path)
         workflow_id = workflow["id"]
@@ -89,6 +131,11 @@ class YamlWorkflowRunner:
         self._console_entries = []
         self._network_entries = []
         self._pending_logs = []
+        self.failure.start_run(workflow_id)
+        run_started_at = self._now()
+        self._write_manifest(workflow, "running", started_at=run_started_at)
+        self._write_redacted_workflow(workflow)
+        self._timeline(workflow, "run.started", status="running")
 
         self._inputs = self._resolve_inputs(workflow.get("inputs", {}))
         self._variables = dict(self._inputs)
@@ -96,14 +143,21 @@ class YamlWorkflowRunner:
 
         missing_secrets = self._missing_secrets()
         if missing_secrets:
-            await self.notifier.question(
-                "I cannot start this YAML workflow because required secrets are missing.",
-                context={
-                    "workflow": workflow_name,
-                    "missing": ", ".join(item["name"] for item in missing_secrets),
+            self._write_preflight(
+                {
+                    "status": "failed",
+                    "passed_checks": [],
+                    "warnings": [],
+                    "blocking_errors": [
+                        f"preflight: missing secret '{item['name']}' ({item['env']})"
+                        for item in missing_secrets
+                    ],
                 },
+                workflow,
+                run_started_at,
             )
-            return {
+            self._timeline(workflow, "preflight.failed", status="failed", failure_kind="missing_secret")
+            result = {
                 "status": "failed",
                 "state": "needs_operator_input",
                 "failure_type": "config",
@@ -112,13 +166,29 @@ class YamlWorkflowRunner:
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
                 "rpa_memory": self.memory.status_snapshot(),
+                "run_id": self.failure._current_run_id,
+                "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
+            self._timeline(workflow, "run.finished", status="failed", failure_kind="missing_secret")
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_run_report(workflow, result)
+            await self.notifier.question(
+                "I cannot start this YAML workflow because required secrets are missing.",
+                context={
+                    "workflow": workflow_name,
+                    "missing": ", ".join(item["name"] for item in missing_secrets),
+                },
+            )
+            return result
         self._secrets = self._load_secrets()
         self.notifier.add_secret_values(self._secret_values())
 
+        self._timeline(workflow, "preflight.started")
         preflight = preflight_workflow(workflow, inputs=self._inputs)
+        self._write_preflight(preflight, workflow, run_started_at)
         if preflight["blocking_errors"]:
-            return {
+            self._timeline(workflow, "preflight.failed", status="failed", failure_kind="workflow_validation_error")
+            result = {
                 "status": "failed",
                 "failure_type": "preflight",
                 "reason": "Preflight checks failed",
@@ -126,18 +196,35 @@ class YamlWorkflowRunner:
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
                 "rpa_memory": self.memory.status_snapshot(),
+                "run_id": self.failure._current_run_id,
+                "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
+            self._timeline(workflow, "run.finished", status="failed", failure_kind="workflow_validation_error")
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_run_report(workflow, result)
+            return result
+        self._timeline(workflow, "preflight.passed", status="passed")
+
+        selection_error = self._selection_error(workflow, phase, pause_before, pause_after_phase, until_step)
+        if selection_error:
+            result = {
+                "status": "failed",
+                "failure_type": "selection",
+                "reason": selection_error,
+                "steps": [],
+                "rulebook_audit": rulebook_audit,
+                "rpa_memory": self.memory.status_snapshot(),
+                "run_id": self.failure._current_run_id,
+                "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
+            }
+            self._timeline(workflow, "run.finished", status="failed", failure_kind="workflow_validation_error", message=selection_error)
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_run_report(workflow, result)
+            return result
 
         unsupported = self._unsupported_runtime_actions(workflow)
         if unsupported:
-            await self.notifier.question(
-                "This YAML workflow has actions I do not know how to run yet.",
-                context={
-                    "workflow": workflow_name,
-                    "actions": ", ".join(unsupported),
-                },
-            )
-            return {
+            result = {
                 "status": "failed",
                 "failure_type": "unsupported",
                 "reason": "Workflow contains actions not supported by YAML execution v1",
@@ -145,7 +232,20 @@ class YamlWorkflowRunner:
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
                 "rpa_memory": self.memory.status_snapshot(),
+                "run_id": self.failure._current_run_id,
+                "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
+            self._timeline(workflow, "run.finished", status="failed", failure_kind="workflow_validation_error")
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_run_report(workflow, result)
+            await self.notifier.question(
+                "This YAML workflow has actions I do not know how to run yet.",
+                context={
+                    "workflow": workflow_name,
+                    "actions": ", ".join(unsupported),
+                },
+            )
+            return result
 
         start_time = time.time()
         steps: List[Dict[str, Any]] = []
@@ -154,7 +254,8 @@ class YamlWorkflowRunner:
         original_auto_heal = self.config.auto_heal_selectors
         self.config.auto_heal_selectors = False
 
-        self.logger.info(f"Running workflow: {workflow_name} ({len(workflow['steps'])} steps)")
+        selected_steps = self._selected_steps(workflow, phase)
+        self.logger.info(f"Running workflow: {workflow_name} ({len(selected_steps)} steps)")
         await self.memory.start_session(
             memory_session_id,
             f"Run YAML workflow {workflow_name}",
@@ -162,7 +263,25 @@ class YamlWorkflowRunner:
         )
 
         try:
-            for step in workflow.get("steps", []):
+            active_phase = None
+            for step in selected_steps:
+                step_phase = self._step_phase(step)
+                if step_phase != active_phase:
+                    if active_phase:
+                        self._timeline(workflow, "phase.passed", status="passed", phase=active_phase)
+                    active_phase = step_phase
+                    self._timeline(workflow, "phase.started", status="running", phase=step_phase)
+
+                if pause_before == step["id"] or step.get("pause_before") is True:
+                    result = self._paused_result(
+                        workflow, step, steps, rulebook_audit, run_started_at, "pause_before"
+                    )
+                    self._timeline(workflow, "run.paused", status="blocked", phase=step_phase, step_id=step["id"])
+                    self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=self._now(), result=result)
+                    self._write_run_report(workflow, result)
+                    return result
+
+                self._timeline(workflow, "step.started", status="running", phase=step_phase, step_id=step["id"], action_type=step.get("action", {}).get("type"))
                 step_result = await self._run_step(step)
                 steps.append(step_result)
                 await self.memory.record_observation(
@@ -174,7 +293,37 @@ class YamlWorkflowRunner:
                 )
 
                 if step_result["status"] == "passed":
+                    self._timeline(workflow, "step.passed", status="passed", phase=step_phase, step_id=step["id"], action_type=step_result.get("action_type"), duration_ms=step_result.get("duration_ms"))
                     last_successful_step = step["id"]
+                    if until_step == step["id"]:
+                        result = {
+                            "status": "passed",
+                            "workflow_id": workflow_id,
+                            "workflow_name": workflow_name,
+                            "steps_completed": len(steps),
+                            "steps": steps,
+                            "duration_ms": (time.time() - start_time) * 1000,
+                            "rulebook_audit": rulebook_audit,
+                            "run_id": self.failure._current_run_id,
+                            "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
+                        }
+                        self._timeline(workflow, "run.finished", status="passed", message=f"Stopped at --until-step {until_step}")
+                        self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=self._now(), result=result)
+                        self._write_run_report(workflow, result)
+                        return result
+                    if pause_after_phase and pause_after_phase == step_phase:
+                        remaining = [
+                            item for item in selected_steps[selected_steps.index(step) + 1 :]
+                            if self._step_phase(item) == step_phase
+                        ]
+                        if not remaining:
+                            result = self._paused_result(
+                                workflow, step, steps, rulebook_audit, run_started_at, "pause_after_phase"
+                            )
+                            self._timeline(workflow, "run.paused", status="blocked", phase=step_phase, step_id=step["id"])
+                            self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=self._now(), result=result)
+                            self._write_run_report(workflow, result)
+                            return result
                     continue
 
                 report_path = await self._record_failure(
@@ -185,6 +334,21 @@ class YamlWorkflowRunner:
                     last_successful_step=last_successful_step,
                 )
                 step_result["failure_report"] = report_path
+                evidence_bundle = "evidence_bundle.json" if report_path else None
+                self._timeline(
+                    workflow,
+                    "step.failed",
+                    status="failed",
+                    phase=step_phase,
+                    step_id=step["id"],
+                    action_type=step_result.get("action_type"),
+                    failure_kind=step_result.get("failure_kind"),
+                    evidence_bundle=evidence_bundle,
+                    duration_ms=step_result.get("duration_ms"),
+                )
+                self._timeline(workflow, "phase.failed", status="failed", phase=step_phase, failure_kind=step_result.get("failure_kind"))
+                self._timeline(workflow, "evidence.created", phase=step_phase, step_id=step["id"], evidence_bundle=evidence_bundle)
+                self._timeline(workflow, "repair_packet.created", phase=step_phase, step_id=step["id"], evidence_bundle="repair_packet.json")
                 await self.memory.summarize(memory_session_id, step_result)
                 memory_status = self.memory.status_snapshot()
                 await self.notifier.failure(
@@ -205,7 +369,7 @@ class YamlWorkflowRunner:
                             "attempts": step_result.get("attempts"),
                         },
                     )
-                return {
+                result = {
                     "status": "failed",
                     "failure_type": "execution",
                     "workflow_id": workflow_id,
@@ -217,8 +381,16 @@ class YamlWorkflowRunner:
                     "duration_ms": (time.time() - start_time) * 1000,
                     "rulebook_audit": rulebook_audit,
                     "rpa_memory": memory_status,
+                    "run_id": self.failure._current_run_id,
+                    "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
                 }
+                self._timeline(workflow, "run.finished", status="failed", failure_kind=step_result.get("failure_kind"))
+                self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+                self._write_run_report(workflow, result)
+                return result
 
+            if active_phase:
+                self._timeline(workflow, "phase.passed", status="passed", phase=active_phase)
             result = {
                 "status": "passed",
                 "workflow_id": workflow_id,
@@ -227,9 +399,14 @@ class YamlWorkflowRunner:
                 "steps": steps,
                 "duration_ms": (time.time() - start_time) * 1000,
                 "rulebook_audit": rulebook_audit,
+                "run_id": self.failure._current_run_id,
+                "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
             summary_result = await self.memory.summarize(memory_session_id, result)
             result["rpa_memory"] = self.memory.status_snapshot()
+            self._timeline(workflow, "run.finished", status="passed")
+            self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_run_report(workflow, result)
             if self._memory_write_succeeded(summary_result):
                 await self.notifier.memory_note(
                     "I saved the YAML workflow summary.",
@@ -330,6 +507,7 @@ class YamlWorkflowRunner:
         result["error"] = self._redact_runtime_text(
             last_error or self._verification_error(check_results)
         )
+        result["failure_kind"] = self._failure_kind(result["error"], check_results)
         result["failure_route"] = classify_failure(result["error"]).get("recommended_route")
         self._log_entry("ERROR", step_id, result["error"])
         return result
@@ -346,6 +524,7 @@ class YamlWorkflowRunner:
     ) -> Dict[str, Any]:
         return {
             "step_id": step_id,
+            "phase": self._step_phase(step),
             "action_type": action_type,
             "status": "passed" if self._checks_passed(check_results) else "failed",
             "duration_ms": (time.time() - started_at) * 1000,
@@ -357,6 +536,7 @@ class YamlWorkflowRunner:
             "failure_path": step.get("failure_path") or "",
             "checks": [self._redact_check_result(result) for result in check_results],
             "destructive": destructive,
+            "safe_retry": self._safe_retry(step, action_type),
             "error": "",
         }
 
@@ -1029,6 +1209,380 @@ class YamlWorkflowRunner:
                 unsupported.append(action_type)
         return unsupported
 
+    def _selected_steps(self, workflow: dict, phase: Optional[str]) -> List[dict]:
+        steps = list(workflow.get("steps", []) or [])
+        if not phase:
+            return steps
+        return [step for step in steps if self._step_phase(step) == phase]
+
+    def _selection_error(
+        self,
+        workflow: dict,
+        phase: Optional[str],
+        pause_before: Optional[str],
+        pause_after_phase: Optional[str],
+        until_step: Optional[str],
+    ) -> Optional[str]:
+        steps = list(workflow.get("steps", []) or [])
+        phases = {self._step_phase(step) for step in steps}
+        step_ids = {str(step.get("id")) for step in steps}
+        if phase and phase not in phases:
+            return f"Unknown phase: {phase}"
+        if pause_after_phase and pause_after_phase not in phases:
+            return f"Unknown phase: {pause_after_phase}"
+        for label, step_id in (("--pause-before", pause_before), ("--until-step", until_step)):
+            if step_id and step_id not in step_ids:
+                return f"{label} references unknown step: {step_id}"
+        return None
+
+    @staticmethod
+    def _step_phase(step: dict) -> str:
+        return str(step.get("phase") or step.get("current_stage") or "default")
+
+    def _paused_result(
+        self,
+        workflow: dict,
+        step: dict,
+        steps: List[Dict[str, Any]],
+        rulebook_audit: dict,
+        started_at: str,
+        reason: str,
+    ) -> Dict[str, Any]:
+        return {
+            "status": "paused",
+            "manifest_status": "blocked",
+            "failure_type": "paused",
+            "reason": reason,
+            "workflow_id": workflow["id"],
+            "workflow_name": workflow.get("name", workflow["id"]),
+            "phase": self._step_phase(step),
+            "step": step.get("id"),
+            "action": redact_mapping(step.get("action", {}), self._secret_values()),
+            "success_checks": redact_value(step.get("success_check", [])),
+            "side_effect": step.get("side_effect"),
+            "safe_retry": self._safe_retry(step, step.get("action", {}).get("type", "no_op")),
+            "steps": steps,
+            "duration_ms": (self._parse_time(self._now()) - self._parse_time(started_at)) * 1000,
+            "rulebook_audit": rulebook_audit,
+            "run_id": self.failure._current_run_id,
+            "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
+        }
+
+    @staticmethod
+    def _now() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _parse_time(value: str) -> float:
+        return datetime.fromisoformat(value).timestamp()
+
+    def _timeline(self, workflow: dict, event: str, **fields: Any) -> None:
+        if not self.failure._run_dir:
+            return
+        entry = {
+            "timestamp": self._now(),
+            "run_id": self.failure._current_run_id,
+            "workflow": workflow.get("id"),
+            "event": event,
+        }
+        entry.update({key: value for key, value in fields.items() if value is not None})
+        with open(self.failure._run_dir / "timeline.jsonl", "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(redact_value(entry), default=str) + "\n")
+
+    def _write_manifest(
+        self,
+        workflow: dict,
+        status: str,
+        *,
+        started_at: str,
+        finished_at: Optional[str] = None,
+        result: Optional[dict] = None,
+    ) -> None:
+        if not self.failure._run_dir:
+            return
+        steps = list(workflow.get("steps", []) or [])
+        result_steps = list((result or {}).get("steps", []) or [])
+        summary = {
+            "total_phases": len({self._step_phase(step) for step in steps}),
+            "passed_phases": len({step.get("phase") for step in result_steps if step.get("status") == "passed"}),
+            "failed_phases": len({step.get("phase") for step in result_steps if step.get("status") == "failed"}),
+            "total_steps": len(steps),
+            "passed_steps": sum(1 for step in result_steps if step.get("status") == "passed"),
+            "failed_steps": sum(1 for step in result_steps if step.get("status") == "failed"),
+            "total_records": 0,
+            "passed_records": 0,
+            "failed_records": 0,
+            "skipped_records": 0,
+        }
+        manifest = {
+            "schema_version": 1,
+            "run_id": self.failure._current_run_id,
+            "workflow": workflow.get("id"),
+            "input_file": self._first_input_file(workflow),
+            "status": status,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "report": "report.html",
+            "timeline": "timeline.jsonl",
+            "preflight": "preflight.json",
+            "run_directory": str(self.failure._run_dir.resolve()),
+            "redaction": {"status": "passed"},
+            "summary": summary,
+        }
+        (self.failure._run_dir / "run_manifest.json").write_text(
+            json.dumps(redact_value(manifest), indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    def _write_preflight(self, preflight: dict, workflow: dict, started_at: str) -> None:
+        if not self.failure._run_dir:
+            return
+        payload = {
+            "schema_version": 1,
+            "run_id": self.failure._current_run_id,
+            "workflow": workflow.get("id"),
+            "status": preflight.get("status"),
+            "checks": [
+                {
+                    "name": check.get("name"),
+                    "status": "passed" if check.get("passed") else "failed",
+                    "message": check.get("path") or "",
+                    "blocking": not check.get("passed"),
+                }
+                for check in [
+                    *preflight.get("passed_checks", []),
+                    *[
+                        {"name": error, "passed": False}
+                        for error in preflight.get("blocking_errors", [])
+                    ],
+                ]
+            ],
+            "warnings": preflight.get("warnings", []),
+            "started_at": started_at,
+            "finished_at": self._now(),
+        }
+        (self.failure._run_dir / "preflight.json").write_text(
+            json.dumps(redact_value(payload), indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    def _write_redacted_workflow(self, workflow: dict) -> None:
+        if self.failure._run_dir:
+            (self.failure._run_dir / "workflow_resolved.redacted.yaml").write_text(
+                yaml.safe_dump(redact_value(workflow), sort_keys=False),
+                encoding="utf-8",
+            )
+
+    def _write_run_report(self, workflow: dict, result: dict) -> None:
+        if not self.failure._run_dir:
+            return
+        run_dir = self.failure._run_dir
+        manifest = self._read_json(run_dir / "run_manifest.json")
+        preflight = self._read_json(run_dir / "preflight.json")
+        timeline = self._read_jsonl(run_dir / "timeline.jsonl")
+        report = {
+            "schema_version": 1,
+            "manifest": manifest,
+            "preflight": preflight,
+            "timeline": timeline,
+            "steps": result.get("steps", []),
+            "failure_report": self._relative_to_run(result.get("failure_report")),
+            "reason": result.get("reason"),
+        }
+        (run_dir / "report.json").write_text(
+            json.dumps(redact_value(report), indent=2, default=str),
+            encoding="utf-8",
+        )
+        (run_dir / "report.html").write_text(
+            self._run_report_html(workflow, report),
+            encoding="utf-8",
+        )
+
+    def _run_report_html(self, workflow: dict, report: dict) -> str:
+        manifest = report.get("manifest") or {}
+        steps = report.get("steps") or []
+        timeline = report.get("timeline") or []
+        failures = [step for step in steps if step.get("status") == "failed"]
+        phase_rows = self._phase_rows(steps)
+        step_rows = "".join(
+            "<tr>"
+            f"<td>{self._esc(item.get('timestamp'))}</td>"
+            f"<td>{self._esc(item.get('phase'))}</td>"
+            f"<td>{self._esc(item.get('step_id'))}</td>"
+            f"<td>{self._esc(item.get('action_type'))}</td>"
+            f"<td>{self._esc(item.get('status'))}</td>"
+            f"<td>{self._esc(item.get('failure_kind'))}</td>"
+            f"<td>{self._artifact_link(item.get('evidence_bundle'))}</td>"
+            "</tr>"
+            for item in timeline
+            if str(item.get("event", "")).startswith("step.")
+        )
+        failure_rows = "".join(
+            "<tr>"
+            f"<td>{self._esc(step.get('phase'))}</td>"
+            f"<td>{self._esc(step.get('step_id'))}</td>"
+            f"<td>{self._esc(step.get('failure_kind'))}</td>"
+            f"<td>{self._esc((step.get('safe_retry') or {}).get('status'))}</td>"
+            f"<td>{self._esc((step.get('safe_retry') or {}).get('reason'))}</td>"
+            f"<td>{self._artifact_link('evidence_bundle.json')} {self._artifact_link('repair_packet.json')}</td>"
+            f"<td>{self._esc(self._recommendation(step.get('failure_kind')))}</td>"
+            "</tr>"
+            for step in failures
+        ) or "<tr><td colspan='7'>No failed steps.</td></tr>"
+        return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{self._esc(workflow.get('name', workflow.get('id')))} run report</title>
+  <style>
+    body {{ margin: 0; font-family: Arial, sans-serif; background: #f6f7f9; color: #17202a; }}
+    header {{ background: #1f2937; color: white; padding: 22px 28px; }}
+    main {{ padding: 20px 28px; display: grid; gap: 16px; }}
+    section {{ background: white; border: 1px solid #d8dde6; border-radius: 6px; padding: 16px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ text-align: left; border-bottom: 1px solid #e6e9ef; padding: 8px; vertical-align: top; }}
+    .bad {{ color: #b42318; font-weight: 700; }}
+    .ok {{ color: #047857; font-weight: 700; }}
+    a {{ color: #175cd3; }}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{self._esc(workflow.get('name', workflow.get('id')))}</h1>
+    <div>Run {self._esc(manifest.get('run_id'))} · {self._esc(manifest.get('status'))}</div>
+  </header>
+  <main>
+    <section><h2>Run summary</h2><table>{self._kv_rows(manifest, ['workflow','status','started_at','finished_at','input_file','timeline','preflight'])}</table></section>
+    <section><h2>Phase summary</h2><table><tr><th>Phase</th><th>Status</th><th>Passed steps</th><th>Failed steps</th></tr>{phase_rows}</table></section>
+    <section><h2>Step timeline</h2><table><tr><th>Time</th><th>Phase</th><th>Step</th><th>Action</th><th>Status</th><th>Failure kind</th><th>Evidence</th></tr>{step_rows}</table></section>
+    <section><h2>Failed step details</h2><table><tr><th>Phase</th><th>Step</th><th>Failure kind</th><th>Safe retry</th><th>Reason</th><th>Evidence</th><th>Recommended next action</th></tr>{failure_rows}</table></section>
+    <section><h2>Preflight</h2><pre>{self._esc(json.dumps(report.get('preflight') or {}, indent=2, default=str))}</pre></section>
+  </main>
+</body>
+</html>"""
+
+    def _phase_rows(self, steps: List[dict]) -> str:
+        phases: dict[str, dict[str, int]] = {}
+        for step in steps:
+            phase = str(step.get("phase") or "default")
+            phases.setdefault(phase, {"passed": 0, "failed": 0})
+            if step.get("status") == "passed":
+                phases[phase]["passed"] += 1
+            if step.get("status") == "failed":
+                phases[phase]["failed"] += 1
+        if not phases:
+            return "<tr><td>none</td><td>not run</td><td>0</td><td>0</td></tr>"
+        rows = []
+        for phase, counts in phases.items():
+            status = "failed" if counts["failed"] else "passed"
+            rows.append(
+                f"<tr><td>{self._esc(phase)}</td><td>{self._esc(status)}</td>"
+                f"<td>{counts['passed']}</td><td>{counts['failed']}</td></tr>"
+            )
+        return "".join(rows)
+
+    def _kv_rows(self, payload: dict, keys: List[str]) -> str:
+        return "".join(
+            f"<tr><td>{self._esc(key)}</td><td>{self._artifact_link(payload.get(key))}</td></tr>"
+            for key in keys
+        )
+
+    def _artifact_link(self, value: Any) -> str:
+        if isinstance(value, str) and value and self.failure._run_dir:
+            if (self.failure._run_dir / value).exists():
+                return f"<a href='{self._esc(value)}'>{self._esc(value)}</a>"
+        return self._esc(value)
+
+    @staticmethod
+    def _esc(value: Any) -> str:
+        return html.escape("" if value is None else str(value))
+
+    @staticmethod
+    def _read_json(path: Path) -> dict:
+        if not path.exists():
+            return {}
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _read_jsonl(path: Path) -> List[dict]:
+        if not path.exists():
+            return []
+        rows = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return rows
+
+    def _relative_to_run(self, path: Any) -> Any:
+        if not path or not self.failure._run_dir:
+            return path
+        try:
+            return str(Path(path).resolve().relative_to(self.failure._run_dir.resolve()))
+        except Exception:
+            return path
+
+    @staticmethod
+    def _first_input_file(workflow: dict) -> Optional[str]:
+        for key, value in (workflow.get("inputs", {}) or {}).items():
+            if "file" in str(key).lower() or "workbook" in str(key).lower():
+                return str(value)
+        return None
+
+    @staticmethod
+    def _failure_kind(error: str, check_results: List[VerificationResult]) -> str:
+        lowered = str(error or "").lower()
+        if "timeout" in lowered or "timed out" in lowered:
+            return "timeout"
+        if "selector" in lowered or "element not found" in lowered:
+            return "selector_not_found"
+        if check_results and any(not result.passed for result in check_results):
+            return "verification_failed"
+        return "action_failed"
+
+    @staticmethod
+    def _safe_retry(step: dict, action_type: str) -> dict:
+        side_effect = str(step.get("side_effect") or "").lower()
+        retryable = step.get("retryable")
+        if retryable is True:
+            return {"status": "yes", "reason": "Step declares retryable=true."}
+        if side_effect in {"external_write", "destructive"} or action_type in {
+            "api.post",
+            "api.put",
+            "api.patch",
+            "api.delete",
+        }:
+            return {"status": "no", "reason": "Step may write to an external system."}
+        if side_effect in {"none", "local_only", "external_read"} or action_type in {
+            "no_op",
+            "api.get",
+            "browser.goto",
+            "browser.get_title",
+            "browser.get_text",
+            "browser.wait_for",
+            "browser.wait_for_url",
+            "excel.read",
+        }:
+            return {"status": "yes", "reason": "Action is read-only or local."}
+        return {"status": "unknown", "reason": "No side_effect/retryable metadata declared."}
+
+    @staticmethod
+    def _recommendation(failure_kind: Optional[str]) -> str:
+        mapping = {
+            "missing_secret": "Check configuration/secrets and rerun after the secret exists.",
+            "input_data_error": "Fix input data before retrying.",
+            "selector_not_found": "Repair selector using the evidence bundle.",
+            "ambiguous_selector": "Make the selector more specific.",
+            "verification_failed": "Check whether the action succeeded, the target rejected it, or the success check is wrong.",
+            "timeout": "Check wait policy, app slowness, or the expected condition.",
+            "business_rule_rejected": "Fix record data or target business state before retrying.",
+            "unexpected_state": "Inspect current URL/window and screenshot evidence.",
+            "auth_failed": "Check credentials, session state, MFA, or account lockout.",
+            "target_unavailable": "Check target availability before retrying.",
+        }
+        return mapping.get(str(failure_kind or ""), "Inspect the evidence bundle before rerunning.")
+
     @staticmethod
     def _target_system(workflow: dict) -> Optional[str]:
         target_systems = workflow.get("target_systems")
@@ -1049,7 +1603,8 @@ class YamlWorkflowRunner:
         started_at: float,
         last_successful_step: str,
     ) -> str:
-        self.failure.start_run(workflow["id"])
+        if not self.failure._run_dir:
+            self.failure.start_run(workflow["id"])
         self._flush_pending_logs()
         evidence = await self._capture_failure_evidence(step=step, step_result=step_result)
         verification_failures = [
@@ -1091,6 +1646,7 @@ class YamlWorkflowRunner:
             last_known_good_stage=last_successful_step or None,
             escalation_status=str(classification.get("recommended_route") or "notified"),
             error_class=str(step.get("failure_class") or classification.get("error_class")),
+            failure_kind=step_result.get("failure_kind"),
         )
         return str(Path(report_path).resolve()) if report_path else ""
 

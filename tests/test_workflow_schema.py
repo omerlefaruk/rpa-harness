@@ -243,6 +243,73 @@ steps:
     assert result["rulebook_audit"]["score"] < 5
 
 
+@pytest.mark.asyncio
+async def test_yaml_runner_writes_operator_artifacts_for_passed_run(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "noop.yaml"
+    wf_path.write_text("""
+id: noop_artifacts
+name: Noop Artifacts
+version: "1.0"
+type: api
+steps:
+  - id: done
+    phase: login
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    result = await YamlWorkflowRunner().run(str(wf_path))
+
+    run_dir = Path(result["run_dir"])
+    events = [json.loads(line)["event"] for line in (run_dir / "timeline.jsonl").read_text().splitlines()]
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+    assert result["status"] == "passed"
+    assert (run_dir / "preflight.json").exists()
+    assert (run_dir / "report.html").exists()
+    assert manifest["status"] == "passed"
+    assert manifest["summary"]["total_phases"] == 1
+    assert "run.started" in events
+    assert "step.passed" in events
+    assert "run.finished" in events
+
+
+@pytest.mark.asyncio
+async def test_yaml_runner_phase_and_pause_controls(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "phases.yaml"
+    wf_path.write_text("""
+id: phase_controls
+name: Phase Controls
+version: "1.0"
+type: api
+steps:
+  - id: open_login
+    phase: login
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+  - id: submit_invoice
+    phase: process_records
+    side_effect: external_write
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    phase_result = await YamlWorkflowRunner().run(str(wf_path), phase="login")
+    paused = await YamlWorkflowRunner().run(str(wf_path), pause_before="submit_invoice")
+
+    assert [step["step_id"] for step in phase_result["steps"]] == ["open_login"]
+    assert paused["status"] == "paused"
+    assert [step["step_id"] for step in paused["steps"]] == ["open_login"]
+    assert json.loads((Path(paused["run_dir"]) / "run_manifest.json").read_text())["status"] == "blocked"
+
+
 def test_audit_workflow_cli_outputs_rulebook_json(tmp_path):
     wf_path = tmp_path / "noop.yaml"
     wf_path.write_text("""
@@ -516,6 +583,57 @@ steps:
     assert report["failed_step_id"] == "get_data"
     assert "api_response" in report["evidence"]
     assert (report_path.parent / "logs.jsonl").exists()
+
+
+@pytest.mark.asyncio
+async def test_yaml_runner_failed_run_artifacts_are_redacted(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "api_fail.yaml"
+    wf_path.write_text("""
+id: api_failure_redacted
+name: API Failure Redacted
+version: "1.0"
+type: api
+steps:
+  - id: get_data
+    phase: fetch
+    action:
+      type: api.get
+      url: "https://api.example.test/items/1"
+    success_check:
+      - type: status_code
+        value: 200
+""")
+
+    canary = "sk-test-canary-12345"
+    fake = FakeAPIDriver(response=FakeResponse(status_code=500, text=f'{{"error": "token={canary}"}}'))
+    runner = YamlWorkflowRunner()
+
+    async def get_fake_api():
+        runner._drivers["api"] = fake
+        return fake
+
+    runner._get_api_driver = get_fake_api
+    result = await runner.run(str(wf_path))
+
+    run_dir = Path(result["run_dir"])
+    assert result["status"] == "failed"
+    assert (run_dir / "evidence_bundle.json").exists()
+    assert (run_dir / "repair_packet.json").exists()
+    assert "verification_failed" in (run_dir / "timeline.jsonl").read_text()
+    for artifact in [
+        "run_manifest.json",
+        "preflight.json",
+        "timeline.jsonl",
+        "failure_report.json",
+        "evidence_bundle.json",
+        "repair_packet.json",
+        "logs.jsonl",
+        "report.json",
+        "report.html",
+        "artifacts/api_response.json",
+    ]:
+        assert canary not in (run_dir / artifact).read_text(encoding="utf-8")
 
 
 class FakeResponse:

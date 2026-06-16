@@ -124,6 +124,48 @@ Bundle a run directory for handoff:
 python main.py --bundle-run runs/<run_id>
 ```
 
+## Operator Visibility
+
+YAML workflow runs now create a run folder under `runs/<run_id>/` with:
+
+- `run_manifest.json`
+- `preflight.json`
+- `timeline.jsonl`
+- `workflow_resolved.redacted.yaml`
+- `report.json`
+- `report.html`
+- failed-run files such as `failure_report.json`, `evidence_bundle.json`, and `repair_packet.json`
+
+Typical operator flow:
+
+```bash
+python main.py --validate-yaml workflows/upload_invoices.yaml
+python main.py --preflight-yaml workflows/upload_invoices.yaml
+python main.py --run-yaml workflows/upload_invoices.yaml --phase login
+python main.py --run-yaml workflows/upload_invoices.yaml --pause-before submit_invoice
+python main.py --run-yaml workflows/upload_invoices.yaml --pause-after-phase login
+python main.py --run-yaml workflows/upload_invoices.yaml --until-step submit_invoice
+python main.py --runs-list
+python main.py --runs-show RUN_ID
+```
+
+Use optional `phase` on steps to group execution:
+
+```yaml
+steps:
+  - id: open_login
+    phase: login
+    action:
+      type: browser.goto
+      url: "${inputs.base_url}/login"
+    success_check:
+      - type: url_contains
+        value: "/login"
+```
+
+`--until-step` stops after the named step passes. `--pause-before` stops before
+the named action runs and writes the pause to the manifest, timeline, and report.
+
 ## Example — Minimal
 
 ```yaml
