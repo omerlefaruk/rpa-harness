@@ -106,5 +106,5 @@ async def test_excel_yaml_missing_input_file_fails_predictably(tmp_path):
     result = await YamlWorkflowRunner().run(str(_write_yaml(tmp_path, workflow)))
 
     assert result["status"] == "failed"
-    assert result["failure_type"] == "execution"
-    assert "Workbook not found" in result["reason"]
+    assert result["failure_type"] == "preflight"
+    assert any("input file does not exist" in error for error in result["preflight"]["blocking_errors"])

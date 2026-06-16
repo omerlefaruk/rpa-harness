@@ -157,12 +157,19 @@ def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]
                 "run_id": data.get("run_id") or report.parent.name,
                 "workflow": data.get("workflow_name"),
                 "status": data.get("status"),
+                "failure_kind": data.get("failure_kind"),
                 "error_class": data.get("error_class"),
                 "current_stage": data.get("current_stage"),
                 "failed_step_id": data.get("failed_step_id"),
                 "human_review_required": data.get("human_review_required"),
                 "report": str(report),
                 "html_report": str(report.with_suffix(".html")) if report.with_suffix(".html").exists() else "",
+                "evidence_bundle": str(report.parent / "evidence_bundle.json")
+                if (report.parent / "evidence_bundle.json").exists()
+                else "",
+                "repair_packet": str(report.parent / "repair_packet.json")
+                if (report.parent / "repair_packet.json").exists()
+                else "",
                 "modified": datetime.fromtimestamp(report.stat().st_mtime).isoformat(),
             }
         )

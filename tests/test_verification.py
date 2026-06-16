@@ -6,6 +6,7 @@ from harness.verification import (
     SuccessCheck,
     VerificationResult,
     validate_workflow,
+    validate_workflow_report,
     validate_workflow_step,
     CheckRunner,
 )
@@ -52,6 +53,36 @@ def test_validate_step_bad_check_type():
         "success_check": [{"type": "invalid_check_type"}],
     })
     assert any("unknown type" in error for error in errors)
+
+
+def test_validate_workflow_report_summarizes_success_check_coverage():
+    workflow = {
+        "id": "coverage",
+        "name": "Coverage",
+        "version": "1.0",
+        "type": "api",
+        "steps": [
+            {
+                "id": "read",
+                "action": {"type": "api.get", "url": "https://example.com"},
+                "success_check": [{"type": "status_code", "value": 200}],
+            },
+            {"id": "action_only", "action": {"type": "no_op"}},
+            {
+                "id": "weak",
+                "action": {"type": "no_op"},
+                "success_check": [{"type": "always_pass"}],
+            },
+        ],
+    }
+
+    report = validate_workflow_report(workflow)
+
+    assert report["total_steps"] == 3
+    assert report["steps_with_success_checks"] == 2
+    assert report["missing_success_checks"] == ["action_only"]
+    assert report["weak_success_checks"] == ["weak[0]: always_pass"]
+    assert any("missing success_check" in error for error in report["errors"])
 
 
 def test_validate_workflow_missing_fields():

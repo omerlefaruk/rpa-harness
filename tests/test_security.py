@@ -1,6 +1,8 @@
 """Tests for deterministic redaction helpers."""
 
-from harness.security import REDACTED, redact_mapping, redact_text, sanitize_url
+import json
+
+from harness.security import REDACTED, SecretValue, redact_mapping, redact_text, sanitize_url
 
 
 def test_sanitize_url_strips_query_and_fragment():
@@ -19,3 +21,12 @@ def test_redact_text_replaces_known_secret_values():
 
 def test_redact_text_replaces_sensitive_assignments():
     assert redact_text("token=abc123") == f"token={REDACTED}"
+
+
+def test_secret_value_does_not_stringify_or_json_serialize_raw_value():
+    secret = SecretValue("api_token", "sk-test-canary-12345")
+
+    assert str(secret) == REDACTED
+    assert repr(secret) == REDACTED
+    assert json.dumps({"token": secret}, default=str) == f'{{"token": "{REDACTED}"}}'
+    assert secret.reveal() == "sk-test-canary-12345"

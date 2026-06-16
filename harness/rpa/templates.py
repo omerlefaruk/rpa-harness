@@ -72,6 +72,7 @@ def _ask(label: str, default: str) -> str:
 
 
 BASE_CONTRACT = {
+    "schema_version": "1",
     "version": "1.0",
     "input_schema": {"record_id": "string"},
     "output_destination": "runs/output",

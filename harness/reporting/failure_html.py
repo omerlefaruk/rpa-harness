@@ -51,7 +51,7 @@ def _html(report: dict[str, Any], base_dir: Path) -> str:
       <h2>Failure Summary</h2>
       <table>{_rows(report, [
         "status", "current_stage", "failed_step_id", "action_type", "intended_action",
-        "expected_result", "actual_result", "error_class", "error_message",
+        "expected_result", "actual_result", "failure_kind", "error_class", "error_message",
         "retry_attempt", "max_attempts", "side_effect_risk", "human_review_required",
         "target_system", "escalation_status", "repro_command"
       ])}</table>

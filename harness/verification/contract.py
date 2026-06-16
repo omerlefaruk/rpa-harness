@@ -3,8 +3,10 @@ Verification contract — defines success checks for workflow steps.
 """
 
 import re
+import os
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from harness.core import retry_policy_is_safe
@@ -92,6 +94,7 @@ class VerificationResult:
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 SAFE_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
+INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 
 BROWSER_ACTIONS = {
     "browser.goto",
@@ -286,6 +289,162 @@ def validate_workflow(workflow: dict) -> List[str]:
                 errors.extend(_validate_workflow_action_rules(workflow, step, credentials))
                 errors.extend(_validate_security_literals(step))
     return errors
+
+
+def validate_workflow_report(workflow: dict) -> dict:
+    steps = workflow.get("steps", []) if isinstance(workflow, dict) else []
+    if not isinstance(steps, list):
+        steps = []
+    missing_success_checks = []
+    weak_success_checks = []
+    steps_with_success_checks = 0
+    for index, step in enumerate(steps):
+        if not isinstance(step, dict):
+            continue
+        step_id = str(step.get("id") or f"step_{index}")
+        checks = step.get("success_check") or []
+        if checks:
+            steps_with_success_checks += 1
+        else:
+            missing_success_checks.append(step_id)
+        for check_index, check in enumerate(checks):
+            if isinstance(check, dict) and check.get("type") == CheckType.ALWAYS_PASS.value:
+                weak_success_checks.append(f"{step_id}[{check_index}]: always_pass")
+    return {
+        "total_steps": len(steps),
+        "steps_with_success_checks": steps_with_success_checks,
+        "missing_success_checks": missing_success_checks,
+        "weak_success_checks": weak_success_checks,
+        "errors": validate_workflow(workflow),
+        "warnings": [
+            f"weak success_check: {item}"
+            for item in weak_success_checks
+        ],
+    }
+
+
+def preflight_workflow(
+    workflow: dict,
+    *,
+    inputs: dict | None = None,
+    env: dict | None = None,
+) -> dict:
+    inputs = inputs or workflow.get("inputs", {}) or {}
+    env = env or os.environ
+    errors = list(validate_workflow(workflow))
+    warnings: list[str] = []
+    checks: list[dict] = []
+
+    for name, env_name in (workflow.get("credentials", {}) or {}).items():
+        ok = bool(env.get(str(env_name)))
+        checks.append({"name": f"secret:{name}", "passed": ok})
+        if not ok:
+            errors.append(f"preflight: missing secret '{name}' ({env_name})")
+
+    required_files = _required_input_files(workflow, inputs)
+    for key, value in inputs.items():
+        if key in required_files and _looks_like_input_file(key, value):
+            path = Path(str(value))
+            ok = path.exists()
+            checks.append({"name": f"input_file:{key}", "passed": ok, "path": str(path)})
+            if not ok:
+                errors.append(f"preflight: input file does not exist: {path}")
+
+    contract = _input_contract(workflow)
+    required_columns = contract.get("required_columns") or []
+    if required_columns:
+        workbook = _contract_workbook_path(contract, inputs)
+        if workbook:
+            column_errors = _required_column_errors(Path(str(workbook)), required_columns)
+            checks.append({
+                "name": "excel_required_columns",
+                "passed": not column_errors,
+                "path": str(workbook),
+            })
+            errors.extend(column_errors)
+        else:
+            warnings.append("preflight: required_columns declared without an input file")
+
+    return {
+        "status": "failed" if errors else "passed",
+        "passed_checks": [check for check in checks if check.get("passed")],
+        "warnings": warnings,
+        "blocking_errors": errors,
+    }
+
+
+def _looks_like_input_file(key: str, value: Any) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+    lowered = key.lower()
+    if not any(part in lowered for part in ("input_file", "source_file", "workbook", "file")):
+        return False
+    if value.startswith(("http://", "https://")) or "${" in value:
+        return False
+    return True
+
+
+def _required_input_files(workflow: dict, inputs: dict) -> set[str]:
+    required: set[str] = set()
+    created: set[str] = set()
+    for step in workflow.get("steps", []) or []:
+        action = step.get("action", {}) if isinstance(step, dict) else {}
+        if not isinstance(action, dict):
+            continue
+        action_type = str(action.get("type") or "")
+        refs = _input_refs(action.get("path") or action.get("file_path"))
+        if action_type in {"excel.write", "excel.append_row"}:
+            created.update(refs)
+        elif action_type == "excel.read":
+            required.update(ref for ref in refs if ref not in created)
+    contract = _input_contract(workflow)
+    if contract.get("required_columns"):
+        for key in ("file", "workbook", "input_file", "source_file"):
+            if inputs.get(key):
+                required.add(key)
+    return required
+
+
+def _input_refs(value: Any) -> set[str]:
+    if not isinstance(value, str):
+        return set()
+    return set(INPUT_REF_RE.findall(value))
+
+
+def _input_contract(workflow: dict) -> dict:
+    for key in ("input", "input_contract"):
+        value = workflow.get(key)
+        if isinstance(value, dict):
+            return value
+    value = workflow.get("input_schema")
+    return value if isinstance(value, dict) and "required_columns" in value else {}
+
+
+def _contract_workbook_path(contract: dict, inputs: dict) -> str | None:
+    for key in ("file", "workbook", "input_file", "source_file"):
+        if contract.get(key):
+            return str(contract[key])
+        if inputs.get(key):
+            return str(inputs[key])
+    return None
+
+
+def _required_column_errors(path: Path, required_columns: list) -> list[str]:
+    if not path.exists():
+        return [f"preflight: input file does not exist: {path}"]
+    try:
+        import openpyxl
+
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+        try:
+            sheet = workbook.active
+            actual = {str(cell.value) for cell in next(sheet.iter_rows(max_row=1)) if cell.value}
+        finally:
+            workbook.close()
+    except Exception as exc:
+        return [f"preflight: cannot read required columns from {path}: {exc}"]
+    missing = [column for column in required_columns if str(column) not in actual]
+    return [f"preflight: missing required column '{column}' in {path}" for column in missing]
 
 
 def _validate_action_fields(step_id: str, action_type: str, action: dict) -> List[str]:

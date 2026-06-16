@@ -27,6 +27,7 @@ def test_workflow_templates_are_valid_and_rulebook_ready():
             target_system="fixture-system",
         )
         assert validate_workflow(workflow) == []
+        assert workflow["schema_version"] == "1"
         assert workflow["owner"] == "ops"
         assert workflow["target_systems"] == ["fixture-system"]
 
@@ -124,17 +125,24 @@ def test_selector_repair_plan_contains_swarm_command():
     assert plan["step_id"] == "click_save"
     assert "--browser-selector-swarm" in plan["recommended_command"]
     assert "Save form" in plan["recommended_command"]
+    assert plan["selector_evidence"]["target_intent"] == "Save form"
+    assert plan["selector_evidence"]["validated"] is False
+    assert plan["repair_suggestions"][0]["confidence"] == 0.4
+    assert plan["repair_suggestions"][0]["validated"] is False
 
 
 def test_dashboard_collects_run_failure_metadata(tmp_path):
     run_dir = tmp_path / "runs" / "run_1"
     run_dir.mkdir(parents=True)
+    (run_dir / "evidence_bundle.json").write_text("{}", encoding="utf-8")
+    (run_dir / "repair_packet.json").write_text("{}", encoding="utf-8")
     (run_dir / "failure_report.json").write_text(
         json.dumps(
             {
                 "run_id": "run_1",
                 "workflow_name": "Workflow",
                 "status": "failed",
+                "failure_kind": "selector_not_found",
                 "error_class": "automation_defect",
                 "current_stage": "click_save",
                 "failed_step_id": "save",
@@ -147,4 +155,7 @@ def test_dashboard_collects_run_failure_metadata(tmp_path):
     reports = collect_run_reports(tmp_path / "runs")
 
     assert reports[0]["run_id"] == "run_1"
+    assert reports[0]["failure_kind"] == "selector_not_found"
     assert reports[0]["error_class"] == "automation_defect"
+    assert reports[0]["evidence_bundle"].endswith("evidence_bundle.json")
+    assert reports[0]["repair_packet"].endswith("repair_packet.json")

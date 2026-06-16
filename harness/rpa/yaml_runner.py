@@ -23,12 +23,19 @@ from harness.reporting.failure_report import FailureReport
 from harness.resilience.errors import classify_failure
 from harness.selectors.repair import selector_repair_plan
 from harness.security import (
+    SecretValue,
     redact_mapping,
     redact_text,
     redacted_preview,
     sanitize_url,
 )
-from harness.verification import CheckType, SuccessCheck, VerificationResult, WorkflowVerifier
+from harness.verification import (
+    CheckType,
+    SuccessCheck,
+    VerificationResult,
+    WorkflowVerifier,
+    preflight_workflow,
+)
 from harness.verification.checks import CheckRunner
 
 INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -54,7 +61,7 @@ class YamlWorkflowRunner:
         self._inputs: Dict[str, Any] = {}
         self._variables: Dict[str, Any] = {}
         self._secret_env_names: Dict[str, str] = {}
-        self._secrets: Dict[str, str] = {}
+        self._secrets: Dict[str, SecretValue] = {}
         self._workflow_path = ""
         self._last_api_context: Optional[Dict[str, Any]] = None
         self._console_entries: List[dict] = []
@@ -98,6 +105,7 @@ class YamlWorkflowRunner:
             )
             return {
                 "status": "failed",
+                "state": "needs_operator_input",
                 "failure_type": "config",
                 "reason": "Missing required secrets",
                 "missing_secrets": missing_secrets,
@@ -106,7 +114,19 @@ class YamlWorkflowRunner:
                 "rpa_memory": self.memory.status_snapshot(),
             }
         self._secrets = self._load_secrets()
-        self.notifier.add_secret_values(self._secrets.values())
+        self.notifier.add_secret_values(self._secret_values())
+
+        preflight = preflight_workflow(workflow, inputs=self._inputs)
+        if preflight["blocking_errors"]:
+            return {
+                "status": "failed",
+                "failure_type": "preflight",
+                "reason": "Preflight checks failed",
+                "preflight": preflight,
+                "steps": [],
+                "rulebook_audit": rulebook_audit,
+                "rpa_memory": self.memory.status_snapshot(),
+            }
 
         unsupported = self._unsupported_runtime_actions(workflow)
         if unsupported:
@@ -483,8 +503,8 @@ class YamlWorkflowRunner:
             "status_code": response.status_code,
             "response_body": body,
             "response_json": response_json,
-            "response_headers": redact_mapping(dict(response.headers), self._secrets.values()),
-            "body_preview": redacted_preview(body, self._secrets.values(), max_chars=4096),
+            "response_headers": redact_mapping(dict(response.headers), self._secret_values()),
+            "body_preview": redacted_preview(body, self._secret_values(), max_chars=4096),
             "url": sanitize_url(str(response.url)),
         }
 
@@ -697,7 +717,7 @@ class YamlWorkflowRunner:
                 passed=passed,
                 check_type=check.type,
                 expected=expected,
-                actual=redacted_preview(body, self._secrets.values(), max_chars=500),
+                actual=redacted_preview(body, self._secret_values(), max_chars=500),
                 message="" if passed else f"Text not visible: '{expected}'",
             )
 
@@ -730,7 +750,7 @@ class YamlWorkflowRunner:
                 expected="[REDACTED]" if check.redacted else "non-empty",
                 actual="[REDACTED]"
                 if check.redacted
-                else redacted_preview(value, self._secrets.values(), 100),
+                else redacted_preview(value, self._secret_values(), 100),
                 message="Field has value" if has_value else "Field has no value",
                 evidence={"redacted": bool(check.redacted)},
             )
@@ -807,7 +827,7 @@ class YamlWorkflowRunner:
                     self._console_entries.append(
                         {
                             "type": message.type,
-                            "text": redacted_preview(message.text, self._secrets.values(), 500),
+                            "text": redacted_preview(message.text, self._secret_values(), 500),
                         }
                     )
             except Exception:
@@ -827,7 +847,7 @@ class YamlWorkflowRunner:
                     {
                         "url": sanitize_url(request.url),
                         "method": request.method,
-                        "error_text": redact_text(error_text, self._secrets.values(), 300),
+                        "error_text": redact_text(error_text, self._secret_values(), 300),
                     }
                 )
             except Exception:
@@ -954,9 +974,9 @@ class YamlWorkflowRunner:
                 missing.append({"name": logical_name, "env": env_name})
         return missing
 
-    def _load_secrets(self) -> Dict[str, str]:
+    def _load_secrets(self) -> Dict[str, SecretValue]:
         return {
-            logical_name: os.environ[env_name]
+            logical_name: SecretValue(logical_name, os.environ[env_name])
             for logical_name, env_name in self._secret_env_names.items()
         }
 
@@ -985,7 +1005,7 @@ class YamlWorkflowRunner:
             name = match.group(1)
             if name not in self._secrets:
                 raise RuntimeError(f"Secret '{name}' is not available")
-            return self._secrets[name]
+            return self._secrets[name].reveal()
 
         result = INPUT_REF_RE.sub(replace_input, result)
         result = VARIABLE_REF_RE.sub(replace_variable, result)
@@ -1092,7 +1112,7 @@ class YamlWorkflowRunner:
                 evidence["screenshot_error"] = str(exc)
             try:
                 raw_dom = await browser.page.content()
-                redacted_dom = redact_text(raw_dom, self._secrets.values(), max_chars=200000)
+                redacted_dom = redact_text(raw_dom, self._secret_values(), max_chars=200000)
                 evidence["dom_snapshot"] = self._relative_evidence_path(
                     self.failure.save_artifact("dom_snapshot_redacted.html", redacted_dom)
                 )
@@ -1163,11 +1183,11 @@ class YamlWorkflowRunner:
                 result.to_dict(),
                 default=str,
             ),
-            object_hook=lambda obj: redact_mapping(obj, self._secrets.values(), max_chars=500),
+            object_hook=lambda obj: redact_mapping(obj, self._secret_values(), max_chars=500),
         )
 
     def _redact_runtime_text(self, value: Any, max_chars: int = 500) -> str:
-        return redacted_preview(value, self._secrets.values(), max_chars=max_chars)
+        return redacted_preview(value, self._secret_values(), max_chars=max_chars)
 
     def _redact_optional(self, value: Any, max_chars: int = 500) -> Optional[str]:
         if value is None:
@@ -1259,3 +1279,9 @@ class YamlWorkflowRunner:
         if value in (None, ""):
             return None
         return int(value)
+
+    def _secret_values(self) -> List[str]:
+        return [
+            secret.reveal() if hasattr(secret, "reveal") else str(secret)
+            for secret in self._secrets.values()
+        ]

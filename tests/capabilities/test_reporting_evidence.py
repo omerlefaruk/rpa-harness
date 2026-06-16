@@ -90,6 +90,62 @@ def test_failure_report_includes_repro_command_and_evidence_paths(tmp_path):
     assert (Path(report_path).parent / "artifacts" / "api_response.json").exists()
 
 
+def test_failure_report_writes_redacted_evidence_bundle(tmp_path):
+    failure = FailureReport(str(tmp_path / "runs"))
+    failure.start_run("bundle_failure")
+
+    report_path = failure.generate(
+        workflow_id="bundle_failure",
+        workflow_name="Bundle Failure",
+        failed_step_id="read_api",
+        failed_step_description="Read API",
+        action_type="api.get",
+        error_type="WorkflowStepFailed",
+        error_message="status_code failed",
+        verification_failures=[
+            {
+                "check_type": "status_code",
+                "expected": 200,
+                "actual": 500,
+                "message": "Authorization: Bearer rpa-canary-token",
+                "secret": "RPA_SECRET_CANARY_12345",
+                "password": "fake-password-do-not-log",
+                "api_key": "sk-test-canary-12345",
+            }
+        ],
+        evidence={"api_response": "artifacts/api_response.json"},
+    )
+
+    report = json.loads(Path(report_path).read_text())
+    bundle_path = Path(report_path).parent / "evidence_bundle.json"
+    bundle_text = bundle_path.read_text()
+    bundle = json.loads(bundle_text)
+    repair_packet_path = Path(report_path).parent / "repair_packet.json"
+    repair_packet_text = repair_packet_path.read_text()
+    repair_packet = json.loads(repair_packet_text)
+
+    assert report["schema_version"] == "1"
+    assert report["failure_kind"] == "verification_failed"
+    assert report["evidence"]["evidence_bundle"] == "evidence_bundle.json"
+    assert report["evidence"]["repair_packet"] == "repair_packet.json"
+    assert bundle["schema_version"] == "1"
+    assert bundle["failure_kind"] == "verification_failed"
+    assert bundle["target_type"] == "api"
+    assert bundle["artifacts"]["api_preview"] == "artifacts/api_response.json"
+    assert bundle["artifacts"]["repair_packet"] == "repair_packet.json"
+    assert repair_packet["schema_version"] == "1"
+    assert repair_packet["failure_kind"] == "verification_failed"
+    assert repair_packet["recommended_next_action"]
+    for canary in [
+        "RPA_SECRET_CANARY_12345",
+        "fake-password-do-not-log",
+        "sk-test-canary-12345",
+        "Bearer rpa-canary-token",
+    ]:
+        assert canary not in bundle_text
+        assert canary not in repair_packet_text
+
+
 def test_failure_report_includes_rulebook_failure_fields(tmp_path):
     failure = FailureReport(str(tmp_path / "runs"))
     failure.start_run("rulebook_failure")

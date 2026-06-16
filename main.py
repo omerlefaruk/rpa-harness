@@ -486,16 +486,18 @@ async def main():
 
         from harness.core import audit_workflow_rulebook
         from harness.rpa.yaml_runner import load_workflow_yaml
-        from harness.verification import validate_workflow
+        from harness.verification import validate_workflow_report
 
         wf = load_workflow_yaml(args.audit_workflow)
-        validation_errors = validate_workflow(wf)
+        validation = validate_workflow_report(wf)
+        validation_errors = validation["errors"]
         audit = audit_workflow_rulebook(wf).to_dict()
         result = {
             "workflow_id": wf.get("id", "unknown"),
             "workflow_name": wf.get("name", wf.get("id", "unknown")),
             "validation_status": "invalid" if validation_errors else "valid",
             "validation_errors": validation_errors,
+            "validation": validation,
             "rulebook_audit": audit,
         }
         print(json.dumps(result, indent=2, default=str))
@@ -505,15 +507,20 @@ async def main():
 
     if args.validate_yaml:
         from harness.rpa.yaml_runner import load_workflow_yaml
-        from harness.verification import validate_workflow
+        from harness.verification import validate_workflow_report
 
         wf = load_workflow_yaml(args.validate_yaml)
-        errors = validate_workflow(wf)
+        validation = validate_workflow_report(wf)
+        errors = validation["errors"]
         if errors:
             print(f"INVALID: {'; '.join(errors)}")
             sys.exit(1)
         else:
-            print(f"VALID: {wf.get('id', 'unknown')} ({len(wf.get('steps', []))} steps)")
+            print(
+                f"VALID: {wf.get('id', 'unknown')} "
+                f"({validation['total_steps']} steps) "
+                f"{validation['steps_with_success_checks']} checked"
+            )
         return
 
     if args.run_yaml:

@@ -6,11 +6,27 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from collections.abc import Iterable, Mapping
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 REDACTED = "[REDACTED]"
+
+
+@dataclass(frozen=True)
+class SecretValue:
+    name: str
+    _value: str
+
+    def __str__(self) -> str:
+        return REDACTED
+
+    def __repr__(self) -> str:
+        return REDACTED
+
+    def reveal(self) -> str:
+        return self._value
 
 SENSITIVE_KEY_PARTS = (
     "authorization",

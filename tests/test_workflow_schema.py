@@ -9,7 +9,7 @@ import pytest
 
 from harness.rpa.yaml_runner import YamlWorkflowRunner
 from harness.config import HarnessConfig
-from harness.verification import validate_workflow
+from harness.verification import preflight_workflow, validate_workflow
 
 
 def test_validate_minimal_workflow():
@@ -322,6 +322,62 @@ steps:
     assert payload["status"] == "valid"
     assert payload["workflow_id"] == "noop_tool_validate"
     assert payload["step_count"] == 1
+    assert payload["total_steps"] == 1
+    assert payload["steps_with_success_checks"] == 1
+
+
+def test_preflight_blocks_missing_input_file(tmp_path):
+    missing = tmp_path / "missing.xlsx"
+    workflow = {
+        "id": "missing_file",
+        "name": "Missing File",
+        "version": "1.0",
+        "type": "excel",
+        "inputs": {"workbook": str(missing)},
+        "steps": [
+            {
+                "id": "read",
+                "action": {"type": "excel.read", "path": "${inputs.workbook}"},
+                "success_check": [{"type": "variable_has_value", "value": "rows"}],
+            }
+        ],
+    }
+
+    result = preflight_workflow(workflow)
+
+    assert result["status"] == "failed"
+    assert any("input file does not exist" in error for error in result["blocking_errors"])
+
+
+def test_preflight_blocks_missing_excel_required_column(tmp_path):
+    import openpyxl
+
+    workbook_path = tmp_path / "input.xlsx"
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append(["invoice_id"])
+    workbook.save(workbook_path)
+
+    workflow = {
+        "id": "bad_columns",
+        "name": "Bad Columns",
+        "version": "1.0",
+        "type": "excel",
+        "inputs": {"workbook": str(workbook_path)},
+        "input": {"required_columns": ["invoice_id", "amount"]},
+        "steps": [
+            {
+                "id": "read",
+                "action": {"type": "excel.read", "path": "${inputs.workbook}"},
+                "success_check": [{"type": "variable_has_value", "value": "rows"}],
+            }
+        ],
+    }
+
+    result = preflight_workflow(workflow)
+
+    assert result["status"] == "failed"
+    assert any("missing required column 'amount'" in error for error in result["blocking_errors"])
 
 
 @pytest.mark.asyncio
@@ -349,8 +405,37 @@ steps:
 
     result = await YamlWorkflowRunner().run(str(wf_path))
     assert result["status"] == "failed"
+    assert result["state"] == "needs_operator_input"
     assert result["failure_type"] == "config"
     assert result["missing_secrets"] == [{"name": "api_token", "env": "MISSING_API_TOKEN"}]
+
+
+@pytest.mark.asyncio
+async def test_yaml_runner_missing_input_file_preflight(tmp_path):
+    wf_path = tmp_path / "missing_file.yaml"
+    wf_path.write_text(f"""
+id: missing_file_preflight
+name: Missing File Preflight
+version: "1.0"
+type: excel
+inputs:
+  workbook: "{(tmp_path / 'missing.xlsx').as_posix()}"
+steps:
+  - id: read_rows
+    action:
+      type: excel.read
+      path: "${{inputs.workbook}}"
+      output: rows
+    success_check:
+      - type: variable_has_value
+        value: rows
+""")
+
+    result = await YamlWorkflowRunner().run(str(wf_path))
+
+    assert result["status"] == "failed"
+    assert result["failure_type"] == "preflight"
+    assert any("input file does not exist" in error for error in result["preflight"]["blocking_errors"])
 
 
 @pytest.mark.asyncio

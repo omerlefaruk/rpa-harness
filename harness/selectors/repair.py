@@ -18,6 +18,24 @@ def selector_repair_plan(
         "step_id": step.get("id"),
         "intent": intent,
         "failed_selector": selector,
+        "selector_evidence": {
+            "target_intent": intent,
+            "failed_selector": selector,
+            "strategy": selector.get("strategy") if isinstance(selector, dict) else None,
+            "target_type": "browser",
+            "candidates": [],
+            "context_artifact": None,
+            "validated": False,
+        },
+        "repair_suggestions": [
+            {
+                "suggestion": "Prefer data-testid, role/name, label, placeholder, or text before CSS/XPath.",
+                "confidence": 0.4,
+                "reason": "No deterministic candidate has been validated yet.",
+                "evidence_source": current_url,
+                "validated": False,
+            }
+        ],
         "current_url": current_url,
         "recommended_command": _recommended_command(current_url, intent),
         "patch_guidance": (

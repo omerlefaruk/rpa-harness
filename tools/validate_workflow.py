@@ -15,7 +15,7 @@ def main():
         sys.exit(1)
 
     from harness.rpa.yaml_runner import load_workflow_yaml
-    from harness.verification import validate_workflow
+    from harness.verification import validate_workflow_report
 
     try:
         workflow = load_workflow_yaml(wf_path)
@@ -23,18 +23,16 @@ def main():
         print(json.dumps({"status": "error", "reason": f"YAML parse error: {e}"}))
         sys.exit(1)
 
-    errors = validate_workflow(workflow)
-    step_count = len(workflow.get("steps", []))
-    checks_count = sum(
-        len(step.get("success_check", [])) for step in workflow.get("steps", [])
-    )
+    validation = validate_workflow_report(workflow)
+    errors = validation["errors"]
+    validation["step_count"] = validation["total_steps"]
+    validation["checks_count"] = validation["steps_with_success_checks"]
 
     if errors:
         print(json.dumps({
             "status": "invalid",
             "workflow_id": workflow.get("id", "unknown"),
-            "step_count": step_count,
-            "checks_count": checks_count,
+            **validation,
             "errors": errors,
         }, indent=2))
         sys.exit(1)
@@ -43,8 +41,7 @@ def main():
             "status": "valid",
             "workflow_id": workflow.get("id", "unknown"),
             "type": workflow.get("type", "unknown"),
-            "step_count": step_count,
-            "checks_count": checks_count,
+            **validation,
         }, indent=2))
 
 
