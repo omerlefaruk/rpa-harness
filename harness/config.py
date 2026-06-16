@@ -50,6 +50,7 @@ class HarnessConfig:
 
     # Browser / Playwright
     browser: str = "chromium"
+    browser_cdp_endpoint: Optional[str] = None
     headless: bool = False
     viewport_width: int = 1920
     viewport_height: int = 1080
@@ -74,6 +75,8 @@ class HarnessConfig:
     agent_model: str = "gpt-4o"
     agent_temperature: float = 0.3
     agent_max_steps: int = 50
+    copilot_enabled: bool = False
+    copilot_question_mode: str = "console"
 
     # Parallel execution
     max_workers: int = 4
@@ -99,12 +102,15 @@ class HarnessConfig:
             log_level=os.getenv("RPA_LOG_LEVEL", "INFO"),
             report_dir=os.getenv("RPA_REPORT_DIR", "./reports"),
             browser=os.getenv("RPA_BROWSER", "chromium"),
+            browser_cdp_endpoint=os.getenv("RPA_BROWSER_CDP_ENDPOINT") or None,
             headless=os.getenv("RPA_HEADLESS", "false").lower() == "true",
             viewport_width=int(os.getenv("RPA_VIEWPORT_W", "1920")),
             viewport_height=int(os.getenv("RPA_VIEWPORT_H", "1080")),
             enable_vision=os.getenv("RPA_ENABLE_VISION", "true").lower() == "true",
             enable_agent=os.getenv("RPA_ENABLE_AGENT", "true").lower() == "true",
             auto_heal_selectors=os.getenv("RPA_AUTO_HEAL", "true").lower() == "true",
+            copilot_enabled=os.getenv("RPA_COPILOT", "false").lower() == "true",
+            copilot_question_mode=os.getenv("RPA_COPILOT_QUESTION_MODE", "console"),
             max_workers=int(os.getenv("RPA_MAX_WORKERS", "4")),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_api_base=os.getenv("OPENAI_API_BASE"),

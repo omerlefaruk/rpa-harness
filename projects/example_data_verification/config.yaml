@@ -1,0 +1,10 @@
+name: example_data_verification
+log_level: INFO
+report_dir: ./reports
+screenshot_dir: ./screenshots
+headless: true
+browser: chromium
+
+variables:
+  input_excel: ./data/input.xlsx
+  output_excel: ./reports/output.xlsx

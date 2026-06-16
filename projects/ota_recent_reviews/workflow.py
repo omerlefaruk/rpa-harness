@@ -35,8 +35,8 @@ def _load_module(name: str, path: Path):
     return module
 
 
-ota_links = _load_module("ota_link_swarm_from_excel", ROOT / "tests" / "rpa" / "ota_link_swarm_from_excel.py")
-trip_excel = _load_module("trip_com_reviews_from_excel", ROOT / "tests" / "rpa" / "trip_com_reviews_from_excel.py")
+ota_links = _load_module("ota_link_swarm_from_excel", ROOT / "projects" / "ota_link_swarm" / "workflow.py")
+trip_excel = _load_module("trip_com_reviews_from_excel", ROOT / "projects" / "trip_com_reviews" / "workflow.py")
 trip_reviews = trip_excel.review_tools
 
 

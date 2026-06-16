@@ -73,6 +73,34 @@ export type WorkflowGraph = {
   summary: Record<string, number>;
 };
 
+export type CopilotQuestion = {
+  id?: string;
+  question?: string;
+  choices?: string[];
+  default?: string;
+  details?: Record<string, unknown>;
+  created_at?: string;
+};
+
+export type CopilotSession = {
+  session_id: string;
+  phase?: string;
+  status?: string;
+  updated_at?: string;
+  workflow_path?: string;
+  target_url?: string;
+  intent?: string;
+  next_question?: CopilotQuestion | null;
+  questions?: Array<Record<string, unknown>>;
+  answers?: Array<Record<string, unknown>>;
+  discovery?: Record<string, unknown>;
+  validation?: Record<string, unknown>;
+  preflight?: Record<string, unknown>;
+  run?: Record<string, unknown>;
+  artifacts?: Record<string, unknown>;
+  path?: string;
+};
+
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
@@ -93,5 +121,7 @@ export const api = {
   getRepairPackets: () => getJson<{ repair_packets: Failure[] }>("/api/repair-packets"),
   getSummary: () => getJson<Record<string, unknown>>("/api/observability/summary"),
   getBuilders: () => getJson<{ sessions: Array<Record<string, unknown>> }>("/api/builder/sessions"),
+  getCopilotSessions: () => getJson<{ sessions: CopilotSession[] }>("/api/copilot/sessions"),
+  getCopilotSession: (sessionId: string) => getJson<CopilotSession>(`/api/copilot/sessions/${encodeURIComponent(sessionId)}`),
   getWorkflowGraph: (path: string) => getJson<WorkflowGraph>(`/api/workflows/${path}/graph`),
 };

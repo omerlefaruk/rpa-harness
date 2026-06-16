@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, Failure, RecordResult, Run, TimelineEvent, WorkflowGraph } from "./api/client";
+import { api, CopilotSession, Failure, RecordResult, Run, TimelineEvent, WorkflowGraph } from "./api/client";
+
+type RunDetailPayload = {
+  manifest?: Record<string, unknown>;
+  report_html?: string;
+};
 
 type Tab =
   | "runs"
+  | "copilot"
   | "run"
   | "live"
   | "workflow"
@@ -15,6 +21,7 @@ type Tab =
   | "builders";
 
 const tabs: Array<[Tab, string]> = [
+  ["copilot", "Copilot"],
   ["runs", "Runs"],
   ["run", "Run Detail"],
   ["live", "Live"],
@@ -29,7 +36,7 @@ const tabs: Array<[Tab, string]> = [
 ];
 
 export function App() {
-  const [tab, setTab] = useState<Tab>("runs");
+  const [tab, setTab] = useState<Tab>("copilot");
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState("");
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
@@ -39,6 +46,10 @@ export function App() {
   const [repairs, setRepairs] = useState<Failure[]>([]);
   const [summary, setSummary] = useState<Record<string, unknown>>({});
   const [builders, setBuilders] = useState<Array<Record<string, unknown>>>([]);
+  const [copilotSessions, setCopilotSessions] = useState<CopilotSession[]>([]);
+  const [selectedCopilot, setSelectedCopilot] = useState("");
+  const [copilotDetail, setCopilotDetail] = useState<CopilotSession | null>(null);
+  const [runDetail, setRunDetail] = useState<RunDetailPayload | null>(null);
   const [workflowPath, setWorkflowPath] = useState("workflows/examples/minimal_example.yaml");
   const [graph, setGraph] = useState<WorkflowGraph | null>(null);
   const [error, setError] = useState("");
@@ -49,8 +60,31 @@ export function App() {
 
   useEffect(() => {
     if (!selectedRun) return;
-    api.getTimeline(selectedRun).then((data) => setTimeline(data.events)).catch(showError);
+    let active = true;
+    Promise.all([api.getTimeline(selectedRun), api.getRun(selectedRun)])
+      .then(([timelineData, detailData]) => {
+        if (!active) return;
+        setTimeline(timelineData.events);
+        setRunDetail(detailData as RunDetailPayload);
+      })
+      .catch(showError);
+    return () => {
+      active = false;
+    };
   }, [selectedRun]);
+
+  useEffect(() => {
+    if (!selectedCopilot) return;
+    let active = true;
+    api.getCopilotSession(selectedCopilot)
+      .then((session) => {
+        if (active) setCopilotDetail(session);
+      })
+      .catch(showError);
+    return () => {
+      active = false;
+    };
+  }, [selectedCopilot]);
 
   useEffect(() => {
     if (tab !== "live" || !selectedRun) return;
@@ -72,7 +106,7 @@ export function App() {
   async function refresh() {
     setError("");
     try {
-      const [runData, recordData, failureData, selectorData, repairData, summaryData, builderData] =
+      const [runData, recordData, failureData, selectorData, repairData, summaryData, builderData, copilotData] =
         await Promise.all([
           api.listRuns(),
           api.getRecords(),
@@ -81,9 +115,12 @@ export function App() {
           api.getRepairPackets(),
           api.getSummary(),
           api.getBuilders(),
+          api.getCopilotSessions(),
         ]);
       setRuns(runData.runs);
       setSelectedRun((current) => current || runData.runs[0]?.run_id || "");
+      setCopilotSessions(copilotData.sessions);
+      setSelectedCopilot((current) => current || copilotData.sessions[0]?.session_id || "");
       setRecords(recordData.records);
       setFailures(failureData.failures);
       setSelectors(selectorData.selector_failures);
@@ -111,10 +148,13 @@ export function App() {
   return (
     <main className="shell">
       <aside className="rail">
-        <h1>RPA Harness</h1>
+        <div className="brand">
+          <h1>RPA Harness</h1>
+          <span>{runs.length ? `${runs.length} runs indexed` : "Evidence console"}</span>
+        </div>
         <nav>
           {tabs.map(([id, label]) => (
-            <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
+            <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)} aria-current={tab === id ? "page" : undefined}>
               {label}
             </button>
           ))}
@@ -124,19 +164,29 @@ export function App() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <span className="eyebrow">Read-only operator layer</span>
+            <span className="eyebrow">Run ledger</span>
             <h2>{tabs.find(([id]) => id === tab)?.[1]}</h2>
           </div>
-          <label>
-            Run
-            <select value={selectedRun} onChange={(event) => setSelectedRun(event.target.value)}>
-              {runs.map((run) => <option key={run.run_id}>{run.run_id}</option>)}
-            </select>
-          </label>
+          {tab === "copilot" ? (
+            <label>
+              Session
+              <select value={selectedCopilot} onChange={(event) => setSelectedCopilot(event.target.value)}>
+                {copilotSessions.map((session) => <option key={session.session_id}>{session.session_id}</option>)}
+              </select>
+            </label>
+          ) : (
+            <label>
+              Run
+              <select value={selectedRun} onChange={(event) => setSelectedRun(event.target.value)}>
+                {runs.map((run) => <option key={run.run_id}>{run.run_id}</option>)}
+              </select>
+            </label>
+          )}
         </header>
         {error && <div className="error">{error}</div>}
+        {tab === "copilot" && <Copilot sessions={copilotSessions} detail={copilotDetail} select={setSelectedCopilot} />}
         {tab === "runs" && <Runs runs={runs} select={(runId) => { setSelectedRun(runId); setTab("run"); }} />}
-        {tab === "run" && <RunDetail run={selected} timeline={timeline} records={records.filter((record) => record.run_id === selected?.run_id)} />}
+        {tab === "run" && <RunDetail run={selected} detail={runDetail} timeline={timeline} records={records.filter((record) => record.run_id === selected?.run_id)} />}
         {tab === "live" && <Live run={selected} timeline={timeline} />}
         {tab === "workflow" && <Workflow path={workflowPath} setPath={setWorkflowPath} graph={graph} load={loadGraph} />}
         {tab === "records" && <Records rows={records} />}
@@ -151,19 +201,94 @@ export function App() {
   );
 }
 
-function Runs({ runs, select }: { runs: Run[]; select: (runId: string) => void }) {
-  return <Table rows={runs} columns={["run_id", "workflow", "status", "started_at", "finished_at", "report_path", "report"]} onFirst={select} />;
-}
-
-function RunDetail({ run, timeline, records }: { run?: Run; timeline: TimelineEvent[]; records: RecordResult[] }) {
-  if (!run) return <Empty text="No run selected" />;
+function Copilot({ sessions, detail, select }: { sessions: CopilotSession[]; detail: CopilotSession | null; select: (sessionId: string) => void }) {
+  const session = detail || sessions[0];
+  if (!session) return <Empty text="No copilot sessions" />;
+  const next = asRecord(session.next_question);
+  const run = asRecord(session.run);
+  const artifacts = asRecord(session.artifacts);
+  const report = String(artifacts.report || run.report || "");
   return (
     <div className="stack">
+      <section className="runHero copilotHero">
+        <div>
+          <span className="eyebrow">Automation copilot</span>
+          <h3>{session.session_id}</h3>
+          <p>{session.workflow_path || session.target_url || "Session is waiting for workflow or discovery evidence."}</p>
+        </div>
+        {report && <a className="reportLink" href={reportHref(report)} target="_blank" rel="noreferrer">Open report</a>}
+      </section>
+      <div className="metrics">
+        <Metric label="Status" value={session.status || "-"} tone={session.status} />
+        <Metric label="Phase" value={session.phase || "-"} />
+        <Metric label="Question" value={String(next.id || "none")} />
+        <Metric label="Updated" value={shortDate(session.updated_at || "") || "-"} />
+      </div>
+      {next.id ? <QuestionPanel question={next} /> : <Empty text="No active question" />}
+      <div className="splitGrid">
+        <section className="miniBlock">
+          <h3>Sessions</h3>
+          <Table rows={sessions as unknown as Array<Record<string, unknown>>} columns={["session_id", "phase", "status", "updated_at"]} onFirst={select} />
+        </section>
+        <section className="miniBlock">
+          <h3>Answers</h3>
+          <Table rows={(session.answers || []) as Array<Record<string, unknown>>} columns={["question_id", "answer", "answered_at"]} />
+        </section>
+      </div>
+      <JsonBlock value={{
+        discovery: session.discovery,
+        validation: session.validation,
+        preflight: session.preflight,
+        run: session.run,
+        artifacts: session.artifacts,
+      }} />
+    </div>
+  );
+}
+
+function QuestionPanel({ question }: { question: Record<string, unknown> }) {
+  const choices = Array.isArray(question.choices) ? question.choices.map(String) : [];
+  return (
+    <section className="questionPanel">
+      <div>
+        <span className="eyebrow">Next question</span>
+        <h3>{String(question.id || "-")}</h3>
+        <p>{String(question.question || "")}</p>
+      </div>
+      <div className="choiceRow">
+        {choices.map((choice) => <span key={choice} className="pill">{choice}</span>)}
+      </div>
+      <JsonBlock value={question.details || {}} />
+    </section>
+  );
+}
+
+function Runs({ runs, select }: { runs: Run[]; select: (runId: string) => void }) {
+  return <Table rows={runs} columns={["run_id", "workflow", "status", "started_at"]} onFirst={select} />;
+}
+
+function RunDetail({ run, detail, timeline, records }: { run?: Run; detail: RunDetailPayload | null; timeline: TimelineEvent[]; records: RecordResult[] }) {
+  if (!run) return <Empty text="No run selected" />;
+  const manifest = asRecord(detail?.manifest);
+  const summary = asRecord(manifest.summary || run.summary);
+  const reportPath = String(detail?.report_html || run.report_path || run.report || "");
+  const steps = pair(summary, "passed_steps", "total_steps", timeline.filter((event) => event.event === "step.passed").length);
+  const recordCount = pair(summary, "passed_records", "total_records", records.filter((record) => record.status === "passed").length);
+  return (
+    <div className="stack">
+      <section className="runHero">
+        <div>
+          <span className="eyebrow">Selected run</span>
+          <h3>{run.run_id}</h3>
+          <p>{run.workflow || String(manifest.workflow || "-")} finished with {timeline.length} timeline events.</p>
+        </div>
+        {reportPath && <a className="reportLink" href={reportHref(reportPath)} target="_blank" rel="noreferrer">Open report</a>}
+      </section>
       <div className="metrics">
         <Metric label="Workflow" value={run.workflow || "-"} />
         <Metric label="Status" value={run.status || "-"} tone={run.status} />
-        <Metric label="Steps" value={String(run.summary?.passed_steps ?? "-") + "/" + String(run.summary?.total_steps ?? "-")} />
-        <Metric label="Records" value={String(run.summary?.passed_records ?? "-") + "/" + String(run.summary?.total_records ?? "-")} />
+        <Metric label="Steps" value={steps} />
+        <Metric label="Records" value={recordCount} />
       </div>
       <Timeline rows={timeline} />
       <Records rows={records} />
@@ -241,8 +366,8 @@ function Table<T extends Record<string, unknown>>({ rows, columns, onFirst }: { 
           {rows.map((row, index) => (
             <tr key={index}>
               {columns.map((column, columnIndex) => (
-                <td key={column} onClick={columnIndex === 0 && onFirst ? () => onFirst(String(row[column] || "")) : undefined}>
-                  {String(row[column] ?? "")}
+                <td key={column} className={columnIndex === 0 && onFirst ? "selectableCell" : ""} onClick={columnIndex === 0 && onFirst ? () => onFirst(String(row[column] || "")) : undefined}>
+                  <Cell column={column} value={row[column]} />
                 </td>
               ))}
             </tr>
@@ -251,6 +376,17 @@ function Table<T extends Record<string, unknown>>({ rows, columns, onFirst }: { 
       </table>
     </div>
   );
+}
+
+function Cell({ column, value }: { column: string; value: unknown }) {
+  const text = String(value ?? "");
+  if (column === "status" || column === "failure_kind" || column === "safe_retry") {
+    return <span className={`pill ${text || "emptyValue"}`}>{text || "-"}</span>;
+  }
+  if (column === "timestamp" || column.endsWith("_at")) {
+    return <time>{shortDate(text)}</time>;
+  }
+  return <>{text}</>;
 }
 
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
@@ -267,4 +403,24 @@ function Empty({ text }: { text: string }) {
 
 function JsonBlock({ value }: { value: unknown }) {
   return <pre className="json">{JSON.stringify(value, null, 2)}</pre>;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function pair(summary: Record<string, unknown>, passedKey: string, totalKey: string, fallbackPassed: number): string {
+  const passed = summary[passedKey] ?? fallbackPassed;
+  const total = summary[totalKey] ?? (fallbackPassed || "-");
+  return `${passed}/${total}`;
+}
+
+function reportHref(path: string): string {
+  if (path.startsWith("http") || path.startsWith("/")) return path;
+  return `file:///${path.replace(/\\/g, "/")}`;
+}
+
+function shortDate(value: string): string {
+  if (!value) return "";
+  return value.replace("T", " ").slice(0, 19);
 }

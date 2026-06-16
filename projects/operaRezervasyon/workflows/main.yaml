@@ -5,7 +5,7 @@ type: mixed
 description: >
   Dry-run OPERA Cloud reservation workbook access and document the live booking
   stages derived from the supplied Canvas Main.json. Field and code-list
-  validation is implemented by tests/rpa/opera_rezervasyon_from_excel.py.
+  validation is implemented by projects/operaRezervasyon/workflow.py.
 owner: ops
 target_systems:
   - opera-cloud
@@ -80,8 +80,8 @@ steps:
       - reservation_rows has workbook data
     postconditions:
       - executable validation gate is identified
-    proof: tests/test_opera_rezervasyon_workflow.py
-    failure_path: Run tests/rpa/opera_rezervasyon_from_excel.py for validation details.
+    proof: projects/operaRezervasyon/tests/test_workflow.py
+    failure_path: Run projects/operaRezervasyon/tests/test_workflow.py for validation details.
     action:
       type: no_op
     success_check:

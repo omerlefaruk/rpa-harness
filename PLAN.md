@@ -205,7 +205,7 @@ Layer 3: details (full fetch, ~500 tokens)      → fetch()
 - [ ] tests/browser/ — example browser tests
 - [ ] tests/desktop/ — example desktop tests
 - [ ] tests/api/ — example API tests
-- [ ] tests/rpa/ — example RPA workflows
+- [ ] projects/*/ — project-local workflows, config, tests, and docs
 - [ ] workflows/examples/ — example workflow definitions
 
 ## Patterns Carried Forward from automation-harness/

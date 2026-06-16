@@ -1,0 +1,35 @@
+id: example_data_verification
+name: Example Data Verification
+version: "0.1.0"
+type: excel
+description: Project descriptor for the Python RPAWorkflow in projects/example_data_verification/workflow.py.
+owner: ops
+target_systems:
+  - fixture-system
+input_schema:
+  input_excel: string
+output_destination: reports/output.xlsx
+system_of_record: fixture-system
+success_condition: The workflow writes mismatch evidence for processed records.
+safe_test_case: Run against fixture rows only.
+allowed_side_effects:
+  - write_report
+rerun_policy: Safe for fixture rows; check output workbook before production use.
+escalation_owner: ops
+inputs:
+  input_excel: ./data/input.xlsx
+  output_excel: ./reports/output.xlsx
+steps:
+  - id: python_workflow_entrypoint
+    current_stage: execute_python_workflow
+    intent: Run the project Python RPAWorkflow.
+    preconditions:
+      - config.yaml points to local fixture files
+    postconditions:
+      - report workbook exists
+    proof: projects/example_data_verification/tests/test_workflow.py
+    failure_path: Fix project tests before production execution.
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass

@@ -59,6 +59,10 @@ Risky actions require approval or a human gate: submit, official upload, delete,
 Useful commands:
 
 ```bash
+python main.py --copilot-auto task.md --builder-session-id SESSION
+python main.py --copilot-answer SESSION --copilot-question-id QUESTION --copilot-response ANSWER
+python main.py --copilot-try-url https://example.test --copilot-try-workflow workflow.yaml --builder-session-id SESSION
+python main.py --autopilot-build task.md --autopilot-workflow workflow.yaml
 python main.py --validate-yaml workflow.yaml
 python main.py --preflight-yaml workflow.yaml
 python main.py --run-yaml workflow.yaml --phase login
@@ -72,6 +76,29 @@ python main.py --capture-desktop "Legacy ERP" --capture-session-dir builder_sess
 python main.py --discovery-validate-fixtures
 python main.py --repair-selector RUN_ID
 python main.py --retry-run RUN_ID --failed-records
+```
+
+Copilot auto mode is the default for user-prompted automation building. The user
+does not run CLI commands; the agent creates the task file, runs `--copilot-auto`,
+asks the user only for active `next_question` decisions, answers with
+`--copilot-answer`, then continues with `--copilot-auto SESSION`.
+
+For fast browser URL iterations, use `--copilot-try-url` when a workflow already
+exists or a known recipe can supply one. It caches selector discovery, moves
+policy approval before discovery, and writes `copilot_report.json/md`.
+
+Autopilot mode is for already-authored deterministic workflow execution. Read
+`.agents/config/autopilot.yaml` and `.agents/config/agent_command_manifest.json`,
+then use `--autopilot-build` to validate, preflight, run, and return JSON
+artifacts without manual CLI work.
+
+OKF maintenance is required when durable repo knowledge changes, especially
+docs, workflow schema, CLI commands, skills, hooks, project layout, or
+agent/copilot policy. Update `docs/okf`, then run:
+
+```bash
+python scripts/okf.py generate-indexes docs/okf
+python scripts/okf.py validate docs/okf
 ```
 
 Do not claim production-ready unless dry-run or one-record evidence supports it.

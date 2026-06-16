@@ -26,6 +26,7 @@ class PlaywrightDriver(AbstractBaseDriver):
         self._playwright = None
         self._healer = None
         self._tabs: Dict[str, Any] = {}
+        self._owns_browser = True
 
     @classmethod
     async def launch(cls, config: Optional[HarnessConfig] = None, **kwargs) -> "PlaywrightDriver":
@@ -45,22 +46,32 @@ class PlaywrightDriver(AbstractBaseDriver):
         headless = cfg.headless if cfg else kwargs.get("headless", False)
         slow_mo = cfg.slow_mo if cfg else kwargs.get("slow_mo", 0)
 
-        self.browser = await browser_type.launch(headless=headless, slow_mo=slow_mo)
-
         viewport = {"width": 1920, "height": 1080}
         if cfg:
             viewport = {"width": cfg.viewport_width, "height": cfg.viewport_height}
 
-        self.context = await self.browser.new_context(viewport=viewport)
-        self.page = await self.context.new_page()
+        cdp_endpoint = kwargs.get("browser_cdp_endpoint") or (
+            getattr(cfg, "browser_cdp_endpoint", None) if cfg else None
+        )
+        if cdp_endpoint:
+            self.browser = await self._playwright.chromium.connect_over_cdp(cdp_endpoint)
+            self._owns_browser = False
+            contexts = list(getattr(self.browser, "contexts", []) or [])
+            self.context = contexts[0] if contexts else await self.browser.new_context(viewport=viewport)
+            pages = list(getattr(self.context, "pages", []) or [])
+            self.page = pages[-1] if pages else await self.context.new_page()
+        else:
+            self.browser = await browser_type.launch(headless=headless, slow_mo=slow_mo)
+            self.context = await self.browser.new_context(viewport=viewport)
+            self.page = await self.context.new_page()
         self._connected = True
         self.logger.info(f"Browser launched: {cfg.browser if cfg else 'chromium'} (headless={headless})")
         return self
 
     async def close(self):
-        if self.context:
+        if self.context and self._owns_browser:
             await self.context.close()
-        if self.browser:
+        if self.browser and self._owns_browser:
             await self.browser.close()
         if self._playwright:
             await self._playwright.stop()

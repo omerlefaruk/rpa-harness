@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 
 
-MODULE_PATH = Path(__file__).parent / "rpa" / "trip_com_reviews_from_excel.py"
+MODULE_PATH = Path(__file__).resolve().parents[1] / "workflow.py"
 SPEC = importlib.util.spec_from_file_location("trip_com_reviews_from_excel", MODULE_PATH)
 trip_workflow = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader

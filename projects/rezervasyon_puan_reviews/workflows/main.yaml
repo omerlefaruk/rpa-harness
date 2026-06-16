@@ -1,0 +1,39 @@
+id: rezervasyon_puan_reviews
+name: Rezervasyon Puan Reviews
+version: "0.1.0"
+type: mixed
+description: Reads hotel/platform links from the TM-57 source workbook and writes last-30-day reviews to Excel.
+owner: ops
+target_systems:
+  - ota-public-sites
+input_schema:
+  input_excel: string
+  sheet: string
+output_destination: reports/rezervasyon_puan_reviews/reviews_last_30_days.xlsx
+system_of_record: public OTA review pages
+success_condition: The workflow writes JSON, HTML, and Excel artifacts with one row per parsed recent review.
+safe_test_case: Run project unit tests against a generated fixture workbook.
+allowed_side_effects:
+  - write_report
+rerun_policy: Safe to rerun; output files are overwritten.
+escalation_owner: ops
+inputs:
+  input_excel: C:/Users/Rau/Desktop/Archive/TM-57-Rezervasyon_Puan/data/Branches.xlsx
+  sheet: Taksim Analiz
+steps:
+  - id: python_workflow_entrypoint
+    current_stage: execute_python_workflow
+    intent: Run the project Python RPAWorkflow.
+    preconditions:
+      - source workbook exists
+      - source sheet exists
+    postconditions:
+      - Excel report exists
+      - JSON report exists
+      - HTML report exists
+    proof: projects/rezervasyon_puan_reviews/tests/test_workflow.py
+    failure_path: Fix project tests before production execution.
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass

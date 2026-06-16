@@ -18,11 +18,13 @@ import yaml
 
 from harness.config import HarnessConfig
 from harness.core import audit_workflow_rulebook
+from harness.copilot import CopilotCheckpoint
 from harness.logger import HarnessLogger
 from harness.memory.recorder import MemoryRecorder
 from harness.notifications import BotNotifier
 from harness.reporting.failure_report import FailureReport
 from harness.resilience.errors import classify_failure
+from harness.rpa.execution_plan import build_execution_plan
 from harness.selectors.repair import selector_repair_plan
 from harness.security import (
     SecretValue,
@@ -72,6 +74,7 @@ class YamlWorkflowRunner:
         self._console_entries: List[dict] = []
         self._network_entries: List[dict] = []
         self._pending_logs: List[dict] = []
+        self._copilot: Any = None
 
     def load(self, path: str) -> dict:
         workflow = load_workflow_yaml(path)
@@ -209,7 +212,13 @@ class YamlWorkflowRunner:
         self._timeline(workflow, "preflight.passed", status="passed")
 
         selection_error = self._selection_error(
-            workflow, phase, pause_before, pause_after_phase, until_step, only_record
+            workflow,
+            phase,
+            pause_before,
+            pause_after_phase,
+            until_step,
+            only_record,
+            inputs=self._variables,
         )
         if selection_error:
             result = {
@@ -259,7 +268,13 @@ class YamlWorkflowRunner:
         original_auto_heal = self.config.auto_heal_selectors
         self.config.auto_heal_selectors = False
 
-        selected_steps = self._selected_steps(workflow, phase, only_record)
+        execution_plan = build_execution_plan(
+            workflow,
+            inputs=self._variables,
+            phase=phase,
+            only_record=only_record,
+        )
+        selected_steps = execution_plan.steps
         self.logger.info(f"Running workflow: {workflow_name} ({len(selected_steps)} steps)")
         await self.memory.start_session(
             memory_session_id,
@@ -278,13 +293,24 @@ class YamlWorkflowRunner:
                     self._timeline(workflow, "phase.started", status="running", phase=step_phase)
 
                 if pause_before == step["id"] or step.get("pause_before") is True:
-                    result = self._paused_result(
-                        workflow, step, steps, rulebook_audit, run_started_at, "pause_before"
-                    )
-                    self._timeline(workflow, "run.paused", status="blocked", phase=step_phase, step_id=step["id"])
-                    self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=self._now(), result=result)
-                    self._write_run_report(workflow, result)
-                    return result
+                    should_pause = True
+                    if self._copilot_enabled():
+                        decision = await self._ask_copilot(
+                            workflow,
+                            step,
+                            step_phase,
+                            reason="pause_before",
+                        )
+                        if decision.get("action") == "continue":
+                            should_pause = False
+                    if should_pause:
+                        result = self._paused_result(
+                            workflow, step, steps, rulebook_audit, run_started_at, "pause_before"
+                        )
+                        self._timeline(workflow, "run.paused", status="blocked", phase=step_phase, step_id=step["id"])
+                        self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=self._now(), result=result)
+                        self._write_run_report(workflow, result)
+                        return result
 
                 self._record_step(workflow, step, "running")
                 self._timeline(workflow, "step.started", status="running", phase=step_phase, step_id=step["id"], action_type=step.get("action", {}).get("type"))
@@ -324,6 +350,15 @@ class YamlWorkflowRunner:
                             if self._step_phase(item) == step_phase
                         ]
                         if not remaining:
+                            if self._copilot_enabled():
+                                decision = await self._ask_copilot(
+                                    workflow,
+                                    step,
+                                    step_phase,
+                                    reason="pause_after_phase",
+                                )
+                                if decision.get("action") == "continue":
+                                    continue
                             result = self._paused_result(
                                 workflow, step, steps, rulebook_audit, run_started_at, "pause_after_phase"
                             )
@@ -536,7 +571,7 @@ class YamlWorkflowRunner:
         check_results: List[VerificationResult],
         destructive: bool,
     ) -> Dict[str, Any]:
-        return {
+        result = {
             "step_id": step_id,
             "phase": self._step_phase(step),
             "action_type": action_type,
@@ -553,6 +588,11 @@ class YamlWorkflowRunner:
             "safe_retry": self._safe_retry(step, action_type),
             "error": "",
         }
+        if step.get("record_id") is not None:
+            result["record_id"] = str(step.get("record_id"))
+        if step.get("row_number") is not None:
+            result["row_number"] = step.get("row_number")
+        return result
 
     async def _execute_action(self, step: dict) -> Dict[str, Any]:
         action = step.get("action", {})
@@ -1244,11 +1284,19 @@ class YamlWorkflowRunner:
         pause_after_phase: Optional[str],
         until_step: Optional[str],
         only_record: Optional[str] = None,
+        inputs: Optional[dict] = None,
     ) -> Optional[str]:
         steps = list(workflow.get("steps", []) or [])
         phases = {self._step_phase(step) for step in steps}
         step_ids = {str(step.get("id")) for step in steps}
         record_ids = {str(step.get("record_id")) for step in steps if step.get("record_id")}
+        if only_record and not record_ids:
+            plan = build_execution_plan(workflow, inputs=inputs or workflow.get("inputs", {}))
+            record_ids = {
+                str(unit.step.get("record_id"))
+                for unit in plan.units
+                if unit.step.get("record_id")
+            }
         if phase and phase not in phases:
             return f"Unknown phase: {phase}"
         if only_record and str(only_record) not in record_ids:
@@ -1292,6 +1340,53 @@ class YamlWorkflowRunner:
             "run_id": self.failure._current_run_id,
             "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
         }
+
+    def _copilot_enabled(self) -> bool:
+        return bool(getattr(self.config, "copilot_enabled", False))
+
+    def _get_copilot(self) -> CopilotCheckpoint:
+        if self._copilot is None:
+            self._copilot = CopilotCheckpoint(self.failure._run_dir or Path("runs"))
+        return self._copilot
+
+    async def _ask_copilot(
+        self,
+        workflow: dict,
+        step: dict,
+        phase: str,
+        *,
+        reason: str,
+    ) -> dict:
+        question = (
+            f"Workflow '{workflow.get('name', workflow.get('id'))}' is paused "
+            f"before step '{step.get('id')}'. Continue?"
+        )
+        self._timeline(
+            workflow,
+            "copilot.question",
+            status="waiting",
+            phase=phase,
+            step_id=step.get("id"),
+            message=question,
+        )
+        result = await self._get_copilot().ask(
+            workflow=workflow,
+            step=step,
+            reason=reason,
+            run_id=self.failure._current_run_id,
+            drivers=self._drivers,
+            secret_values=self._secret_values(),
+            question=question,
+        )
+        self._timeline(
+            workflow,
+            "copilot.answer",
+            status=result.get("action"),
+            phase=phase,
+            step_id=step.get("id"),
+            message=result.get("answer"),
+        )
+        return result
 
     @staticmethod
     def _now() -> str:

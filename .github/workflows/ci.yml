@@ -28,6 +28,9 @@ jobs:
       - name: Compile
         run: python -m compileall -q harness subagents tools tests main.py conftest.py
 
+      - name: Validate OKF knowledge bundle
+        run: python scripts/okf.py validate docs/okf
+
       - name: Unit tests
         run: python -m pytest -q
 

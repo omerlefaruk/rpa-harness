@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from fastapi.staticfiles import StaticFiles
 
 from harness.builder import list_builder_sessions, read_builder_session
+from harness.copilot_session import list_copilot_sessions, read_copilot_session
 from harness.observability import ObservabilityDB, index_runs
 from harness.security import redact_value
 
@@ -217,6 +218,17 @@ def create_dashboard(
             return read_builder_session(session_id, root_path)
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="builder session not found") from None
+
+    @app.get("/api/copilot/sessions")
+    async def copilot_sessions():
+        return {"sessions": list_copilot_sessions(root_path)}
+
+    @app.get("/api/copilot/sessions/{session_id}")
+    async def copilot_session(session_id: str):
+        try:
+            return read_copilot_session(session_id, root_dir=root_path)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="copilot session not found") from None
 
     return app
 

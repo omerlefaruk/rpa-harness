@@ -203,6 +203,7 @@ def normalize_default_schema_to_runner(workflow: dict[str, Any]) -> dict[str, An
     }
     for phase in workflow.get("phases") or []:
         phase_id = str(phase.get("id") or "main")
+        phase_loop = phase.get("for_each")
         for raw_step in phase.get("steps") or []:
             if raw_step.get("type") == "human_gate":
                 steps.append(
@@ -222,7 +223,9 @@ def normalize_default_schema_to_runner(workflow: dict[str, Any]) -> dict[str, An
                 "action": _normalize_action(raw_step.get("action") or {}),
                 "success_check": raw_step.get("success_checks") or [],
             }
-            for key in ("side_effect", "retryable", "idempotency_key", "record_id", "row_number"):
+            if phase_loop and "for_each" not in raw_step:
+                step["for_each"] = phase_loop
+            for key in ("side_effect", "retryable", "idempotency_key", "record_id", "row_number", "for_each"):
                 if key in raw_step:
                     step[key] = raw_step[key]
             steps.append(step)

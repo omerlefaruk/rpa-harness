@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from harness.builder import create_builder_session
+from harness.copilot_session import start_copilot_session
 from harness.reporting.dashboard import create_dashboard, read_jsonl_tail, serve_dashboard
 
 
@@ -62,6 +63,7 @@ def test_dashboard_exposes_runs_and_builder_sessions(tmp_path):
     task = tmp_path / "task.md"
     task.write_text("Build a safe fixture workflow", encoding="utf-8")
     create_builder_session(task, session_id="session-1", root_dir=tmp_path)
+    (tmp_path / "builder_sessions" / "_cache").mkdir(parents=True)
     app = create_dashboard(root_dir=tmp_path)
     client = TestClient(app)
 
@@ -74,8 +76,25 @@ def test_dashboard_exposes_runs_and_builder_sessions(tmp_path):
     assert "YAML Runs" in index.text
     assert "Builder Sessions" in index.text
     assert runs_response.json()["runs"][0]["run_id"] == "run-1"
-    assert builders_response.json()["sessions"][0]["session_id"] == "session-1"
+    assert [item["session_id"] for item in builders_response.json()["sessions"]] == ["session-1"]
     assert detail_response.json()["session_id"] == "session-1"
+
+
+def test_dashboard_exposes_copilot_sessions(tmp_path):
+    task = tmp_path / "task.md"
+    task.write_text("Build a safe fixture workflow\nworkflow: workflow.yaml\n", encoding="utf-8")
+    start_copilot_session(task, session_id="copilot-1", root_dir=tmp_path)
+    app = create_dashboard(root_dir=tmp_path)
+    client = TestClient(app)
+
+    sessions = client.get("/api/copilot/sessions")
+    detail = client.get("/api/copilot/sessions/copilot-1")
+
+    assert sessions.status_code == 200
+    assert detail.status_code == 200
+    assert sessions.json()["sessions"][0]["session_id"] == "copilot-1"
+    assert detail.json()["phase"] == "intake"
+    assert detail.json()["next_question"]["id"] == "intake.confirm_scope"
 
 
 def test_read_jsonl_tail_skips_invalid_lines(tmp_path):
