@@ -142,6 +142,7 @@ async def test_yaml_wait_recovery_reexecutes_api_check_after_delay(tmp_path):
     result = await _run_yaml_with_api(tmp_path, workflow, fake)
 
     assert result["status"] == "passed"
+    assert result["steps"][0]["attempts"] == 2
     assert fake.calls == 2
 
 

@@ -227,28 +227,34 @@ class YamlWorkflowRunner:
         destructive = action_type in {"api.post", "api.put", "api.patch", "api.delete"}
         started_at = time.time()
         attempts = 0
-        action_result: Dict[str, Any] = {}
         check_results: List[VerificationResult] = []
+        action_result: Dict[str, Any] = {}
         last_error = ""
 
         self._log_entry("INFO", step_id, f"Starting: {step_desc}")
 
-        async def run_action_and_verify() -> tuple[Dict[str, Any], List[VerificationResult]]:
+        async def try_action_and_verify() -> bool:
             nonlocal attempts
+            nonlocal action_result
+            nonlocal check_results
+            nonlocal last_error
             attempts += 1
-            result = await self._execute_action(step)
-            results = await self._verify_step(step, result)
-            return result, results
+            try:
+                action_result = await self._execute_action(step)
+                check_results = await self._verify_step(step, action_result)
+                last_error = ""
+            except Exception as exc:
+                last_error = str(exc)
+                check_results = []
+            return self._checks_passed(check_results)
 
-        try:
-            action_result, check_results = await run_action_and_verify()
-        except Exception as exc:
-            last_error = str(exc)
-
-        if self._checks_passed(check_results):
+        def passed_step_result() -> Dict[str, Any]:
             return self._step_result(
                 step, step_id, action_type, started_at, attempts, check_results, destructive
             )
+
+        if await try_action_and_verify():
+            return passed_step_result()
 
         for recovery in step.get("recovery", []) or []:
             recovery_type = recovery.get("type")
@@ -261,16 +267,8 @@ class YamlWorkflowRunner:
                             "I am retrying a YAML step because the check did not pass.",
                             context={"step": step_id, "attempt": attempts + 1},
                         )
-                    try:
-                        action_result, check_results = await run_action_and_verify()
-                        last_error = ""
-                    except Exception as exc:
-                        last_error = str(exc)
-                        check_results = []
-                    if self._checks_passed(check_results):
-                        return self._step_result(
-                            step, step_id, action_type, started_at, attempts, check_results, destructive
-                        )
+                    if await try_action_and_verify():
+                        return passed_step_result()
 
             elif recovery_type == "wait":
                 await self.notifier.frustration(
@@ -283,18 +281,12 @@ class YamlWorkflowRunner:
                 await self._sleep_ms(int(recovery.get("ms", recovery.get("duration_ms", 1000))))
                 should_reexecute = bool(last_error) or action_type.startswith("api.")
                 if should_reexecute:
-                    try:
-                        action_result, check_results = await run_action_and_verify()
-                        last_error = ""
-                    except Exception as exc:
-                        last_error = str(exc)
-                        check_results = []
+                    passed = await try_action_and_verify()
                 else:
                     check_results = await self._verify_step(step, action_result)
-                if self._checks_passed(check_results):
-                    return self._step_result(
-                        step, step_id, action_type, started_at, attempts, check_results, destructive
-                    )
+                    passed = self._checks_passed(check_results)
+                if passed:
+                    return passed_step_result()
 
             elif recovery_type == "refresh_page":
                 await self.notifier.frustration(
@@ -304,16 +296,8 @@ class YamlWorkflowRunner:
                 browser = self._drivers.get("browser")
                 if browser and browser.page:
                     await browser.page.reload(wait_until="load")
-                try:
-                    action_result, check_results = await run_action_and_verify()
-                    last_error = ""
-                except Exception as exc:
-                    last_error = str(exc)
-                    check_results = []
-                if self._checks_passed(check_results):
-                    return self._step_result(
-                        step, step_id, action_type, started_at, attempts, check_results, destructive
-                    )
+                if await try_action_and_verify():
+                    return passed_step_result()
 
         result = self._step_result(
             step, step_id, action_type, started_at, attempts, check_results, destructive
