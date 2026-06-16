@@ -49,7 +49,9 @@ SUPPORTED_RUNTIME_PREFIXES = ("browser.", "api.", "desktop.", "excel.")
 
 
 def load_workflow_yaml(path: str | Path) -> dict:
-    return yaml.safe_load(Path(path).read_text()) or {}
+    from harness.rpa.schema import load_workflow_yaml_compat
+
+    return load_workflow_yaml_compat(path)
 
 
 class YamlWorkflowRunner:

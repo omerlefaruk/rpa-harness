@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -11,10 +12,12 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from harness.builder import list_builder_sessions, read_builder_session
+from harness.observability import ObservabilityDB, index_runs
+from harness.security import redact_value
 
 
 def create_dashboard(
@@ -25,13 +28,20 @@ def create_dashboard(
     app = FastAPI(title=title)
     root_path = Path(root_dir or Path.cwd()).resolve()
     report_path = root_path / report_dir
+    frontend_dist = root_path / "frontend" / "dist"
 
     if report_path.exists():
         app.mount("/reports", StaticFiles(directory=str(report_path)), name="reports")
+    if frontend_dist.exists():
+        app.mount("/app", StaticFiles(directory=str(frontend_dist), html=True), name="app")
 
     @app.get("/")
     async def index():
         return HTMLResponse(DASHBOARD_HTML.replace("__TITLE__", title))
+
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok", "observability_db": str(_observability_db_path(root_path))}
 
     @app.get("/api/status")
     async def status():
@@ -72,7 +82,48 @@ def create_dashboard(
 
     @app.get("/api/runs")
     async def list_runs():
-        return {"runs": collect_run_manifests(root_path / "runs")}
+        db_runs = _query_or_empty(root_path, lambda db: db.list_runs(limit=100))
+        return {"runs": db_runs or collect_run_manifests(root_path / "runs")}
+
+    @app.get("/api/failures")
+    async def list_failures():
+        return {"failures": _query_or_empty(root_path, lambda db: db.get_failures())}
+
+    @app.get("/api/records")
+    async def list_records(record_id: str | None = None):
+        if record_id:
+            rows = _query_or_empty(root_path, lambda db: db.search_records(record_id))
+        else:
+            rows = _query_or_empty(root_path, lambda db: db.get_record_failures())
+        return {"records": rows}
+
+    @app.get("/api/selector-failures")
+    async def selector_failures():
+        return {"selector_failures": _query_or_empty(root_path, lambda db: db.get_selector_failures())}
+
+    @app.get("/api/repair-packets")
+    async def repair_packets():
+        db = ObservabilityDB(_observability_db_path(root_path))
+        try:
+            rows = db._rows("SELECT * FROM repair_packets ORDER BY created_at DESC", [])
+        finally:
+            db.close()
+        return {"repair_packets": rows}
+
+    @app.get("/api/observability/summary")
+    async def observability_summary():
+        db_path = _observability_db_path(root_path)
+        if not db_path.exists():
+            index_runs(root_path / "runs", db_path)
+        db = ObservabilityDB(db_path)
+        try:
+            return {
+                "runs": db.get_recent_runs(limit=10),
+                "failure_kinds": db.get_failure_kinds_summary(),
+                "record_failures": db.get_record_failures(),
+            }
+        finally:
+            db.close()
 
     @app.get("/api/runs/{run_id}")
     async def show_run(run_id: str):
@@ -80,6 +131,81 @@ def create_dashboard(
         if not run:
             raise HTTPException(status_code=404, detail="run not found")
         return run
+
+    @app.get("/api/runs/{run_id}/timeline")
+    async def run_timeline(run_id: str, after_id: int | None = None):
+        events = _query_or_empty(root_path, lambda db: db.get_run_timeline(run_id, after_id=after_id))
+        if not events and not _resolve_run_dir(root_path / "runs", run_id).exists():
+            raise HTTPException(status_code=404, detail="run not found")
+        return {"events": events}
+
+    @app.get("/api/runs/{run_id}/phases")
+    async def run_phases(run_id: str):
+        return {"phases": _query_or_empty(root_path, lambda db: db.get_run_phases(run_id))}
+
+    @app.get("/api/runs/{run_id}/steps")
+    async def run_steps(run_id: str):
+        return {"steps": _query_or_empty(root_path, lambda db: db.get_run_steps(run_id))}
+
+    @app.get("/api/runs/{run_id}/records")
+    async def run_records(run_id: str):
+        return {"records": _query_or_empty(root_path, lambda db: db.get_run_records(run_id))}
+
+    @app.get("/api/runs/{run_id}/failures")
+    async def run_failures(run_id: str):
+        rows = _query_or_empty(
+            root_path,
+            lambda db: [
+                item for item in db.get_run_steps(run_id)
+                if item.get("status") == "failed" or item.get("failure_kind")
+            ],
+        )
+        return {"failures": rows}
+
+    @app.get("/api/runs/{run_id}/events")
+    async def run_events(run_id: str, after_id: int | None = None, stream: bool = False):
+        run_dir = _resolve_run_dir(root_path / "runs", run_id)
+        if not run_dir.exists():
+            raise HTTPException(status_code=404, detail="run not found")
+        if not stream:
+            events = _timeline_events_from_file(run_dir / "timeline.jsonl", after_id=after_id)
+            return {"events": events}
+        return StreamingResponse(
+            _sse_timeline(run_dir / "timeline.jsonl", after_id=after_id),
+            media_type="text/event-stream",
+        )
+
+    @app.get("/api/artifacts")
+    async def artifact(run_id: str, path: str):
+        run_dir = _resolve_run_dir(root_path / "runs", run_id)
+        if not run_dir.exists():
+            raise HTTPException(status_code=404, detail="run not found")
+        target = _safe_artifact_path(run_dir, path)
+        if not target:
+            raise HTTPException(status_code=403, detail="artifact path is not allowed")
+        if not target.exists() or not target.is_file():
+            raise HTTPException(status_code=404, detail="artifact not found")
+        if target.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+            return FileResponse(target)
+        text = target.read_text(encoding="utf-8", errors="replace")
+        redacted = redact_value(text)
+        if target.suffix.lower() == ".json":
+            try:
+                return JSONResponse(json.loads(redacted))
+            except json.JSONDecodeError:
+                pass
+        return PlainTextResponse(str(redacted))
+
+    @app.get("/api/workflows/{workflow_path:path}/graph")
+    async def workflow_graph(workflow_path: str):
+        from harness.rpa.schema import generate_workflow_graph
+        import yaml
+
+        path = _safe_workspace_path(root_path, workflow_path)
+        if not path or not path.exists():
+            raise HTTPException(status_code=404, detail="workflow not found")
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return generate_workflow_graph(workflow)
 
     @app.get("/api/builder/sessions")
     async def builder_sessions():
@@ -93,6 +219,78 @@ def create_dashboard(
             raise HTTPException(status_code=404, detail="builder session not found") from None
 
     return app
+
+
+def _observability_db_path(root_path: Path) -> Path:
+    return root_path / "runs" / "observability.db"
+
+
+def _query_or_empty(root_path: Path, fn) -> list[dict[str, Any]]:
+    db_path = _observability_db_path(root_path)
+    if not db_path.exists():
+        index_runs(root_path / "runs", db_path)
+    db = ObservabilityDB(db_path)
+    try:
+        return fn(db)
+    finally:
+        db.close()
+
+
+def _resolve_run_dir(runs_dir: Path, run_id: str) -> Path:
+    safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in run_id)
+    return runs_dir / safe_id
+
+
+def _safe_artifact_path(run_dir: Path, path: str) -> Path | None:
+    root = run_dir.resolve()
+    target = (root / path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        return None
+    return target
+
+
+def _safe_workspace_path(root_path: Path, path: str) -> Path | None:
+    root = root_path.resolve()
+    target = (root / path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        return None
+    return target
+
+
+def _timeline_events_from_file(path: Path, after_id: int | None = None) -> list[dict[str, Any]]:
+    events = []
+    for index, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1) if path.exists() else []:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        event = redact_value(event)
+        event_id = int(event.get("event_id") or index)
+        event["event_id"] = event_id
+        if after_id is not None and event_id <= after_id:
+            continue
+        events.append(event)
+    return events
+
+
+async def _sse_timeline(path: Path, after_id: int | None = None):
+    sent = after_id or 0
+    while True:
+        events = _timeline_events_from_file(path, after_id=sent)
+        for event in events:
+            sent = int(event["event_id"])
+            yield f"event: timeline\ndata: {json.dumps(event, default=str)}\n\n"
+        if path.exists():
+            finished = any(event.get("event") == "run.finished" for event in events)
+            if finished:
+                return
+        time.sleep(0.5)
 
 
 def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]:

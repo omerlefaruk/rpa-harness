@@ -1,0 +1,71 @@
+schema_version: 2
+id: upload_invoices
+name: Upload Invoices
+description: Upload invoice PDFs to a vendor portal with explicit verification.
+
+metadata:
+  owner: ops
+  tags: [invoices, browser]
+  reliability_level: browser_dom
+
+assumptions:
+  - id: reference_visible
+    text: A visible portal reference number means submission succeeded.
+    confirmed_by_user: false
+
+inputs:
+  primary:
+    type: excel
+    path: data/invoices.xlsx
+    required_columns: [invoice_id, invoice_pdf_path, amount]
+    unique_key: invoice_id
+
+secrets:
+  - name: ACME_USERNAME
+    required: true
+  - name: ACME_PASSWORD
+    required: true
+
+policies:
+  require_success_checks: true
+  retry_requires_idempotent: true
+  redact_artifacts: true
+
+targets:
+  portal:
+    type: browser
+    base_url: https://vendor.example.com
+
+phases:
+  - id: login
+    name: Login
+    steps:
+      - id: open_login
+        target: portal
+        action:
+          type: browser.goto
+          url: https://vendor.example.com/login
+        success_checks:
+          - type: url_contains
+            value: /login
+
+  - id: process_records
+    name: Process records
+    for_each:
+      input: primary
+      record_id: invoice_id
+    steps:
+      - id: upload_invoice
+        target: portal
+        side_effect: external_write
+        retryable: false
+        idempotency_key: "{{ record.invoice_id }}"
+        action:
+          type: browser.get_text
+          selector:
+            strategy: data-testid
+            value: upload-status
+          output: upload_status
+        success_checks:
+          - type: variable_has_value
+            value: upload_status

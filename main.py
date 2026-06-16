@@ -130,6 +130,18 @@ Examples:
     parser.add_argument("--only-record", help="Run only YAML steps for this record_id")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
     parser.add_argument("--audit-workflow", help="Audit a YAML workflow against the RPA rulebook")
+    parser.add_argument("--migrate-workflow", help="Migrate a legacy flat workflow to the default schema")
+    parser.add_argument("--workflow-output", help="Output path for --migrate-workflow")
+    parser.add_argument("--migration-report", help="Markdown report path for --migrate-workflow")
+    parser.add_argument("--workflow-graph", help="Generate workflow graph JSON from a workflow YAML file")
+    parser.add_argument("--workflow-graph-output", help="Output path for --workflow-graph")
+    parser.add_argument("--observability-index", action="store_true", help="Index run artifacts into SQLite")
+    parser.add_argument("--observability-rebuild", action="store_true", help="Rebuild the observability SQLite index")
+    parser.add_argument("--observability-stats", action="store_true", help="Print observability summary")
+    parser.add_argument("--observability-db-path", action="store_true", help="Print observability database path")
+    parser.add_argument("--observability-db", help="Override observability database path")
+    parser.add_argument("--runs-dir", default="runs", help="Run artifact directory")
+    parser.add_argument("--live-tail", help="Tail timeline events for a run id or run directory")
     parser.add_argument("--new-workflow", help="Create a workflow YAML file from a template")
     parser.add_argument(
         "--workflow-template",
@@ -473,6 +485,76 @@ async def main():
             sys.exit(1)
         return
 
+    if args.migrate_workflow:
+        import json
+
+        from harness.rpa.schema import migrate_legacy_workflow
+
+        output = args.workflow_output
+        if not output:
+            source_path = Path(args.migrate_workflow)
+            output = str(source_path.with_name(f"{source_path.stem}.schema.yaml"))
+        result = migrate_legacy_workflow(
+            args.migrate_workflow,
+            output,
+            report_path=args.migration_report,
+        )
+        print(json.dumps({"status": result["status"], "output": output, "report": args.migration_report}, indent=2))
+        return
+
+    if args.workflow_graph:
+        import json
+        import yaml
+
+        from harness.rpa.schema import generate_workflow_graph
+
+        workflow = yaml.safe_load(Path(args.workflow_graph).read_text(encoding="utf-8")) or {}
+        graph = generate_workflow_graph(workflow)
+        if args.workflow_graph_output:
+            Path(args.workflow_graph_output).write_text(
+                json.dumps(graph, indent=2, default=str),
+                encoding="utf-8",
+            )
+            print(f"Workflow graph written: {args.workflow_graph_output}")
+        else:
+            print(json.dumps(graph, indent=2, default=str))
+        return
+
+    if (
+        args.observability_index
+        or args.observability_rebuild
+        or args.observability_stats
+        or args.observability_db_path
+    ):
+        import json
+
+        from harness.observability import ObservabilityDB, index_runs, rebuild_runs
+
+        db_path = Path(args.observability_db) if args.observability_db else Path(args.runs_dir) / "observability.db"
+        if args.observability_db_path:
+            print(db_path.resolve())
+            return
+        if args.observability_rebuild:
+            print(json.dumps(rebuild_runs(args.runs_dir, db_path), indent=2, default=str))
+            return
+        if args.observability_index:
+            print(json.dumps(index_runs(args.runs_dir, db_path), indent=2, default=str))
+            return
+        db = ObservabilityDB(db_path)
+        try:
+            print(json.dumps({
+                "runs": db.get_recent_runs(limit=10),
+                "failure_kinds": db.get_failure_kinds_summary(),
+                "record_failures": db.get_record_failures(),
+            }, indent=2, default=str))
+        finally:
+            db.close()
+        return
+
+    if args.live_tail:
+        _live_tail(args.live_tail, runs_dir=args.runs_dir)
+        return
+
     if args.validate_yaml:
         from harness.rpa.yaml_runner import load_workflow_yaml
         from harness.verification import validate_workflow_report
@@ -641,6 +723,7 @@ async def main():
             args.preflight_yaml,
             args.runs_list,
             args.runs_show,
+            args.live_tail,
             args.browser_selector_swarm,
         ]
     ):
@@ -753,6 +836,30 @@ def _run_report_path(run: str) -> Path:
         print(f"Run report not found: {path}", file=sys.stderr)
         sys.exit(1)
     return path.resolve()
+
+
+def _live_tail(run: str, runs_dir: str = "runs"):
+    import json
+    import time
+
+    run_dir = _resolve_run_dir(run) if Path(run).exists() else Path(runs_dir) / run
+    timeline = run_dir / "timeline.jsonl"
+    if not timeline.exists():
+        print(f"Timeline not found: {timeline}", file=sys.stderr)
+        sys.exit(1)
+    seen = 0
+    while True:
+        lines = timeline.read_text(encoding="utf-8", errors="replace").splitlines()
+        for line in lines[seen:]:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            print(json.dumps(event, default=str))
+            if event.get("event") == "run.finished":
+                return
+        seen = len(lines)
+        time.sleep(0.5)
 
 
 async def _retry_run(run: str, *, failed_records: bool = False, config: HarnessConfig | None = None) -> dict:

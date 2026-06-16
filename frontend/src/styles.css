@@ -1,0 +1,284 @@
+:root {
+  color: #191b1c;
+  background: #f4f2ed;
+  font-family: "Aptos", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  letter-spacing: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.rail {
+  background: #252525;
+  color: #f8f5eb;
+  padding: 22px;
+  border-right: 1px solid #151515;
+}
+
+.rail h1 {
+  margin: 0 0 22px;
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+nav {
+  display: grid;
+  gap: 6px;
+}
+
+nav button,
+.refresh,
+.toolbar button {
+  border: 1px solid #474747;
+  border-radius: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+nav button.active,
+.refresh,
+.toolbar button {
+  background: #d9ff63;
+  color: #171717;
+  border-color: #a4cb23;
+  font-weight: 700;
+}
+
+.refresh {
+  width: 100%;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.workspace {
+  min-width: 0;
+  padding: 22px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  border-bottom: 2px solid #292929;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #66615a;
+}
+
+h2 {
+  margin: 4px 0 0;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.topbar label {
+  display: grid;
+  gap: 6px;
+  min-width: 280px;
+  color: #625e58;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+select,
+input {
+  border: 1px solid #b7b0a5;
+  border-radius: 4px;
+  min-height: 36px;
+  background: white;
+  color: #191b1c;
+  padding: 0 10px;
+}
+
+.stack {
+  display: grid;
+  gap: 16px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric {
+  border: 1px solid #c8c0b4;
+  border-radius: 6px;
+  padding: 14px;
+  background: #fffdf8;
+  min-width: 0;
+}
+
+.metric span {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #69645e;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.metric.failed strong,
+.metric.error strong {
+  color: #b02f28;
+}
+
+.metric.passed strong {
+  color: #1d7b49;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #c8c0b4;
+  border-radius: 6px;
+  background: #fffdf8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e2dbcf;
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #ebe4d7;
+  color: #47433e;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+td {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.phases {
+  display: grid;
+  gap: 14px;
+}
+
+.phase {
+  border-top: 2px solid #252525;
+  padding-top: 10px;
+}
+
+.phase h3 {
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) repeat(3, auto);
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border-bottom: 1px solid #ddd6ca;
+}
+
+em {
+  border: 1px solid #b7b0a5;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-style: normal;
+  font-size: 12px;
+  background: white;
+}
+
+.empty,
+.error,
+.json {
+  border: 1px solid #c8c0b4;
+  border-radius: 6px;
+  padding: 14px;
+  background: #fffdf8;
+}
+
+.error {
+  margin-bottom: 14px;
+  border-color: #d98276;
+  color: #8b1f18;
+}
+
+.json {
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    position: static;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topbar {
+    display: grid;
+  }
+
+  .topbar label {
+    min-width: 0;
+  }
+}

@@ -7,9 +7,11 @@ The core rule is simple: an action executing is not success. A workflow step onl
 ## Typical operator flow
 
 ```bash
-python main.py --validate-workflow workflows/examples/minimal_example.yaml
-python main.py --preflight-workflow workflows/examples/minimal_example.yaml
+python main.py --validate-yaml workflows/examples/default_schema_example.yaml
+python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
 python main.py --run-yaml workflows/examples/minimal_example.yaml
+python main.py --observability-index --runs-dir runs
+python main.py --serve --port 8080
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
 python main.py --report-open <RUN_ID>
@@ -34,3 +36,14 @@ A run directory may contain:
 - Browser selectors should prefer stable selectors such as `data-testid`, role/name, label, placeholder, text, id, CSS, then XPath.
 - Desktop selectors should prefer automation IDs, name/control type, class/control type, tree paths, image anchors, then coordinates as last resort.
 - Memory should store evidence, not guesses.
+
+## Default schema and dashboard
+
+New workflows should use the phase-based default schema. Legacy flat workflows can be migrated:
+
+```bash
+python main.py --migrate-workflow workflows/examples/minimal_example.yaml --workflow-output workflows/examples/minimal_example.schema.yaml --migration-report migration_report.md
+python main.py --workflow-graph workflows/examples/default_schema_example.yaml --workflow-graph-output workflow_graph.json
+```
+
+The local dashboard API indexes run folders into `runs/observability.db` without replacing artifacts as the source of truth.
