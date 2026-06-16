@@ -210,6 +210,7 @@ Examples:
     parser.add_argument("--pause-before", help="Pause before this YAML step id")
     parser.add_argument("--pause-after-phase", help="Pause after this YAML phase")
     parser.add_argument("--until-step", help="Stop after this YAML step id")
+    parser.add_argument("--only-record", help="Run only YAML steps for this record_id")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
     parser.add_argument("--audit-workflow", help="Audit a YAML workflow against the RPA rulebook")
     parser.add_argument("--new-workflow", help="Create a workflow YAML file from a template")
@@ -232,6 +233,19 @@ Examples:
     parser.add_argument("--bundle-output", help="Output path for --bundle-run")
     parser.add_argument("--runs-list", action="store_true", help="List recent YAML run folders")
     parser.add_argument("--runs-show", help="Show run_manifest.json for a run id or run directory")
+    parser.add_argument("--logs-show", help="Show logs.jsonl for a run id or run directory")
+    parser.add_argument("--logs-tail", type=int, help="Show only the last N log lines")
+    parser.add_argument("--log-step", help="Filter --logs-show by step id")
+    parser.add_argument("--report-open", help="Print report.html path for a run id or run directory")
+    parser.add_argument("--build-start", help="Create a minimal builder session from a task markdown file")
+    parser.add_argument("--builder-session-id", help="Optional session id for --build-start")
+    parser.add_argument("--capture-desktop", help="Create a blocked desktop capture session for an app/window")
+    parser.add_argument("--capture-session-dir", help="Builder session directory for --capture-desktop")
+    parser.add_argument("--discovery-validate-fixtures", action="store_true", help="Validate local discovery fixtures")
+    parser.add_argument("--repair-selector", help="Run directory containing selector repair evidence")
+    parser.add_argument("--repair-approve", action="store_true", help="Allow validated selector patch application")
+    parser.add_argument("--retry-run", help="Retry a manifest-backed YAML run id or directory")
+    parser.add_argument("--failed-records", action="store_true", help="With --retry-run, retry safe failed records")
     parser.add_argument("--resume-ledger-status", help="Show resume ledger summary JSON")
     parser.add_argument(
         "--telegram-message",
@@ -482,6 +496,50 @@ async def main():
         _print_run_manifest(args.runs_show)
         return
 
+    if args.logs_show:
+        _print_run_logs(args.logs_show, tail=args.logs_tail, step=args.log_step)
+        return
+
+    if args.report_open:
+        print(_run_report_path(args.report_open))
+        return
+
+    if args.build_start:
+        print(f"Builder session: {_start_builder_session(args.build_start, args.builder_session_id)}")
+        return
+
+    if args.capture_desktop:
+        print(f"Capture session: {_capture_desktop(args.capture_desktop, args.capture_session_dir)}")
+        return
+
+    if args.discovery_validate_fixtures:
+        import json
+
+        from harness.builder import validate_discovery_fixtures
+
+        print(json.dumps(validate_discovery_fixtures(), indent=2, default=str))
+        return
+
+    if args.repair_selector:
+        import json
+
+        from harness.selectors.repair import production_selector_repair
+
+        result = production_selector_repair(args.repair_selector, approve=args.repair_approve)
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") not in {"applied", "ready"}:
+            sys.exit(1)
+        return
+
+    if args.retry_run:
+        import json
+
+        result = await _retry_run(args.retry_run, failed_records=args.failed_records, config=build_config(args))
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") != "passed":
+            sys.exit(1)
+        return
+
     if args.resume_ledger_status:
         import json
 
@@ -560,6 +618,7 @@ async def main():
             pause_before=args.pause_before,
             pause_after_phase=args.pause_after_phase,
             until_step=args.until_step,
+            only_record=args.only_record,
         )
         print(f"\nStatus: {result['status']}")
         if result.get("run_dir"):
@@ -793,17 +852,135 @@ def _print_runs_list(runs_dir: str = "runs", limit: int = 20):
         )
 
 
-def _print_run_manifest(run: str):
-    import json
-
+def _resolve_run_dir(run: str) -> Path:
     path = Path(run)
     if not path.exists():
         path = Path("runs") / run
-    manifest = path / "run_manifest.json" if path.is_dir() else path
+    if path.is_file():
+        path = path.parent
+    if not path.exists():
+        print(f"Run not found: {run}", file=sys.stderr)
+        sys.exit(1)
+    return path
+
+
+def _print_run_manifest(run: str):
+    import json
+
+    path = _resolve_run_dir(run)
+    manifest = path / "run_manifest.json"
     if not manifest.exists():
         print(f"Run manifest not found: {run}", file=sys.stderr)
         sys.exit(1)
     print(json.dumps(json.loads(manifest.read_text(encoding="utf-8")), indent=2, default=str))
+
+
+def _print_run_logs(run: str, tail: int | None = None, step: str | None = None):
+    import json
+
+    path = _resolve_run_dir(run) / "logs.jsonl"
+    if not path.exists():
+        print(f"Run logs not found: {path}", file=sys.stderr)
+        sys.exit(1)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if step:
+        lines = [
+            line for line in lines
+            if _jsonl_step(line) == step
+        ]
+    if tail is not None:
+        lines = lines[-max(tail, 0):]
+    for line in lines:
+        try:
+            print(json.dumps(json.loads(line), ensure_ascii=False, default=str))
+        except json.JSONDecodeError:
+            print(line)
+
+
+def _jsonl_step(line: str) -> str | None:
+    import json
+
+    try:
+        return json.loads(line).get("step")
+    except json.JSONDecodeError:
+        return None
+
+
+def _run_report_path(run: str) -> Path:
+    path = _resolve_run_dir(run) / "report.html"
+    if not path.exists():
+        print(f"Run report not found: {path}", file=sys.stderr)
+        sys.exit(1)
+    return path.resolve()
+
+
+async def _retry_run(run: str, *, failed_records: bool = False, config: HarnessConfig | None = None) -> dict:
+    import json
+
+    from harness.rpa.yaml_runner import YamlWorkflowRunner
+
+    run_dir = _resolve_run_dir(run)
+    manifest_path = run_dir / "run_manifest.json"
+    if not manifest_path.exists():
+        return {"status": "blocked", "reason": "run_manifest.json not found", "run_dir": str(run_dir)}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    workflow_path = manifest.get("workflow_path")
+    if not workflow_path:
+        return {"status": "blocked", "reason": "manifest does not include workflow_path", "run_dir": str(run_dir)}
+    if not failed_records:
+        return {"status": "blocked", "reason": "Only --failed-records retry is supported safely."}
+    records = _latest_records(run_dir / "records.jsonl")
+    failed = [
+        record for record in records.values()
+        if record.get("status") == "failed" and (record.get("safe_retry") or {}).get("status") == "yes"
+    ]
+    if not failed:
+        return {"status": "blocked", "reason": "No safe failed records to retry.", "run_dir": str(run_dir)}
+    results = []
+    runner = YamlWorkflowRunner(config or HarnessConfig.from_env())
+    for record in failed:
+        results.append(await runner.run(workflow_path, only_record=str(record.get("record_id"))))
+    return {
+        "status": "passed" if all(item.get("status") == "passed" for item in results) else "failed",
+        "retried_records": [record.get("record_id") for record in failed],
+        "results": results,
+    }
+
+
+def _latest_records(path: Path) -> dict[str, dict]:
+    import json
+
+    latest: dict[str, dict] = {}
+    if not path.exists():
+        return latest
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        record_id = str(record.get("record_id") or "")
+        if record_id:
+            latest[record_id] = record
+    return latest
+
+
+def _start_builder_session(task_path: str, session_id: str | None = None) -> Path:
+    from harness.builder import create_builder_session
+
+    try:
+        return create_builder_session(task_path, session_id=session_id)
+    except FileNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+
+
+def _capture_desktop(app: str, session_dir: str | None = None) -> Path:
+    from harness.builder import capture_desktop_session
+
+    target_dir = Path(session_dir) if session_dir else Path("builder_sessions") / "desktop_capture"
+    return capture_desktop_session(app=app, session_dir=target_dir)
 
 
 async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict[str, str]):

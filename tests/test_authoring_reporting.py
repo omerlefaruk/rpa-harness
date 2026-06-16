@@ -15,7 +15,7 @@ from harness.reporting.evidence_bundle import bundle_run
 from harness.reporting.failure_html import render_failure_report_html
 from harness.rpa.ledger import ResumeLedger
 from harness.rpa.templates import TEMPLATE_NAMES, workflow_template, write_workflow_template
-from harness.selectors.repair import selector_repair_plan
+from harness.selectors.repair import production_selector_repair, selector_repair_plan
 from harness.verification import validate_workflow
 
 
@@ -129,6 +129,59 @@ def test_selector_repair_plan_contains_swarm_command():
     assert plan["selector_evidence"]["validated"] is False
     assert plan["repair_suggestions"][0]["confidence"] == 0.4
     assert plan["repair_suggestions"][0]["validated"] is False
+
+
+def test_production_selector_repair_requires_validated_candidate_and_approval(tmp_path):
+    workflow = tmp_path / "workflow.yaml"
+    workflow.write_text(
+        """
+id: repairable
+name: Repairable
+version: "1.0"
+type: browser
+steps:
+  - id: click_save
+    action:
+      type: browser.click
+      selector:
+        strategy: text
+        value: Old Save
+    success_check:
+      - type: selector_visible
+        value: "[data-testid='saved']"
+""",
+        encoding="utf-8",
+    )
+    run_dir = tmp_path / "runs" / "run-1"
+    run_dir.mkdir(parents=True)
+    (run_dir / "repair_packet.json").write_text(
+        json.dumps({"step_id": "click_save", "workflow_path": str(workflow)}),
+        encoding="utf-8",
+    )
+    (run_dir / "evidence_bundle.json").write_text(
+        json.dumps({"artifacts": {"selector_evidence": "selector_evidence.json"}}),
+        encoding="utf-8",
+    )
+    (run_dir / "selector_evidence.json").write_text(
+        json.dumps(
+            {
+                "candidates": [
+                    {
+                        "selector": {"strategy": "data-testid", "value": "save"},
+                        "validated": True,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    ready = production_selector_repair(run_dir)
+    applied = production_selector_repair(run_dir, approve=True)
+
+    assert ready["status"] == "ready"
+    assert applied["status"] == "applied"
+    assert "data-testid" in workflow.read_text(encoding="utf-8")
 
 
 def test_dashboard_collects_run_failure_metadata(tmp_path):

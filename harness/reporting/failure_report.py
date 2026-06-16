@@ -342,4 +342,4 @@ class FailureReport:
         if extra:
             entry.update(extra)
         with open(log_path, "a") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
+            f.write(json.dumps(redact_value(entry), default=str) + "\n")

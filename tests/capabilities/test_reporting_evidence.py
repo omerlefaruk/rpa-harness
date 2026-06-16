@@ -93,6 +93,12 @@ def test_failure_report_includes_repro_command_and_evidence_paths(tmp_path):
 def test_failure_report_writes_redacted_evidence_bundle(tmp_path):
     failure = FailureReport(str(tmp_path / "runs"))
     failure.start_run("bundle_failure")
+    failure.log_entry(
+        "ERROR",
+        "read_api",
+        "Authorization: Bearer rpa-canary-token",
+        extra={"password": "fake-password-do-not-log"},
+    )
 
     report_path = failure.generate(
         workflow_id="bundle_failure",
@@ -123,6 +129,7 @@ def test_failure_report_writes_redacted_evidence_bundle(tmp_path):
     repair_packet_path = Path(report_path).parent / "repair_packet.json"
     repair_packet_text = repair_packet_path.read_text()
     repair_packet = json.loads(repair_packet_text)
+    logs_text = (Path(report_path).parent / "logs.jsonl").read_text()
 
     assert report["schema_version"] == "1"
     assert report["failure_kind"] == "verification_failed"
@@ -144,6 +151,7 @@ def test_failure_report_writes_redacted_evidence_bundle(tmp_path):
     ]:
         assert canary not in bundle_text
         assert canary not in repair_packet_text
+        assert canary not in logs_text
 
 
 def test_failure_report_includes_rulebook_failure_fields(tmp_path):

@@ -277,6 +277,132 @@ steps:
 
 
 @pytest.mark.asyncio
+async def test_yaml_runner_writes_records_for_record_steps(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "recorded.yaml"
+    wf_path.write_text("""
+id: recorded_steps
+name: Recorded Steps
+version: "1.0"
+type: api
+steps:
+  - id: validate_record
+    phase: process_records
+    record_id: INV-1001
+    row_number: 2
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    result = await YamlWorkflowRunner().run(str(wf_path))
+
+    run_dir = Path(result["run_dir"])
+    records = [
+        json.loads(line)
+        for line in (run_dir / "records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    report = json.loads((run_dir / "report.json").read_text(encoding="utf-8"))
+    report_html = (run_dir / "report.html").read_text(encoding="utf-8")
+    assert [record["status"] for record in records] == ["running", "passed"]
+    assert manifest["records"] == "records.jsonl"
+    assert manifest["summary"]["total_records"] == 1
+    assert manifest["summary"]["passed_records"] == 1
+    assert report["records"][-1]["record_id"] == "INV-1001"
+    assert "Record table" in report_html
+
+
+@pytest.mark.asyncio
+async def test_yaml_runner_only_record_filters_steps(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "records.yaml"
+    wf_path.write_text("""
+id: only_record
+name: Only Record
+version: "1.0"
+type: api
+steps:
+  - id: first
+    record_id: A
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+  - id: second
+    record_id: B
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    result = await YamlWorkflowRunner().run(str(wf_path), only_record="B")
+
+    assert result["status"] == "passed"
+    assert [step["step_id"] for step in result["steps"]] == ["second"]
+
+
+@pytest.mark.asyncio
+async def test_retry_run_retries_only_safe_failed_records(tmp_path, monkeypatch):
+    from main import _retry_run
+
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "retry.yaml"
+    wf_path.write_text("""
+id: retry_records
+name: Retry Records
+version: "1.0"
+type: api
+steps:
+  - id: safe_failed
+    record_id: SAFE
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+  - id: unsafe_failed
+    record_id: UNSAFE
+    side_effect: external_write
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+    run_dir = tmp_path / "runs" / "old-run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps({"run_id": "old-run", "workflow_path": str(wf_path)}),
+        encoding="utf-8",
+    )
+    (run_dir / "records.jsonl").write_text(
+        "\n".join(
+            [
+                json.dumps({
+                    "record_id": "SAFE",
+                    "status": "failed",
+                    "safe_retry": {"status": "yes"},
+                }),
+                json.dumps({
+                    "record_id": "UNSAFE",
+                    "status": "failed",
+                    "safe_retry": {"status": "no"},
+                }),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = await _retry_run("old-run", failed_records=True)
+
+    assert result["status"] == "passed"
+    assert result["retried_records"] == ["SAFE"]
+    assert [step["step_id"] for step in result["results"][0]["steps"]] == ["safe_failed"]
+
+
+@pytest.mark.asyncio
 async def test_yaml_runner_phase_and_pause_controls(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     wf_path = tmp_path / "phases.yaml"
@@ -361,6 +487,47 @@ steps:
     )
 
     assert "VALID: noop_cli_validate (1 steps)" in completed.stdout
+
+
+def test_run_artifact_cli_helpers(tmp_path, monkeypatch, capsys):
+    from harness.builder import capture_desktop_session, validate_discovery_fixtures
+    from main import _print_run_logs, _run_report_path, _start_builder_session
+
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "runs" / "run-1"
+    run_dir.mkdir(parents=True)
+    (run_dir / "report.html").write_text("<html></html>", encoding="utf-8")
+    (run_dir / "logs.jsonl").write_text(
+        '{"step":"one","message":"first"}\n{"step":"two","message":"second"}\n',
+        encoding="utf-8",
+    )
+    task = tmp_path / "task.md"
+    task.write_text("Build login flow with token=secret-value", encoding="utf-8")
+
+    _print_run_logs("run-1", tail=1, step=None)
+    output = capsys.readouterr().out
+    assert "second" in output
+    assert "first" not in output
+    assert _run_report_path("run-1") == (run_dir / "report.html").resolve()
+
+    session = _start_builder_session(str(task), "session-1")
+    assert (session / "task_spec.md").exists()
+    assert "secret-value" not in (session / "task_spec.md").read_text(encoding="utf-8")
+    assert (session / "discovery_session.json").exists()
+
+    capture = capture_desktop_session(app="Legacy ERP", session_dir=session)
+    assert (capture / "capture_session.json").exists()
+    assert "blocked" in (capture / "capture_session.json").read_text(encoding="utf-8")
+
+    fixture = tmp_path / "workflows" / "capabilities"
+    fixture.mkdir(parents=True)
+    (fixture / "local_browser_form.html").write_text("<form></form>", encoding="utf-8")
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "dump_uia_tree.py").write_text("# fixture", encoding="utf-8")
+    discovery = validate_discovery_fixtures(tmp_path)
+    assert discovery["browser_fixture"]["status"] == "passed"
+    assert discovery["desktop_fixture"]["status"] == "blocked"
 
 
 def test_validate_workflow_tool_outputs_valid_json(tmp_path):
@@ -617,10 +784,26 @@ steps:
     result = await runner.run(str(wf_path))
 
     run_dir = Path(result["run_dir"])
+    report = json.loads((run_dir / "report.json").read_text(encoding="utf-8"))
+    report_html = (run_dir / "report.html").read_text(encoding="utf-8")
     assert result["status"] == "failed"
     assert (run_dir / "evidence_bundle.json").exists()
     assert (run_dir / "repair_packet.json").exists()
     assert "verification_failed" in (run_dir / "timeline.jsonl").read_text()
+    assert report["failure_kind_summary"] == [
+        {
+            "failure_kind": "verification_failed",
+            "count": 1,
+            "phases": ["fetch"],
+            "steps": ["get_data"],
+            "recommendation": (
+                "Check whether the action succeeded, the target rejected it, "
+                "or the success check is wrong."
+            ),
+        }
+    ]
+    assert "Failure kind summary" in report_html
+    assert "verification_failed" in report_html
     for artifact in [
         "run_manifest.json",
         "preflight.json",

@@ -19,6 +19,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from harness.builder import list_builder_sessions, read_builder_session
+
 RUN_ONCE_PROCESS: subprocess.Popen[str] | None = None
 RUN_ONCE_STARTED_AT: float | None = None
 
@@ -82,6 +84,28 @@ def create_dashboard(
             ],
             "runs": run_reports,
         }
+
+    @app.get("/api/runs")
+    async def list_runs():
+        return {"runs": collect_run_manifests(root_path / "runs")}
+
+    @app.get("/api/runs/{run_id}")
+    async def show_run(run_id: str):
+        run = read_run_detail(root_path / "runs", run_id)
+        if not run:
+            raise HTTPException(status_code=404, detail="run not found")
+        return run
+
+    @app.get("/api/builder/sessions")
+    async def builder_sessions():
+        return {"sessions": list_builder_sessions(root_path)}
+
+    @app.get("/api/builder/sessions/{session_id}")
+    async def builder_session(session_id: str):
+        try:
+            return read_builder_session(session_id, root_path)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="builder session not found") from None
 
     return app
 
@@ -174,6 +198,63 @@ def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]
             }
         )
     return entries
+
+
+def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any]]:
+    if not run_path.exists():
+        return []
+    manifests = sorted(
+        run_path.glob("*/run_manifest.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )[:limit]
+    runs = []
+    for manifest in manifests:
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        runs.append(
+            {
+                "run_id": data.get("run_id") or manifest.parent.name,
+                "workflow": data.get("workflow"),
+                "status": data.get("status"),
+                "summary": data.get("summary") or {},
+                "report": str(manifest.parent / "report.html"),
+                "manifest": str(manifest),
+                "records": str(manifest.parent / "records.jsonl")
+                if (manifest.parent / "records.jsonl").exists()
+                else "",
+                "modified": datetime.fromtimestamp(manifest.stat().st_mtime).isoformat(),
+            }
+        )
+    return runs
+
+
+def read_run_detail(run_path: Path, run_id: str) -> dict[str, Any]:
+    safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in run_id)
+    run_dir = run_path / safe_id
+    manifest = run_dir / "run_manifest.json"
+    if not manifest.exists():
+        return {}
+    return {
+        "manifest": _read_json(manifest),
+        "timeline": read_jsonl_tail(run_dir / "timeline.jsonl", limit=200),
+        "records": read_jsonl_tail(run_dir / "records.jsonl", limit=200),
+        "report_html": str(run_dir / "report.html") if (run_dir / "report.html").exists() else "",
+        "failure_report": _read_json(run_dir / "failure_report.json"),
+        "repair_packet": _read_json(run_dir / "repair_packet.json"),
+    }
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def start_autoresearch_once(root_path: Path) -> subprocess.Popen[str]:
@@ -419,8 +500,16 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
                 <h2>Recent Events</h2>
                 <div class="timeline" id="events"></div>
             </div>
+            <div class="panel">
+                <h2>Builder Sessions</h2>
+                <div class="timeline" id="builders"></div>
+            </div>
         </section>
         <section class="stack">
+            <div class="panel">
+                <h2>YAML Runs</h2>
+                <div class="timeline" id="yamlRuns"></div>
+            </div>
             <div class="panel">
                 <h2>Run Log</h2>
                 <div class="body"><pre id="runLog"></pre></div>
@@ -477,6 +566,22 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
                     <div>${escapeHtml(item.type || 'supervisor')}</div>
                 </div>
             `).join('') || '<div class="event"><strong>no events yet</strong></div>';
+            const runs = await (await fetch('/api/runs', { cache: 'no-store' })).json();
+            $('yamlRuns').innerHTML = (runs.runs || []).slice(0, 8).map(run => `
+                <div class="event">
+                    <strong class="${stateClass(run.status)}">${escapeHtml(run.run_id)}</strong>
+                    <small>${escapeHtml(run.workflow || '')} · ${escapeHtml(run.status || '')}</small>
+                    <div>steps ${escapeHtml((run.summary || {}).passed_steps || 0)}/${escapeHtml((run.summary || {}).total_steps || 0)} · records ${escapeHtml((run.summary || {}).passed_records || 0)}/${escapeHtml((run.summary || {}).total_records || 0)}</div>
+                </div>
+            `).join('') || '<div class="event"><strong>no YAML runs yet</strong></div>';
+            const builders = await (await fetch('/api/builder/sessions', { cache: 'no-store' })).json();
+            $('builders').innerHTML = (builders.sessions || []).slice(0, 6).map(session => `
+                <div class="event">
+                    <strong class="${stateClass(session.status)}">${escapeHtml(session.session_id)}</strong>
+                    <small>${escapeHtml(session.status || '')}</small>
+                    <div>${escapeHtml(session.path || '')}</div>
+                </div>
+            `).join('') || '<div class="event"><strong>no builder sessions yet</strong></div>';
             $('runLog').textContent = [data.run_once.stdout_tail, data.run_once.stderr_tail].filter(Boolean).join('\n\n');
             $('git').textContent = [data.git.status, data.git.log, data.git.worktrees].filter(Boolean).join('\n\n');
             $('plan').textContent = data.supervisor.plan_tail || data.supervisor.learnings_tail || '';

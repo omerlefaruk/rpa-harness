@@ -121,6 +121,7 @@ class YamlWorkflowRunner:
         pause_before: Optional[str] = None,
         pause_after_phase: Optional[str] = None,
         until_step: Optional[str] = None,
+        only_record: Optional[str] = None,
     ) -> Dict[str, Any]:
         self._workflow_path = str(workflow_path)
         workflow = self.load(workflow_path)
@@ -205,7 +206,9 @@ class YamlWorkflowRunner:
             return result
         self._timeline(workflow, "preflight.passed", status="passed")
 
-        selection_error = self._selection_error(workflow, phase, pause_before, pause_after_phase, until_step)
+        selection_error = self._selection_error(
+            workflow, phase, pause_before, pause_after_phase, until_step, only_record
+        )
         if selection_error:
             result = {
                 "status": "failed",
@@ -254,7 +257,7 @@ class YamlWorkflowRunner:
         original_auto_heal = self.config.auto_heal_selectors
         self.config.auto_heal_selectors = False
 
-        selected_steps = self._selected_steps(workflow, phase)
+        selected_steps = self._selected_steps(workflow, phase, only_record)
         self.logger.info(f"Running workflow: {workflow_name} ({len(selected_steps)} steps)")
         await self.memory.start_session(
             memory_session_id,
@@ -281,6 +284,7 @@ class YamlWorkflowRunner:
                     self._write_run_report(workflow, result)
                     return result
 
+                self._record_step(workflow, step, "running")
                 self._timeline(workflow, "step.started", status="running", phase=step_phase, step_id=step["id"], action_type=step.get("action", {}).get("type"))
                 step_result = await self._run_step(step)
                 steps.append(step_result)
@@ -293,6 +297,7 @@ class YamlWorkflowRunner:
                 )
 
                 if step_result["status"] == "passed":
+                    self._record_step(workflow, step, "passed", step_result=step_result)
                     self._timeline(workflow, "step.passed", status="passed", phase=step_phase, step_id=step["id"], action_type=step_result.get("action_type"), duration_ms=step_result.get("duration_ms"))
                     last_successful_step = step["id"]
                     if until_step == step["id"]:
@@ -335,6 +340,13 @@ class YamlWorkflowRunner:
                 )
                 step_result["failure_report"] = report_path
                 evidence_bundle = "evidence_bundle.json" if report_path else None
+                self._record_step(
+                    workflow,
+                    step,
+                    "failed",
+                    step_result=step_result,
+                    evidence_bundle=evidence_bundle,
+                )
                 self._timeline(
                     workflow,
                     "step.failed",
@@ -1209,11 +1221,18 @@ class YamlWorkflowRunner:
                 unsupported.append(action_type)
         return unsupported
 
-    def _selected_steps(self, workflow: dict, phase: Optional[str]) -> List[dict]:
+    def _selected_steps(
+        self,
+        workflow: dict,
+        phase: Optional[str],
+        only_record: Optional[str] = None,
+    ) -> List[dict]:
         steps = list(workflow.get("steps", []) or [])
-        if not phase:
-            return steps
-        return [step for step in steps if self._step_phase(step) == phase]
+        if phase:
+            steps = [step for step in steps if self._step_phase(step) == phase]
+        if only_record:
+            steps = [step for step in steps if str(step.get("record_id") or "") == str(only_record)]
+        return steps
 
     def _selection_error(
         self,
@@ -1222,12 +1241,16 @@ class YamlWorkflowRunner:
         pause_before: Optional[str],
         pause_after_phase: Optional[str],
         until_step: Optional[str],
+        only_record: Optional[str] = None,
     ) -> Optional[str]:
         steps = list(workflow.get("steps", []) or [])
         phases = {self._step_phase(step) for step in steps}
         step_ids = {str(step.get("id")) for step in steps}
+        record_ids = {str(step.get("record_id")) for step in steps if step.get("record_id")}
         if phase and phase not in phases:
             return f"Unknown phase: {phase}"
+        if only_record and str(only_record) not in record_ids:
+            return f"Unknown record: {only_record}"
         if pause_after_phase and pause_after_phase not in phases:
             return f"Unknown phase: {pause_after_phase}"
         for label, step_id in (("--pause-before", pause_before), ("--until-step", until_step)):
@@ -1289,6 +1312,63 @@ class YamlWorkflowRunner:
         with open(self.failure._run_dir / "timeline.jsonl", "a", encoding="utf-8") as handle:
             handle.write(json.dumps(redact_value(entry), default=str) + "\n")
 
+    def _record_step(
+        self,
+        workflow: dict,
+        step: dict,
+        status: str,
+        *,
+        step_result: Optional[dict] = None,
+        evidence_bundle: Optional[str] = None,
+    ) -> None:
+        if not self.failure._run_dir or not step.get("record_id"):
+            return
+        result = step_result or {}
+        entry = {
+            "schema_version": 1,
+            "run_id": self.failure._current_run_id,
+            "workflow": workflow.get("id"),
+            "record_id": step.get("record_id"),
+            "row_number": step.get("row_number"),
+            "phase": self._step_phase(step),
+            "status": status,
+            "failed_step": step.get("id") if status == "failed" else None,
+            "failure_kind": result.get("failure_kind"),
+            "evidence_bundle": evidence_bundle,
+            "retry_count": max(int(result.get("attempts", 1) or 1) - 1, 0),
+            "safe_retry": result.get("safe_retry") or self._safe_retry(
+                step, step.get("action", {}).get("type", "no_op")
+            ),
+            "external_reference": result.get("external_reference"),
+            "timestamp": self._now(),
+        }
+        with open(self.failure._run_dir / "records.jsonl", "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(redact_value(entry), default=str) + "\n")
+
+    def _record_summary(self) -> dict:
+        if not self.failure._run_dir:
+            return {}
+        path = self.failure._run_dir / "records.jsonl"
+        if not path.exists():
+            return {}
+        latest: dict[str, dict] = {}
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            record_id = str(entry.get("record_id") or "")
+            if record_id:
+                latest[record_id] = entry
+        return {
+            "total_records": len(latest),
+            "passed_records": sum(1 for item in latest.values() if item.get("status") == "passed"),
+            "failed_records": sum(1 for item in latest.values() if item.get("status") == "failed"),
+            "skipped_records": sum(1 for item in latest.values() if item.get("status") == "skipped"),
+        }
+
     def _write_manifest(
         self,
         workflow: dict,
@@ -1314,16 +1394,19 @@ class YamlWorkflowRunner:
             "failed_records": 0,
             "skipped_records": 0,
         }
+        summary.update(self._record_summary())
         manifest = {
             "schema_version": 1,
             "run_id": self.failure._current_run_id,
             "workflow": workflow.get("id"),
+            "workflow_path": self._workflow_path,
             "input_file": self._first_input_file(workflow),
             "status": status,
             "started_at": started_at,
             "finished_at": finished_at,
             "report": "report.html",
             "timeline": "timeline.jsonl",
+            "records": "records.jsonl" if (self.failure._run_dir / "records.jsonl").exists() else None,
             "preflight": "preflight.json",
             "run_directory": str(self.failure._run_dir.resolve()),
             "redaction": {"status": "passed"},
@@ -1380,12 +1463,15 @@ class YamlWorkflowRunner:
         manifest = self._read_json(run_dir / "run_manifest.json")
         preflight = self._read_json(run_dir / "preflight.json")
         timeline = self._read_jsonl(run_dir / "timeline.jsonl")
+        records = self._read_jsonl(run_dir / "records.jsonl")
         report = {
             "schema_version": 1,
             "manifest": manifest,
             "preflight": preflight,
             "timeline": timeline,
+            "records": records,
             "steps": result.get("steps", []),
+            "failure_kind_summary": self._failure_kind_summary(result.get("steps", []), timeline),
             "failure_report": self._relative_to_run(result.get("failure_report")),
             "reason": result.get("reason"),
         }
@@ -1404,6 +1490,8 @@ class YamlWorkflowRunner:
         timeline = report.get("timeline") or []
         failures = [step for step in steps if step.get("status") == "failed"]
         phase_rows = self._phase_rows(steps)
+        failure_kind_rows = self._failure_kind_rows(report.get("failure_kind_summary") or [])
+        record_rows = self._record_rows(report.get("records") or [])
         step_rows = "".join(
             "<tr>"
             f"<td>{self._esc(item.get('timestamp'))}</td>"
@@ -1455,6 +1543,8 @@ class YamlWorkflowRunner:
     <section><h2>Run summary</h2><table>{self._kv_rows(manifest, ['workflow','status','started_at','finished_at','input_file','timeline','preflight'])}</table></section>
     <section><h2>Phase summary</h2><table><tr><th>Phase</th><th>Status</th><th>Passed steps</th><th>Failed steps</th></tr>{phase_rows}</table></section>
     <section><h2>Step timeline</h2><table><tr><th>Time</th><th>Phase</th><th>Step</th><th>Action</th><th>Status</th><th>Failure kind</th><th>Evidence</th></tr>{step_rows}</table></section>
+    {record_rows}
+    <section><h2>Failure kind summary</h2><table><tr><th>Failure kind</th><th>Count</th><th>Affected phases</th><th>Affected steps</th><th>Likely area to inspect</th></tr>{failure_kind_rows}</table></section>
     <section><h2>Failed step details</h2><table><tr><th>Phase</th><th>Step</th><th>Failure kind</th><th>Safe retry</th><th>Reason</th><th>Evidence</th><th>Recommended next action</th></tr>{failure_rows}</table></section>
     <section><h2>Preflight</h2><pre>{self._esc(json.dumps(report.get('preflight') or {}, indent=2, default=str))}</pre></section>
   </main>
@@ -1480,6 +1570,83 @@ class YamlWorkflowRunner:
                 f"<td>{counts['passed']}</td><td>{counts['failed']}</td></tr>"
             )
         return "".join(rows)
+
+    def _failure_kind_summary(self, steps: List[dict], timeline: List[dict]) -> List[dict]:
+        summary: dict[str, dict[str, Any]] = {}
+        sources = [
+            {
+                "failure_kind": step.get("failure_kind"),
+                "phase": step.get("phase"),
+                "step_id": step.get("step_id"),
+            }
+            for step in steps
+            if step.get("status") == "failed" and step.get("failure_kind")
+        ]
+        if not sources:
+            sources = [
+                item
+                for item in timeline
+                if item.get("event") == "step.failed" and item.get("failure_kind")
+            ]
+        for item in sources:
+            kind = str(item.get("failure_kind") or "unknown")
+            row = summary.setdefault(kind, {"failure_kind": kind, "count": 0, "phases": set(), "steps": set()})
+            row["count"] += 1
+            if item.get("phase"):
+                row["phases"].add(str(item.get("phase")))
+            if item.get("step_id"):
+                row["steps"].add(str(item.get("step_id")))
+        return [
+            {
+                "failure_kind": kind,
+                "count": row["count"],
+                "phases": sorted(row["phases"]),
+                "steps": sorted(row["steps"]),
+                "recommendation": self._recommendation(kind),
+            }
+            for kind, row in sorted(summary.items())
+        ]
+
+    def _failure_kind_rows(self, summary: List[dict]) -> str:
+        if not summary:
+            return "<tr><td colspan='5'>No failures.</td></tr>"
+        return "".join(
+            "<tr>"
+            f"<td>{self._esc(row.get('failure_kind'))}</td>"
+            f"<td>{self._esc(row.get('count'))}</td>"
+            f"<td>{self._esc(', '.join(row.get('phases') or []))}</td>"
+            f"<td>{self._esc(', '.join(row.get('steps') or []))}</td>"
+            f"<td>{self._esc(row.get('recommendation'))}</td>"
+            "</tr>"
+            for row in summary
+        )
+
+    def _record_rows(self, records: List[dict]) -> str:
+        if not records:
+            return ""
+        latest: dict[str, dict] = {}
+        for record in records:
+            record_id = str(record.get("record_id") or "")
+            if record_id:
+                latest[record_id] = record
+        rows = "".join(
+            "<tr>"
+            f"<td>{self._esc(record.get('record_id'))}</td>"
+            f"<td>{self._esc(record.get('row_number'))}</td>"
+            f"<td>{self._esc(record.get('status'))}</td>"
+            f"<td>{self._esc(record.get('failed_step'))}</td>"
+            f"<td>{self._esc(record.get('failure_kind'))}</td>"
+            f"<td>{self._esc((record.get('safe_retry') or {}).get('status'))}</td>"
+            f"<td>{self._artifact_link(record.get('evidence_bundle'))}</td>"
+            "</tr>"
+            for record in latest.values()
+        )
+        return (
+            "<section><h2>Record table</h2><table>"
+            "<tr><th>Record</th><th>Row</th><th>Status</th><th>Failed step</th>"
+            "<th>Failure kind</th><th>Safe retry</th><th>Evidence</th></tr>"
+            f"{rows}</table></section>"
+        )
 
     def _kv_rows(self, payload: dict, keys: List[str]) -> str:
         return "".join(

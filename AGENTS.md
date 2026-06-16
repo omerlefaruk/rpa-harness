@@ -106,5 +106,14 @@ Do not make broad rewrites. Prefer small patches. Fixing failures: read failure 
 - Never check in `reports/`, `runs/`, `screenshots/`, `data/*.xlsx`, `*.db`
 - Never hardcode API keys or file paths
 
+## Operator and Builder Docs
+
+- `docs/operator_workflow.md`
+- `docs/builder_mode.md`
+- `docs/selector_strategy.md`
+- `docs/legacy_desktop_strategy.md`
+- `docs/evidence_and_repair.md`
+- `skills/rpa_harness_automation_builder/SKILL.md`
+
 ## Done Definition
 A task is done only when: code implemented, tests added/updated, commands run, outputs reported, risks stated.
