@@ -13,5 +13,3 @@ def test_search_to_rpa_workflow_skill_exists_and_requires_hardening():
     assert "RPA Memory" in text
     assert "dedicated harness artifact" in text
     assert "browser selector swarm" in text
-    assert "autoresearch" in text
-    assert "python3 tools/autoresearch_runner.py --once" in text

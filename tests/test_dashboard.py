@@ -40,21 +40,15 @@ async def test_serve_dashboard_awaits_uvicorn_server(monkeypatch):
     }
 
 
-def test_dashboard_status_reads_supervisor_events(tmp_path):
-    session_dir = tmp_path / ".autoresearch"
-    session_dir.mkdir()
-    (session_dir / "supervisor.jsonl").write_text(
-        '{"status":"experiment_rejected","timestamp":"2026-05-01T12:00:00Z"}\n',
-        encoding="utf-8",
-    )
+def test_dashboard_status_reports_memory_and_git(tmp_path):
     app = create_dashboard(root_dir=tmp_path)
     client = TestClient(app)
 
-    response = client.get("/api/autoresearch/status")
+    response = client.get("/api/status")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["supervisor"]["latest"]["status"] == "experiment_rejected"
+    assert "memory" in payload["services"]
     assert "git" in payload
 
 

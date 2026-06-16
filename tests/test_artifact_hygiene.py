@@ -24,14 +24,6 @@ def test_generated_artifact_paths_are_ignored_by_default():
         ".env.local",
         "playwright-report/",
         "test-results/",
-        ".autoresearch/worktrees/",
-        ".autoresearch/supervisor.jsonl",
-        ".autoresearch/tech_radar.state.json",
-        ".autoresearch/tech_radar.jsonl",
-        ".autoresearch/tech_radar_candidates.md",
-        ".autoresearch/autoresearch.jsonl",
-        ".autoresearch/autoresearch_dashboard.html",
-        ".autoresearch/codex_prompt.md",
         ".pytest_tmp/",
     }
 

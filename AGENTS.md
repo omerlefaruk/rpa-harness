@@ -30,7 +30,6 @@ Treat these as protected and modify only with explicit justification and tests:
 - credential policy
 - AGENTS rules
 - skills
-- autoresearch guards
 
 ## Selector policy
 

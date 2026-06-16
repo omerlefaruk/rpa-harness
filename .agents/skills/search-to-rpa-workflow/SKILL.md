@@ -40,16 +40,6 @@ automation_id → name/control_type → class/control_type → tree path → ima
 
 Coordinates are a last resort and must be relative, calibrated, logged as weak, and verified after action.
 
-## Autoresearch
-
-Use autoresearch only for guarded, evidence-backed improvements. The standard one-cycle command is:
-
-```bash
-python3 tools/autoresearch_runner.py --once
-```
-
-Autoresearch must respect protected paths, change budgets, tests, and evidence requirements. Do not use autoresearch for broad uncontrolled refactors.
-
 ## Output
 
 When producing or repairing a workflow, return:

@@ -1,14 +1,9 @@
-"""
-FastAPI web dashboard for live test/workflow and autoresearch monitoring.
-"""
+"""FastAPI web dashboard for live test/workflow monitoring."""
 
 from __future__ import annotations
 
 import json
-import os
 import subprocess
-import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -20,9 +15,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from harness.builder import list_builder_sessions, read_builder_session
-
-RUN_ONCE_PROCESS: subprocess.Popen[str] | None = None
-RUN_ONCE_STARTED_AT: float | None = None
 
 
 def create_dashboard(
@@ -48,19 +40,12 @@ def create_dashboard(
             "time": datetime.now().isoformat(),
             "reports_dir": str(report_path),
             "reports_count": len(list(report_path.glob("*.html"))) if report_path.exists() else 0,
+            "services": {"memory": memory_health()},
+            "git": {
+                "status": run_text(["git", "status", "--short", "--branch"], root_path),
+                "log": run_text(["git", "log", "--oneline", "--decorate", "-8"], root_path),
+            },
         }
-
-    @app.get("/api/autoresearch/status")
-    async def autoresearch_status():
-        return collect_autoresearch_status(root_path, report_path)
-
-    @app.post("/api/autoresearch/run-once")
-    async def run_autoresearch_once():
-        process = current_run_once_process()
-        if process is not None:
-            raise HTTPException(status_code=409, detail="A dashboard-started run is already active.")
-        started = start_autoresearch_once(root_path)
-        return {"started": True, "pid": started.pid, "time": datetime.now().isoformat()}
 
     @app.get("/api/reports")
     async def list_reports():
@@ -108,58 +93,6 @@ def create_dashboard(
             raise HTTPException(status_code=404, detail="builder session not found") from None
 
     return app
-
-
-def collect_autoresearch_status(root_path: Path, report_path: Path) -> dict[str, Any]:
-    session_dir = root_path / ".autoresearch"
-    supervisor_entries = read_jsonl_tail(session_dir / "supervisor.jsonl", limit=20)
-    run_entries = read_jsonl_tail(session_dir / "autoresearch.jsonl", limit=20)
-    worktree_entries = read_jsonl_tail(
-        session_dir / "worktrees" / "sovereign" / ".autoresearch" / "autoresearch.jsonl",
-        limit=20,
-    )
-    latest_supervisor = supervisor_entries[-1] if supervisor_entries else {}
-    latest_run = (worktree_entries or run_entries or [{}])[-1]
-    process = current_run_once_process()
-    stdout_log = root_path / "logs" / "autoresearch-run-once.out.log"
-    stderr_log = root_path / "logs" / "autoresearch-run-once.err.log"
-
-    return {
-        "time": datetime.now().isoformat(),
-        "services": {
-            "dashboard": {"status": "ok", "port": 8080},
-            "memory": memory_health(),
-        },
-        "run_once": {
-            "active": process is not None,
-            "pid": process.pid if process else None,
-            "started_at": RUN_ONCE_STARTED_AT,
-            "duration_seconds": round(time.time() - RUN_ONCE_STARTED_AT, 1)
-            if RUN_ONCE_STARTED_AT and process
-            else None,
-            "stdout_tail": tail_text(stdout_log),
-            "stderr_tail": tail_text(stderr_log),
-        },
-        "supervisor": {
-            "latest": latest_supervisor,
-            "recent": supervisor_entries[-8:],
-            "plan_tail": tail_text(session_dir / "supervisor_plan.md", max_chars=5000),
-            "learnings_tail": tail_text(session_dir / "autoresearch.learnings.md", max_chars=3000),
-        },
-        "autoresearch": {
-            "latest": latest_run,
-            "recent": (worktree_entries or run_entries)[-8:],
-        },
-        "git": {
-            "status": run_text(["git", "status", "--short", "--branch"], root_path),
-            "log": run_text(["git", "log", "--oneline", "--decorate", "-8"], root_path),
-            "worktrees": run_text(["git", "worktree", "list"], root_path),
-        },
-        "reports": {
-            "count": len(list(report_path.glob("*.html"))) if report_path.exists() else 0,
-            "recent_failures": collect_run_reports(root_path / "runs")[:8],
-        },
-    }
 
 
 def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]:
@@ -255,38 +188,6 @@ def _read_json(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
-
-
-def start_autoresearch_once(root_path: Path) -> subprocess.Popen[str]:
-    global RUN_ONCE_PROCESS, RUN_ONCE_STARTED_AT
-
-    logs_dir = root_path / "logs"
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    stdout_handle = (logs_dir / "autoresearch-run-once.out.log").open("w", encoding="utf-8")
-    stderr_handle = (logs_dir / "autoresearch-run-once.err.log").open("w", encoding="utf-8")
-    env = os.environ.copy()
-    env.setdefault("PYTHONIOENCODING", "utf-8")
-    RUN_ONCE_STARTED_AT = time.time()
-    RUN_ONCE_PROCESS = subprocess.Popen(
-        [sys.executable, "-u", "main.py", "--self-improve-once"],
-        cwd=root_path,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=stdout_handle,
-        stderr=stderr_handle,
-        env=env,
-    )
-    return RUN_ONCE_PROCESS
-
-
-def current_run_once_process() -> subprocess.Popen[str] | None:
-    global RUN_ONCE_PROCESS
-
-    if RUN_ONCE_PROCESS is not None and RUN_ONCE_PROCESS.poll() is None:
-        return RUN_ONCE_PROCESS
-    RUN_ONCE_PROCESS = None
-    return None
 
 
 def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
@@ -477,7 +378,6 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
             <div class="subline" id="clock">connecting</div>
         </div>
         <div class="actions">
-            <button id="runOnce">Run once</button>
             <button class="secondary" id="refresh">Refresh</button>
         </div>
     </header>
@@ -487,18 +387,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
                 <h2>Live State</h2>
                 <div class="metrics">
                     <div class="metric"><div class="label">Memory</div><div class="value" id="memory">-</div></div>
-                    <div class="metric"><div class="label">Run Once</div><div class="value" id="runState">-</div></div>
-                    <div class="metric"><div class="label">Latest Status</div><div class="value" id="latestStatus">-</div></div>
                     <div class="metric"><div class="label">Reports</div><div class="value" id="reports">-</div></div>
                 </div>
-            </div>
-            <div class="panel">
-                <h2>Supervisor Latest</h2>
-                <div class="body"><table id="latestTable"></table></div>
-            </div>
-            <div class="panel">
-                <h2>Recent Events</h2>
-                <div class="timeline" id="events"></div>
             </div>
             <div class="panel">
                 <h2>Builder Sessions</h2>
@@ -511,16 +401,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
                 <div class="timeline" id="yamlRuns"></div>
             </div>
             <div class="panel">
-                <h2>Run Log</h2>
-                <div class="body"><pre id="runLog"></pre></div>
-            </div>
-            <div class="panel">
                 <h2>Git</h2>
                 <div class="body"><pre id="git"></pre></div>
-            </div>
-            <div class="panel">
-                <h2>Plan Tail</h2>
-                <div class="body"><pre id="plan"></pre></div>
             </div>
         </section>
     </main>
@@ -542,30 +424,11 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
         const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
         async function refresh() {
-            const res = await fetch('/api/autoresearch/status', { cache: 'no-store' });
+            const res = await fetch('/api/status', { cache: 'no-store' });
             const data = await res.json();
-            const latest = data.supervisor.latest || {};
             $('clock').textContent = `last update ${data.time}`;
             setValue('memory', data.services.memory.status);
-            setValue('runState', data.run_once.active ? `active ${data.run_once.pid}` : 'idle');
-            setValue('latestStatus', latest.status || 'none');
-            setValue('reports', data.reports.count);
-            $('runOnce').disabled = data.run_once.active;
-            $('latestTable').innerHTML = [
-                row('status', latest.status),
-                row('timestamp', latest.timestamp),
-                row('branch', latest.branch),
-                row('worktree', latest.worktree),
-                row('review', latest.require_review === false ? 'disabled' : latest.require_review),
-                row('experiment', latest.experiment ? latest.experiment.tail_output || latest.experiment.exit_code : ''),
-            ].join('');
-            $('events').innerHTML = (data.supervisor.recent || []).slice().reverse().map(item => `
-                <div class="event">
-                    <strong class="${stateClass(item.status)}">${escapeHtml(item.status || 'unknown')}</strong>
-                    <small>${escapeHtml(item.timestamp || '')}</small>
-                    <div>${escapeHtml(item.type || 'supervisor')}</div>
-                </div>
-            `).join('') || '<div class="event"><strong>no events yet</strong></div>';
+            setValue('reports', data.reports_count);
             const runs = await (await fetch('/api/runs', { cache: 'no-store' })).json();
             $('yamlRuns').innerHTML = (runs.runs || []).slice(0, 8).map(run => `
                 <div class="event">
@@ -582,16 +445,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
                     <div>${escapeHtml(session.path || '')}</div>
                 </div>
             `).join('') || '<div class="event"><strong>no builder sessions yet</strong></div>';
-            $('runLog').textContent = [data.run_once.stdout_tail, data.run_once.stderr_tail].filter(Boolean).join('\n\n');
-            $('git').textContent = [data.git.status, data.git.log, data.git.worktrees].filter(Boolean).join('\n\n');
-            $('plan').textContent = data.supervisor.plan_tail || data.supervisor.learnings_tail || '';
+            $('git').textContent = [data.git.status, data.git.log].filter(Boolean).join('\n\n');
         }
-        async function runOnce() {
-            $('runOnce').disabled = true;
-            await fetch('/api/autoresearch/run-once', { method: 'POST' });
-            await refresh();
-        }
-        $('runOnce').addEventListener('click', runOnce);
         $('refresh').addEventListener('click', refresh);
         refresh();
         setInterval(refresh, 2000);

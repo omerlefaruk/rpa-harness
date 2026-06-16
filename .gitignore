@@ -24,16 +24,6 @@ test-results/
 .pytest_tmp/
 .pytest_cache/
 
-# Autoresearch generated state
-.autoresearch/worktrees/
-.autoresearch/supervisor.jsonl
-.autoresearch/tech_radar.state.json
-.autoresearch/tech_radar.jsonl
-.autoresearch/tech_radar_candidates.md
-.autoresearch/autoresearch.jsonl
-.autoresearch/autoresearch_dashboard.html
-.autoresearch/codex_prompt.md
-
 # Python
 __pycache__/
 *.py[cod]

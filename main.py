@@ -7,11 +7,6 @@ Usage:
     python main.py --agent "Login to example.com and verify dashboard" --headless
     python main.py --serve --port 8080
     python main.py --rpa-memory-serve
-    python main.py --autoresearch
-    python main.py --autoresearch-supervisor-once
-    python main.py --self-improve-24-7
-    python main.py --self-improve-once
-    python main.py --tech-radar-once
     python main.py --run-workflows --discover-wf ./tests/rpa
     python main.py --browser-selector-swarm https://example.com/login
 """
@@ -44,11 +39,6 @@ Examples:
   python main.py --agent "Login and verify dashboard" --headless
   python main.py --serve --port 8080
   python main.py --rpa-memory-serve --rpa-memory-port 37777
-  python main.py --autoresearch
-  python main.py --autoresearch-supervisor-once
-  python main.py --self-improve-24-7
-  python main.py --self-improve-once
-  python main.py --tech-radar-once
   python main.py --browser-selector-swarm https://example.com/login
         """,
     )
@@ -130,79 +120,6 @@ Examples:
         "--browser-selector-swarm-save-raw-html",
         action="store_true",
         help="Save a redacted DOM map artifact during browser selector swarm discovery",
-    )
-    parser.add_argument(
-        "--autoresearch",
-        action="store_true",
-        help="Start autoresearch supervisor daemon",
-    )
-    parser.add_argument(
-        "--autoresearch-supervisor",
-        action="store_true",
-        help="Start autoresearch supervisor daemon",
-    )
-    parser.add_argument(
-        "--autoresearch-supervisor-once",
-        action="store_true",
-        help="Run one autoresearch supervisor cycle",
-    )
-    parser.add_argument(
-        "--autoresearch-supervisor-plan",
-        action="store_true",
-        help="Write the next autoresearch supervisor plan",
-    )
-    parser.add_argument(
-        "--self-improve-24-7",
-        action="store_true",
-        help="Run the free-mutation self-improvement daemon using the sovereign config",
-    )
-    parser.add_argument(
-        "--self-improve-once",
-        action="store_true",
-        help="Run one free-mutation self-improvement cycle using the sovereign config",
-    )
-    parser.add_argument(
-        "--self-improve-plan",
-        action="store_true",
-        help="Write the next free-mutation self-improvement plan",
-    )
-    parser.add_argument("--autoresearch-supervisor-config", help="Path to supervisor config JSON")
-    parser.add_argument("--autoresearch-config", help="Path to supervisor config JSON")
-    parser.add_argument(
-        "--tech-radar-once",
-        action="store_true",
-        help="Run one read-only technology radar heartbeat",
-    )
-    parser.add_argument(
-        "--tech-radar-config",
-        default=".autoresearch/tech_radar.sources.json",
-        help="Path to technology radar source config JSON",
-    )
-    parser.add_argument(
-        "--tech-radar-state",
-        default=".autoresearch/tech_radar.state.json",
-        help="Path for technology radar state JSON",
-    )
-    parser.add_argument(
-        "--tech-radar-jsonl",
-        default=".autoresearch/tech_radar.jsonl",
-        help="Path for technology radar event JSONL",
-    )
-    parser.add_argument(
-        "--tech-radar-candidates",
-        default=".autoresearch/tech_radar_candidates.md",
-        help="Path for generated technology radar candidate ideas",
-    )
-    parser.add_argument(
-        "--tech-radar-timeout",
-        type=float,
-        default=10.0,
-        help="Per-source technology radar timeout in seconds",
-    )
-    parser.add_argument(
-        "--tech-radar-cycle-size",
-        type=int,
-        help="Scan only N technology sources this run and advance a persistent cursor",
     )
     parser.add_argument("--run-yaml", "-y", help="Run a YAML workflow file")
     parser.add_argument("--preflight-yaml", help="Run YAML workflow preflight only")
@@ -432,28 +349,6 @@ async def main():
             sys.exit(1)
         return
 
-    if args.tech_radar_once:
-        from tools.tech_radar import main as tech_radar_main
-
-        tech_radar_args = [
-            "--config",
-            args.tech_radar_config,
-            "--state",
-            args.tech_radar_state,
-            "--jsonl",
-            args.tech_radar_jsonl,
-            "--candidates",
-            args.tech_radar_candidates,
-            "--timeout",
-            str(args.tech_radar_timeout),
-        ]
-        if args.tech_radar_cycle_size is not None:
-            tech_radar_args.extend(["--cycle-size", str(args.tech_radar_cycle_size)])
-        code = tech_radar_main(tech_radar_args)
-        if code:
-            sys.exit(code)
-        return
-
     if args.new_workflow:
         from harness.rpa.templates import prompt_for_workflow, write_workflow_template
 
@@ -657,52 +552,6 @@ async def main():
         )
         return
 
-    if (
-        args.autoresearch
-        or args.autoresearch_supervisor
-        or args.autoresearch_supervisor_once
-        or args.autoresearch_supervisor_plan
-        or args.self_improve_24_7
-        or args.self_improve_once
-        or args.self_improve_plan
-    ):
-        from tools.autoresearch_supervisor import (
-            build_supervisor_prompt,
-            discover_improvements,
-            load_config_for_supervisor,
-            load_supervisor_config,
-            run_daemon,
-            run_supervisor_cycle,
-        )
-
-        supervisor_config_path = args.autoresearch_config or args.autoresearch_supervisor_config
-        if (args.self_improve_24_7 or args.self_improve_once or args.self_improve_plan) and not supervisor_config_path:
-            supervisor_config_path = ".autoresearch/autoresearch.sovereign.json"
-        supervisor_config = load_supervisor_config(
-            supervisor_config_path,
-            Path(".").resolve(),
-        )
-        if args.autoresearch_supervisor_plan or args.self_improve_plan:
-            autoresearch_config = load_config_for_supervisor(supervisor_config)
-            candidates = discover_improvements(supervisor_config, autoresearch_config)
-            supervisor_config.session_dir.mkdir(parents=True, exist_ok=True)
-            supervisor_config.plan_path.write_text(
-                build_supervisor_prompt(supervisor_config, autoresearch_config, candidates),
-                encoding="utf-8",
-            )
-            print(supervisor_config.plan_path)
-            return
-        if args.autoresearch_supervisor_once or args.self_improve_once:
-            import json
-
-            result = run_supervisor_cycle(supervisor_config)
-            print(json.dumps(result, indent=2))
-            if result.get("status") not in {"planned", "committed", "merged", "pushed"}:
-                sys.exit(1)
-            return
-        run_daemon(supervisor_config)
-        return
-
     config = build_config(args)
     harness = AutomationHarness(config)
 
@@ -792,22 +641,14 @@ async def main():
             args.preflight_yaml,
             args.runs_list,
             args.runs_show,
-            args.autoresearch_supervisor,
-            args.autoresearch_supervisor_once,
-            args.autoresearch_supervisor_plan,
-            args.self_improve_24_7,
-            args.self_improve_once,
-            args.self_improve_plan,
             args.browser_selector_swarm,
-            args.tech_radar_once,
         ]
     ):
         print(
             f"Discovered {len(harness.test_classes)} test(s), "
             f"{len(harness.workflow_classes)} workflow(s). "
             "Use --run, --run-workflows, --agent, --serve, --rpa-memory-serve, "
-            "--browser-selector-swarm, --tech-radar-once, --autoresearch-supervisor, "
-            "or --self-improve-24-7."
+            "or --browser-selector-swarm."
         )
 
 
