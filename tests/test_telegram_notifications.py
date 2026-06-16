@@ -8,6 +8,7 @@ from harness.notifications.telegram import (
     TelegramNotificationConfig,
     TelegramNotificationError,
 )
+from main import _telegram_channel_or_skip
 
 
 class _FakeResponse:
@@ -28,6 +29,18 @@ class _FakeClient:
     async def post(self, url, json):
         self.posts.append({"url": url, "json": json})
         return _FakeResponse()
+
+
+def test_cli_telegram_helper_skips_enabled_unconfigured_env(monkeypatch, capsys):
+    monkeypatch.setenv("RPA_TELEGRAM_ENABLED", "1")
+    monkeypatch.delenv("RPA_TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("RPA_TELEGRAM_CHAT_ID", raising=False)
+
+    channel, config = _telegram_channel_or_skip()
+
+    assert channel is None
+    assert config.enabled is True
+    assert "Telegram notification skipped" in capsys.readouterr().err
 
 
 @pytest.mark.asyncio

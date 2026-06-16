@@ -708,20 +708,26 @@ async def main():
         )
 
 
-async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict[str, str]):
+def _telegram_channel_or_skip():
     from harness.notifications import TelegramBotChannel, TelegramNotificationConfig
 
     telegram_config = TelegramNotificationConfig.from_env()
     if not telegram_config.enabled:
-        return
+        return None, telegram_config
     if not telegram_config.configured:
         print(
             "Telegram notification skipped: set RPA_TELEGRAM_BOT_TOKEN and "
             "RPA_TELEGRAM_CHAT_ID.",
             file=sys.stderr,
         )
+        return None, telegram_config
+    return TelegramBotChannel(telegram_config), telegram_config
+
+
+async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict[str, str]):
+    channel, telegram_config = _telegram_channel_or_skip()
+    if channel is None:
         return
-    channel = TelegramBotChannel(telegram_config)
     try:
         result = await channel.send_run_report(
             suite_name=config.name,
@@ -737,19 +743,9 @@ async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict
 
 
 async def _notify_agent_result(result: dict):
-    from harness.notifications import TelegramBotChannel, TelegramNotificationConfig
-
-    telegram_config = TelegramNotificationConfig.from_env()
-    if not telegram_config.enabled:
+    channel, telegram_config = _telegram_channel_or_skip()
+    if channel is None:
         return
-    if not telegram_config.configured:
-        print(
-            "Telegram notification skipped: set RPA_TELEGRAM_BOT_TOKEN and "
-            "RPA_TELEGRAM_CHAT_ID.",
-            file=sys.stderr,
-        )
-        return
-    channel = TelegramBotChannel(telegram_config)
     try:
         telegram_result = await channel.send_agent_report(result)
         if telegram_result is None:
