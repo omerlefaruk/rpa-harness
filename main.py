@@ -483,13 +483,12 @@ async def main():
 
     if args.audit_workflow:
         import json
-        import yaml
 
         from harness.core import audit_workflow_rulebook
+        from harness.rpa.yaml_runner import load_workflow_yaml
         from harness.verification import validate_workflow
 
-        with open(args.audit_workflow) as f:
-            wf = yaml.safe_load(f) or {}
+        wf = load_workflow_yaml(args.audit_workflow)
         validation_errors = validate_workflow(wf)
         audit = audit_workflow_rulebook(wf).to_dict()
         result = {
@@ -505,11 +504,10 @@ async def main():
         return
 
     if args.validate_yaml:
-        import yaml
-
+        from harness.rpa.yaml_runner import load_workflow_yaml
         from harness.verification import validate_workflow
-        with open(args.validate_yaml) as f:
-            wf = yaml.safe_load(f)
+
+        wf = load_workflow_yaml(args.validate_yaml)
         errors = validate_workflow(wf)
         if errors:
             print(f"INVALID: {'; '.join(errors)}")

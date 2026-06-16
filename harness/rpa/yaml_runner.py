@@ -38,6 +38,10 @@ SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
 SUPPORTED_RUNTIME_PREFIXES = ("browser.", "api.", "desktop.", "excel.")
 
 
+def load_workflow_yaml(path: str | Path) -> dict:
+    return yaml.safe_load(Path(path).read_text()) or {}
+
+
 class YamlWorkflowRunner:
     def __init__(self, config: Optional[HarnessConfig] = None):
         self.config = config or HarnessConfig.from_env()
@@ -58,14 +62,14 @@ class YamlWorkflowRunner:
         self._pending_logs: List[dict] = []
 
     def load(self, path: str) -> dict:
-        workflow = yaml.safe_load(Path(path).read_text()) or {}
+        workflow = load_workflow_yaml(path)
         errors = self.verifier.validate(workflow)
         if errors:
             raise ValueError(f"Workflow validation failed: {'; '.join(errors)}")
         return workflow
 
     def validate(self, path: str) -> List[str]:
-        workflow = yaml.safe_load(Path(path).read_text()) or {}
+        workflow = load_workflow_yaml(path)
         return self.verifier.validate(workflow)
 
     async def run(self, workflow_path: str) -> Dict[str, Any]:
