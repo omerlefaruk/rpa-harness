@@ -6,13 +6,34 @@ TEXT_NAMES = {".gitignore", ".gitattributes"}
 
 
 def iter_text_files(repo: Path):
-    tracked = subprocess.run(
-        ["git", "ls-files"],
-        cwd=repo,
-        check=True,
-        text=True,
-        capture_output=True,
-    ).stdout.splitlines()
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files"],
+            cwd=repo,
+            check=True,
+            text=True,
+            capture_output=True,
+        ).stdout.splitlines()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        ignored_dirs = {
+            ".git",
+            ".pytest_cache",
+            ".pytest_tmp",
+            "__pycache__",
+            "runs",
+            "reports",
+            "downloads",
+            "screenshots",
+            "playwright-report",
+            "test-results",
+        }
+        for path in repo.rglob("*"):
+            if any(part in ignored_dirs for part in path.relative_to(repo).parts):
+                continue
+            if path.is_file() and (path.suffix in TEXT_EXTENSIONS or path.name in TEXT_NAMES):
+                yield path
+        return
+
     for relative_path in tracked:
         path = repo / relative_path
         if path.is_file() and (path.suffix in TEXT_EXTENSIONS or path.name in TEXT_NAMES):

@@ -1,42 +1,33 @@
 # Selector Strategy
 
-Browser selector priority:
+## Browser selectors
+
+Prefer, in order:
 
 1. `data-testid`
-2. role and accessible name
+2. role/name
 3. label
 4. placeholder
-5. visible text
+5. text
 6. stable id
 7. CSS
 8. XPath
 
-Desktop selector priority:
+Avoid absolute XPath when any stable selector exists. A selector candidate should explain its strategy, score, reason, match count, visibility/enabled state when available, and validation status.
 
-1. `automation_id`
-2. name and control type
-3. class name and control type
+## Desktop selectors
+
+Prefer, in order:
+
+1. automation ID
+2. name + control type
+3. class + control type
 4. tree path
 5. image anchor
 6. coordinate fallback
 
-Coordinates are last resort. XPath, image, OCR, and coordinates are weak unless backed by stable context and explicit success checks.
+Coordinates must be last resort, marked weak, relative/calibrated when possible, and followed by success checks.
 
-Selector evidence should answer:
+## Repair
 
-- What selector failed?
-- What candidates were found?
-- Why were candidates ranked?
-- Which artifact proves the current page/window state?
-- Was the candidate validated before use?
-
-Runtime should not silently auto-apply selector repairs in production. Patch the workflow, rerun validation, then rerun the relevant phase or record.
-
-Production repair command:
-
-```bash
-python main.py --repair-selector RUN_ID
-python main.py --repair-selector RUN_ID --repair-approve
-```
-
-The command applies a selector only when repair evidence contains a validated structured candidate and `--repair-approve` is present. Without both, it writes `selector_repair_decision.json` and blocks.
+Repair selectors from `selector_evidence.json`, screenshots, DOM/UIA snapshots, and failed verification. Do not auto-apply production repairs unless a candidate is validated and the operator or policy allows it.

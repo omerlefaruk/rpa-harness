@@ -1,32 +1,27 @@
 # Legacy Desktop Strategy
 
-Use the most deterministic path available:
+Old desktop apps may expose weak or no UIAutomation tree. The harness should degrade honestly instead of pretending fragile selectors are strong.
 
-1. API or file import/export when authorized.
-2. UIAutomation controls.
-3. Win32 handles, class names, captions, and menu ids.
-4. Menus and keyboard accelerators.
-5. Clipboard paste/copy instead of slow typing.
-6. Image anchors with OCR verification.
-7. Calibrated relative coordinates.
+## Fallback ladder
 
-Legacy app steps that rely on image/OCR or coordinates must say so:
+1. Attach by process/window/title/class.
+2. Stabilize window size, DPI/scaling, theme, language, and starting screen.
+3. Try UIA.
+4. Try Win32 controls, classes, handles, menus, and command IDs.
+5. Prefer menus and keyboard accelerators.
+6. Prefer keyboard navigation and clipboard paste/copy.
+7. Prefer file import/export or authorized backend/API paths.
+8. Use image anchors.
+9. Use OCR for verification.
+10. Use calibrated relative coordinates only as last resort.
 
-```yaml
-selector_quality: weak
-required_calibration:
-  - fixed resolution
-  - fixed DPI
-  - stable theme
-```
+## Reliability levels
 
-If no reliable UIA, Win32, keyboard, image, OCR, or file/API path exists, stop with a blocked discovery result and attach evidence. Do not invent reliable selectors.
+- Level 1: API automation.
+- Level 2: Browser DOM/accessibility automation.
+- Level 3: Desktop UIA/Win32 automation.
+- Level 4: Keyboard/menu-driven desktop automation.
+- Level 5: Image/OCR anchor automation.
+- Level 6: Coordinate automation.
 
-Reliability levels:
-
-- Level 1: API automation
-- Level 2: Browser DOM/accessibility automation
-- Level 3: Desktop UIA/Win32 automation
-- Level 4: Keyboard/menu-driven desktop automation
-- Level 5: Image/OCR anchor automation
-- Level 6: Coordinate automation
+Reports should identify weak steps, required calibration, and verification method.

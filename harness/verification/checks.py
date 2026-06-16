@@ -2,6 +2,7 @@
 Verification checks — executes success checks against real state.
 """
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -450,11 +451,8 @@ class CheckRunner:
 
         try:
             from jsonpath_ng.ext import parse
-        except ModuleNotFoundError as exc:
-            raise RuntimeError(
-                "json_path_equals requires jsonpath-ng. Install dependencies with "
-                "python3 -m pip install -r requirements.txt"
-            ) from exc
+        except ModuleNotFoundError:
+            return self._resolve_basic_json_path(data, path)
 
         matches = [match.value for match in parse(path).find(data)]
         if not matches:
@@ -462,6 +460,156 @@ class CheckRunner:
 
         actual = matches[0] if len(matches) == 1 else matches
         return True, actual
+
+    def _resolve_basic_json_path(self, data: Any, path: str) -> tuple[bool, Any]:
+        """Resolve common JSONPath checks without requiring jsonpath-ng.
+
+        Supported subset:
+        - ``$``
+        - dot keys: ``$.items``
+        - quoted keys: ``$['meta']['odd.key']``
+        - integer indexes: ``$.items[0]``
+        - wildcards over lists: ``$.items[*].name``
+        - simple equality filters: ``$.items[?(@.name == "beta")].id``
+        """
+        tokens = self._parse_basic_json_path(path)
+        if tokens is None:
+            return False, None
+        if not tokens:
+            return True, data
+
+        values = [data]
+        for token in tokens:
+            next_values: list[Any] = []
+            for value in values:
+                if token == "*":
+                    if isinstance(value, list):
+                        next_values.extend(value)
+                    continue
+
+                if isinstance(token, int):
+                    if isinstance(value, list) and 0 <= token < len(value):
+                        next_values.append(value[token])
+                    continue
+
+                if isinstance(token, tuple) and token and token[0] == "filter_eq":
+                    _, key, expected = token
+                    if isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict) and self._values_equal(item.get(key), expected):
+                                next_values.append(item)
+                    continue
+
+                if isinstance(token, str) and isinstance(value, dict) and token in value:
+                    next_values.append(value[token])
+
+            values = next_values
+            if not values:
+                return False, None
+
+        actual = values[0] if len(values) == 1 else values
+        return True, actual
+
+    def _parse_basic_json_path(self, path: str) -> list[Any] | None:
+        if path == "$":
+            return []
+        if not path.startswith("$"):
+            return None
+
+        tokens: list[Any] = []
+        i = 1
+        while i < len(path):
+            char = path[i]
+            if char == ".":
+                i += 1
+                start = i
+                while i < len(path) and path[i] not in ".[":
+                    i += 1
+                if start == i:
+                    return None
+                tokens.append(path[start:i])
+                continue
+
+            if char != "[":
+                return None
+
+            end = self._find_jsonpath_bracket_end(path, i)
+            if end is None:
+                return None
+            raw = path[i + 1 : end].strip()
+
+            if raw == "*":
+                tokens.append("*")
+            elif raw.startswith("?"):
+                parsed_filter = self._parse_basic_filter(raw)
+                if parsed_filter is None:
+                    return None
+                tokens.append(parsed_filter)
+            elif (raw.startswith("'") and raw.endswith("'")) or (
+                raw.startswith('"') and raw.endswith('"')
+            ):
+                tokens.append(raw[1:-1])
+            else:
+                try:
+                    tokens.append(int(raw))
+                except ValueError:
+                    return None
+            i = end + 1
+        return tokens
+
+    def _find_jsonpath_bracket_end(self, path: str, start: int) -> int | None:
+        quote: str | None = None
+        escaped = False
+        for i in range(start + 1, len(path)):
+            char = path[i]
+            if escaped:
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
+            if quote:
+                if char == quote:
+                    quote = None
+                continue
+            if char in {"'", '"'}:
+                quote = char
+                continue
+            if char == "]":
+                return i
+        return None
+
+    def _parse_basic_filter(self, raw: str) -> tuple[str, str, Any] | None:
+        match = re.fullmatch(
+            r"\?\(\s*@\.([A-Za-z_][A-Za-z0-9_\-.]*)\s*==\s*(.+?)\s*\)",
+            raw,
+        )
+        if not match:
+            return None
+        key = match.group(1)
+        literal = match.group(2).strip()
+        return ("filter_eq", key, self._parse_filter_literal(literal))
+
+    def _parse_filter_literal(self, literal: str) -> Any:
+        if (literal.startswith("'") and literal.endswith("'")) or (
+            literal.startswith('"') and literal.endswith('"')
+        ):
+            return literal[1:-1]
+        lowered = literal.lower()
+        if lowered == "true":
+            return True
+        if lowered == "false":
+            return False
+        if lowered == "null":
+            return None
+        try:
+            return int(literal)
+        except ValueError:
+            pass
+        try:
+            return float(literal)
+        except ValueError:
+            return literal
 
     def _values_equal(self, actual: Any, expected: Any) -> bool:
         if isinstance(actual, (dict, list)) or isinstance(expected, (dict, list)):

@@ -1,45 +1,54 @@
 # Operator Workflow
 
-Use the harness as a deterministic loop:
+Use `rpa-harness` as a transparent automation cockpit:
 
-1. Validate the workflow.
-2. Run preflight.
-3. Inspect or discover selectors when needed.
-4. Run one phase.
-5. Pause before risky steps.
-6. Run one record when the workflow supports record ids.
-7. Open the run report.
-8. Inspect evidence and repair packets.
-9. Retry only when safe retry says yes or an operator approves the risk.
+`validate → preflight → inspect → run phase → review report → repair → retry/resume safely`
 
-Commands:
+## Common commands
 
 ```bash
-python main.py --validate-yaml workflows/upload_invoices.yaml
-python main.py --preflight-yaml workflows/upload_invoices.yaml
-python main.py --run-yaml workflows/upload_invoices.yaml --phase login
-python main.py --run-yaml workflows/upload_invoices.yaml --pause-before submit_invoice
+python main.py --validate-yaml workflows/examples/minimal_example.yaml
+python main.py --preflight-yaml workflows/examples/minimal_example.yaml
+python main.py --run-yaml workflows/examples/minimal_example.yaml
+python main.py --run-yaml workflows/examples/minimal_example.yaml --phase login
+python main.py --run-yaml workflows/examples/minimal_example.yaml --pause-before submit_invoice
 python main.py --runs-list
-python main.py --runs-show RUN_ID
-python main.py --logs-show RUN_ID --log-step submit_invoice
-python main.py --report-open RUN_ID
-python main.py --run-yaml workflows/upload_invoices.yaml --only-record INV-1001
-python main.py --retry-run RUN_ID --failed-records
+python main.py --runs-show <RUN_ID>
+python main.py --logs-show <RUN_ID>
+python main.py --report-open <RUN_ID>
 ```
 
-Run artifacts:
+Adapt workflow names and phase/step IDs to the target workflow.
 
-- `run_manifest.json`: run index, status, counts, artifact paths.
-- `preflight.json`: blocking checks and warnings before execution.
-- `timeline.jsonl`: phase, step, verification, evidence, and repair events.
-- `records.jsonl`: append-only latest record state when YAML steps declare `record_id`.
-- `report.html` and `report.json`: operator-readable run summary.
-- `failure_report.json`, `evidence_bundle.json`, `repair_packet.json`: failed-step repair context.
+## Run artifacts
 
-Safe retry:
+A YAML run creates a folder under `runs/` with operator evidence such as:
 
-- YAML `--only-record` runs only steps whose `record_id` matches.
-- `--retry-run RUN_ID --failed-records` retries only failed records whose latest `records.jsonl` entry has `safe_retry.status == "yes"`.
-- Unsafe or unknown retry states stay blocked.
+- `run_manifest.json` — run index, status, paths, and counts.
+- `preflight.json` — blocking errors and warnings before execution.
+- `timeline.jsonl` — structured event log for phases, steps, actions, verification, and evidence.
+- `records.jsonl` — record status for data-driven workflows.
+- `evidence_bundle.json` — failure evidence manifest.
+- `repair_packet.json` — compact repair context.
+- `report.html` / `report.json` — operator report.
 
-Secrets must stay as secret names in workflows. Reports, logs, evidence, memory, and repair packets must be redacted before writing.
+## Debugging order
+
+1. Open `report.html`.
+2. Find failed phase and step.
+3. Read `failure_kind`.
+4. Open `evidence_bundle.json`.
+5. Inspect screenshot/DOM/UIA/API/log artifacts.
+6. Read failed verification and actual state.
+7. Check `safe_retry` before rerunning.
+8. Repair workflow/input/selector/config based on evidence.
+
+## Failure routing
+
+- `missing_secret` → configuration/secrets.
+- `input_data_error` → input file/Excel contract.
+- `selector_not_found` → selector repair and target inspection.
+- `verification_failed` → success check mismatch, target rejection, or unexpected state.
+- `timeout` → wait policy, wrong condition, slow target.
+- `business_rule_rejected` → target accepted automation but rejected the business record.
+- `unexpected_state` → target page/window is not where the workflow expected.

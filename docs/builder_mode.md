@@ -1,16 +1,21 @@
 # Builder Mode
 
-Builder mode starts with evidence, not guesses.
+Builder mode is for creating deterministic workflows from target discovery evidence. It should not guess selectors or business logic.
 
-Current minimal command:
+## Builder loop
 
-```bash
-python main.py --build-start tasks/upload_invoices.md
-python main.py --capture-desktop "Legacy ERP" --capture-session-dir builder_sessions/SESSION
-python main.py --discovery-validate-fixtures
-```
+1. Task intake: goal, target, input files, outputs, secret names, risky actions, and success criteria.
+2. Target discovery: browser DOM/accessibility, API preview, desktop UIA/Win32, or legacy desktop evidence.
+3. Selector/action candidates: generate scored candidates with reasons.
+4. Workflow draft: phases, steps, actions, selectors, success checks, side effects, retry policy, and human gates.
+5. Safe dry-run: run non-destructive phases and pause before external writes.
+6. Risk review: mark weak selectors, unresolved checks, and business ambiguities.
+7. One-record test: run only after approval for risky actions.
+8. Promotion: keep deterministic YAML/Python workflow and evidence.
 
-This creates `builder_sessions/<session_id>/` with:
+## Builder artifacts
+
+Builder helpers write under `builder_sessions/`:
 
 - `task_spec.md`
 - `assumptions.md`
@@ -18,21 +23,21 @@ This creates `builder_sessions/<session_id>/` with:
 - `discovery_session.json`
 - `workflow_draft_report.md`
 - `unresolved_risks.md`
+- optional capture/discovery artifacts
 
-Desktop capture currently records a blocked capture package unless explicit UIA/Win32/screenshot evidence is supplied. This is deliberate: a recorder that silently invents desktop steps is worse than no recorder.
+## Commands
 
-The session is only a scaffold until browser, desktop, API, or file discovery runs. Do not call a workflow production-ready until selectors, actions, success checks, and risky actions have been validated by dry-run or one-record evidence.
+```bash
+python main.py --build-start tasks/upload_invoices/task.md
+python main.py --capture-desktop "Legacy ERP" --capture-session-dir builder_sessions/<SESSION_ID>
+python main.py --discovery-validate-fixtures
+python main.py --browser-selector-swarm file://$PWD/workflows/capabilities/local_browser_form.html
+```
 
-Builder loop:
+## Required behavior
 
-1. Record task, inputs, outputs, secret names, and risky actions.
-2. Inspect the target before drafting selectors.
-3. Generate selector candidates with evidence.
-4. Draft deterministic workflow phases and steps.
-5. Add success checks to every step.
-6. Mark side effects, retryability, and required approvals.
-7. Dry-run safe phases.
-8. Pause before external writes.
-9. Produce a build report with unresolved risks.
-
-Do not auto-submit, delete, pay, upload to official systems, send external messages, or solve MFA/CAPTCHA without an explicit operator gate.
+- Every generated step needs success checks.
+- Risky actions need approval/human gate or explicit policy.
+- External writes are non-retryable by default.
+- Weak legacy desktop steps must be marked weak and verified.
+- Discovery failures should produce blocked results, not hallucinated coordinates.

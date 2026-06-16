@@ -1,71 +1,64 @@
 ---
 name: search-to-rpa-workflow
-description: >
-  Convert completed browser searches, public-site research, review collection,
-  lead/list scraping, or other web data-gathering tasks into repeatable RPA
-  Harness workflows/tests, then harden them with measured autoresearch. Use
-  whenever a one-off search result should become reusable automation.
-hooks: "preflight, compliance, validation, reporting, memory-search, memory-save"
+description: Convert a searched or described business process into a deterministic rpa-harness workflow with evidence, verification, and repair guidance.
 ---
 
-# Search To RPA Workflow
+# Search to RPA Workflow
 
-## Rule
+Use this skill when turning a user request, researched process, target website, desktop app, API, or Excel task into an rpa-harness workflow.
 
-Do not leave a completed search or browser research task as a one-off answer.
-Turn it into a dedicated harness artifact, then run autoresearch hardening.
+## Required approach
 
-## Required Flow
+1. Start with task intake: goal, target system, input files, output expectations, secret names, risky actions, and success criteria.
+2. Search or inspect only enough to identify the deterministic automation path.
+3. Save findings in a dedicated harness artifact rather than free-form scratch notes.
+4. Check RPA Memory for prior selectors, workflows, failures, and repair evidence before creating new assumptions.
+5. Use browser selector swarm for browser targets when selectors are unknown or likely to be brittle.
+6. Use UIA/Win32 inspection for desktop targets before image/OCR/coordinate fallbacks.
+7. Draft workflow phases and steps with success checks on every step.
+8. Mark side effects, retry policy, idempotency keys, weak selectors, and human gates.
+9. Run preflight and safe dry-runs before any risky external write.
+10. Use reports, evidence bundles, and repair packets to fix failures.
 
-1. **Open RPA Memory first**
-   - `GET /api/search` for similar targets, selectors, failures, and prior workflows.
-   - `GET /api/timeline` around relevant matches.
-   - `POST /api/observations/batch` only for selected details.
-   - If memory is down, state it and continue from current repo evidence.
+## Hardening requirements
 
-2. **Preserve the search contract**
-   - Record target URL, query terms, filters, sort order, date window, locale, and source.
-   - Define success checks before implementation.
-   - If the target blocks automation, make the blocked state explicit and verifiable.
+- Action execution is not success; explicit success checks are required.
+- Secret values must not be hardcoded, logged, stored in RPA Memory, reports, screenshots metadata, or repair artifacts.
+- Evidence must support claims. Memory stores evidence, not guesses.
+- Risky actions such as submit, upload, delete, send, payment, and irreversible update require approval or explicit policy.
+- Do not auto-retry non-idempotent external writes.
 
-3. **Create a dedicated harness artifact**
-   - Browser search or public-site extraction: create an `AutomationTestCase` in `tests/browser/`.
-   - Excel or record-driven work: create an `RPAWorkflow` in `tests/rpa/` or `workflows/`.
-   - Reuse `PlaywrightDriver` and the browser selector swarm instead of manual browsing.
-   - Write structured output under ignored runtime paths such as `runs/` or `reports/`.
-   - Include all major actions as `self.step(...)`.
+## Selector strategy
 
-4. **Use browser selector swarm**
-   - Run swarm before extraction to capture selector evidence and screenshots.
-   - Prefer stable selectors: test id, role/name, label, placeholder, text, id, CSS, XPath.
-   - Treat `insufficient actionable page evidence`, 403 pages, captchas, and login walls as first-class outcomes.
+Browser priority:
 
-5. **Add tests**
-   - Add pure parser/date/window tests when extraction logic exists.
-   - Add harness discovery or focused tests for new helpers.
-   - Keep tests deterministic; do not require the public site for parser correctness.
+data-testid → role/name → label → placeholder → text → stable id → CSS → XPath
 
-6. **Harden with autoresearch**
-   - Use a task-specific autoresearch benchmark when speed or reliability is the target.
-   - The benchmark must run the new workflow/test and print a metric, for example:
-     `METRIC workflow_seconds=...` or `METRIC extraction_success=...`.
-   - Run:
-     `python3 tools/autoresearch_runner.py --once`
-   - If the default autoresearch metric does not measure this workflow, state that and run the focused benchmark/checks separately.
+Desktop priority:
 
-7. **Verify repeatability**
-   - Run the exact harness command the user can reuse.
-   - Example:
-     `RPA_RUN_EXTERNAL_TESTS=1 RPA_HEADLESS=true python3 main.py --discover ./tests/browser --run --test-name <name> --tags external --headless --report json`
-   - Report artifact paths, command results, and remaining risks.
+automation_id → name/control_type → class/control_type → tree path → image anchor → coordinate fallback
 
-## Done Definition
+Coordinates are a last resort and must be relative, calibrated, logged as weak, and verified after action.
 
-Done means:
+## Autoresearch
 
-- A repeatable harness artifact exists.
-- The artifact has explicit success or blocked-state checks.
-- Parser/business logic has deterministic tests.
-- Browser selector swarm evidence is saved.
-- Autoresearch or a task-specific benchmark was run.
-- Final answer includes the reusable command and output artifact path.
+Use autoresearch only for guarded, evidence-backed improvements. The standard one-cycle command is:
+
+```bash
+python3 tools/autoresearch_runner.py --once
+```
+
+Autoresearch must respect protected paths, change budgets, tests, and evidence requirements. Do not use autoresearch for broad uncontrolled refactors.
+
+## Output
+
+When producing or repairing a workflow, return:
+
+1. Workflow draft path.
+2. Discovery artifacts.
+3. Selector quality summary.
+4. Success check coverage.
+5. Risky steps and human gates.
+6. Preflight/dry-run result.
+7. Unresolved questions.
+8. Suggested next command.
