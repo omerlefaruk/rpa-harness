@@ -296,6 +296,34 @@ steps:
     assert "VALID: noop_cli_validate (1 steps)" in completed.stdout
 
 
+def test_validate_workflow_tool_outputs_valid_json(tmp_path):
+    wf_path = tmp_path / "noop.yaml"
+    wf_path.write_text("""
+id: noop_tool_validate
+name: Noop Tool Validate
+version: "1.0"
+type: api
+steps:
+  - id: done
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    completed = subprocess.run(
+        [sys.executable, "tools/validate_workflow.py", str(wf_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "valid"
+    assert payload["workflow_id"] == "noop_tool_validate"
+    assert payload["step_count"] == 1
+
+
 @pytest.mark.asyncio
 async def test_yaml_runner_missing_secret_preflight(tmp_path, monkeypatch):
     monkeypatch.delenv("MISSING_API_TOKEN", raising=False)

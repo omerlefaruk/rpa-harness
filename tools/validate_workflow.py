@@ -14,16 +14,11 @@ def main():
         print(json.dumps({"status": "error", "reason": f"File not found: {args.workflow_path}"}))
         sys.exit(1)
 
+    from harness.rpa.yaml_runner import load_workflow_yaml
     from harness.verification import validate_workflow
 
     try:
-        import yaml
-    except ImportError:
-        print(json.dumps({"status": "error", "reason": "pyyaml not installed"}))
-        sys.exit(1)
-
-    try:
-        workflow = yaml.safe_load(wf_path.read_text())
+        workflow = load_workflow_yaml(wf_path)
     except Exception as e:
         print(json.dumps({"status": "error", "reason": f"YAML parse error: {e}"}))
         sys.exit(1)
