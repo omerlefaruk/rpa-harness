@@ -11,9 +11,9 @@ def propose(report_path: str, workflow_path: str) -> dict:
     report = json.loads(Path(report_path).read_text())
     workflow = {}
     if Path(workflow_path).exists():
-        import yaml
-        with open(workflow_path) as f:
-            workflow = yaml.safe_load(f)
+        from harness.rpa.yaml_runner import load_workflow_yaml
+
+        workflow = load_workflow_yaml(workflow_path)
 
     failed_step_id = report.get("failed_step_id", "")
     failed_step = None
