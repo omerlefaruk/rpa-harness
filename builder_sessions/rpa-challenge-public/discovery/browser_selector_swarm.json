@@ -1,0 +1,2146 @@
+{
+  "status": "passed",
+  "url": "https://rpachallenge.com/",
+  "title": "Rpa Challenge",
+  "artifacts": {
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151",
+    "screenshot": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151\\screenshot.png",
+    "raw_html": null,
+    "redacted_dom": null,
+    "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151\\selector_swarm_report.json",
+    "html_report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151\\selector_swarm_report.html"
+  },
+  "summary": {
+    "intent": "Submit",
+    "wait_until": "domcontentloaded",
+    "subagent_policy": "off",
+    "subagent_escalation_reasons": [],
+    "interactive_elements": 18,
+    "candidates": 47,
+    "validated": 1,
+    "console_errors": 2,
+    "failed_requests": 2
+  },
+  "page_map": {
+    "url": "https://rpachallenge.com/",
+    "title": "Rpa Challenge",
+    "element_count": 18,
+    "elements": [
+      {
+        "index": 0,
+        "tag": "meta",
+        "role": null,
+        "accessible_name": "viewport",
+        "text": "",
+        "id": null,
+        "name": "viewport",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": false,
+        "disabled": false,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      {
+        "index": 1,
+        "tag": "a",
+        "role": null,
+        "accessible_name": "RPA Challenge",
+        "text": "RPA Challenge",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 249,
+          "height": 64
+        }
+      },
+      {
+        "index": 2,
+        "tag": "a",
+        "role": "link",
+        "accessible_name": "Input Forms",
+        "text": "Input Forms",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": "/",
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 583,
+          "y": 0,
+          "width": 119,
+          "height": 64
+        }
+      },
+      {
+        "index": 3,
+        "tag": "a",
+        "role": "link",
+        "accessible_name": "Shortest Path",
+        "text": "Shortest Path",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": "./assets/shortestPath/public/shortestpath.html",
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 701,
+          "y": 0,
+          "width": 130,
+          "height": 64
+        }
+      },
+      {
+        "index": 4,
+        "tag": "a",
+        "role": "link",
+        "accessible_name": "Movie Search",
+        "text": "Movie Search",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": "/movieSearch",
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 831,
+          "y": 0,
+          "width": 130,
+          "height": 64
+        }
+      },
+      {
+        "index": 5,
+        "tag": "a",
+        "role": "link",
+        "accessible_name": "Invoice Extraction",
+        "text": "Invoice Extraction",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": "https://rpachallengeocr.azurewebsites.net",
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 961,
+          "y": 0,
+          "width": 161,
+          "height": 64
+        }
+      },
+      {
+        "index": 6,
+        "tag": "a",
+        "role": "link",
+        "accessible_name": "RPA Stock Market",
+        "text": "RPA Stock Market",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": "./assets/rpaStockMarket/index.html",
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 1122,
+          "y": 0,
+          "width": 158,
+          "height": 64
+        }
+      },
+      {
+        "index": 7,
+        "tag": "a",
+        "role": null,
+        "accessible_name": "EN",
+        "text": "EN",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 246,
+          "y": 73,
+          "width": 79,
+          "height": 36
+        }
+      },
+      {
+        "index": 8,
+        "tag": "a",
+        "role": "link",
+        "accessible_name": "DOWNLOAD EXCEL cloud_download",
+        "text": "DOWNLOAD EXCEL cloud_download",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": "./assets/downloadFiles/challenge.xlsx",
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 11,
+          "y": 550,
+          "width": 298,
+          "height": 36
+        }
+      },
+      {
+        "index": 9,
+        "tag": "button",
+        "role": "button",
+        "accessible_name": "START",
+        "text": "START",
+        "id": null,
+        "name": null,
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 11,
+          "y": 595,
+          "width": 298,
+          "height": 54
+        }
+      },
+      {
+        "index": 10,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "8bIuh",
+        "text": "",
+        "id": "8bIuh",
+        "name": "8bIuh",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 431,
+          "y": 136,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 11,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "zVOyu",
+        "text": "",
+        "id": "zVOyu",
+        "name": "zVOyu",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 696,
+          "y": 136,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 12,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "8l8vm",
+        "text": "",
+        "id": "8l8vm",
+        "name": "8l8vm",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 431,
+          "y": 224,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 13,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "EMMsm",
+        "text": "",
+        "id": "EMMsm",
+        "name": "EMMsm",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 696,
+          "y": 224,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 14,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "Go9H8",
+        "text": "",
+        "id": "Go9H8",
+        "name": "Go9H8",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 431,
+          "y": 312,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 15,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "WqAP0",
+        "text": "",
+        "id": "WqAP0",
+        "name": "WqAP0",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 696,
+          "y": 312,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 16,
+        "tag": "input",
+        "role": "textbox",
+        "accessible_name": "m4Azn",
+        "text": "",
+        "id": "m4Azn",
+        "name": "m4Azn",
+        "type": null,
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 431,
+          "y": 400,
+          "width": 242,
+          "height": 46
+        }
+      },
+      {
+        "index": 17,
+        "tag": "input",
+        "role": "button",
+        "accessible_name": null,
+        "text": "",
+        "id": null,
+        "name": null,
+        "type": "submit",
+        "placeholder": null,
+        "aria_label": null,
+        "data_testid": null,
+        "data_test": null,
+        "data_qa": null,
+        "href": null,
+        "labels": [],
+        "visible": true,
+        "disabled": false,
+        "bounds": {
+          "x": 420,
+          "y": 466,
+          "width": 116,
+          "height": 36
+        }
+      }
+    ],
+    "headings": []
+  },
+  "candidates": [
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "button",
+        "name": "START"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 9,
+      "intent_hint": "button: START",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "8bIuh"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 10,
+      "intent_hint": "input: 8bIuh",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "zVOyu"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 11,
+      "intent_hint": "input: zVOyu",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "8l8vm"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 12,
+      "intent_hint": "input: 8l8vm",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "EMMsm"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 13,
+      "intent_hint": "input: EMMsm",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "Go9H8"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 14,
+      "intent_hint": "input: Go9H8",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "WqAP0"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 15,
+      "intent_hint": "input: WqAP0",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "textbox",
+        "name": "m4Azn"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 16,
+      "intent_hint": "input: m4Azn",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "link",
+        "name": "Input Forms"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 2,
+      "intent_hint": "a: Input Forms",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "link",
+        "name": "Movie Search"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 4,
+      "intent_hint": "a: Movie Search",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "link",
+        "name": "Shortest Path"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 3,
+      "intent_hint": "a: Shortest Path",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "link",
+        "name": "RPA Stock Market"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 6,
+      "intent_hint": "a: RPA Stock Market",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "link",
+        "name": "Invoice Extraction"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 5,
+      "intent_hint": "a: Invoice Extraction",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "role",
+        "role": "link",
+        "name": "DOWNLOAD EXCEL cloud_download"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 8,
+      "intent_hint": "a: DOWNLOAD EXCEL cloud_download",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "8bIuh"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 10,
+      "intent_hint": "input: 8bIuh",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "zVOyu"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 11,
+      "intent_hint": "input: zVOyu",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "8l8vm"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 12,
+      "intent_hint": "input: 8l8vm",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "EMMsm"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 13,
+      "intent_hint": "input: EMMsm",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "Go9H8"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 14,
+      "intent_hint": "input: Go9H8",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "WqAP0"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 15,
+      "intent_hint": "input: WqAP0",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "name",
+        "value": "m4Azn"
+      },
+      "source": "name",
+      "score": 82,
+      "element_index": 16,
+      "intent_hint": "input: m4Azn",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "EN"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 7,
+      "intent_hint": "a: EN",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "START"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 9,
+      "intent_hint": "button: START",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "Input Forms"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 2,
+      "intent_hint": "a: Input Forms",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "Movie Search"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 4,
+      "intent_hint": "a: Movie Search",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "RPA Challenge"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 1,
+      "intent_hint": "a: RPA Challenge",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "Shortest Path"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 3,
+      "intent_hint": "a: Shortest Path",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "RPA Stock Market"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 6,
+      "intent_hint": "a: RPA Stock Market",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "Invoice Extraction"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 5,
+      "intent_hint": "a: Invoice Extraction",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "text",
+        "value": "DOWNLOAD EXCEL cloud_download"
+      },
+      "source": "visible_text",
+      "score": 68,
+      "element_index": 8,
+      "intent_hint": "a: DOWNLOAD EXCEL cloud_download",
+      "reasons": [],
+      "risk_flags": [
+        "text selectors can break on copy changes"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "8bIuh"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 10,
+      "intent_hint": "input: 8bIuh",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "zVOyu"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 11,
+      "intent_hint": "input: zVOyu",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "8l8vm"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 12,
+      "intent_hint": "input: 8l8vm",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "EMMsm"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 13,
+      "intent_hint": "input: EMMsm",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "Go9H8"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 14,
+      "intent_hint": "input: Go9H8",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "WqAP0"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 15,
+      "intent_hint": "input: WqAP0",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "id",
+        "value": "m4Azn"
+      },
+      "source": "id",
+      "score": 64,
+      "element_index": 16,
+      "intent_hint": "input: m4Azn",
+      "reasons": [],
+      "risk_flags": []
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "a"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 1,
+      "intent_hint": "a: RPA Challenge",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 17,
+      "intent_hint": null,
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "button"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 9,
+      "intent_hint": "button: START",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"8bIuh\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 10,
+      "intent_hint": "input: 8bIuh",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"zVOyu\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 11,
+      "intent_hint": "input: zVOyu",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"8l8vm\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 12,
+      "intent_hint": "input: 8l8vm",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"EMMsm\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 13,
+      "intent_hint": "input: EMMsm",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"Go9H8\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 14,
+      "intent_hint": "input: Go9H8",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"WqAP0\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 15,
+      "intent_hint": "input: WqAP0",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    },
+    {
+      "selector": {
+        "strategy": "css",
+        "value": "input[id=\"m4Azn\"]"
+      },
+      "source": "structure",
+      "score": 35,
+      "element_index": 16,
+      "intent_hint": "input: m4Azn",
+      "reasons": [],
+      "risk_flags": [
+        "structural fallback"
+      ]
+    }
+  ],
+  "validation": {
+    "winner": {
+      "selector": {
+        "strategy": "role",
+        "role": "button",
+        "name": "START"
+      },
+      "source": "accessibility",
+      "score": 92,
+      "element_index": 9,
+      "intent_hint": "button: START",
+      "reasons": [
+        "role plus accessible name is stable and readable"
+      ],
+      "risk_flags": []
+    },
+    "validations": [
+      {
+        "candidate": {
+          "selector": {
+            "strategy": "role",
+            "role": "button",
+            "name": "START"
+          },
+          "source": "accessibility",
+          "score": 92,
+          "element_index": 9,
+          "intent_hint": "button: START",
+          "reasons": [
+            "role plus accessible name is stable and readable"
+          ],
+          "risk_flags": []
+        },
+        "passed": true,
+        "count": 1,
+        "visible": true,
+        "enabled": true,
+        "action_passed": null,
+        "success_check_passed": null,
+        "error": null
+      }
+    ],
+    "validated_count": 1
+  },
+  "orchestration": {
+    "execution_mode": "deterministic_selector_swarm",
+    "subagent_policy": "off",
+    "subagent_escalation_reasons": [],
+    "codex_subagents_invoked": false,
+    "hidden_chain_of_thought_recorded": false,
+    "thinking_process_note": "Report exposes configuration, reasoning_effort, and decision summaries. It does not expose private chain-of-thought.",
+    "orchestrator": {
+      "name": "browser_selector_swarm_orchestrator",
+      "runtime": "harness.selectors.browser_swarm.run_browser_selector_swarm",
+      "model_profile": "planner",
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "model_used_in_this_run": false,
+      "decision_summary": "The current implementation used deterministic Python and Playwright. The planner model is the configured model for future LLM planning handoff."
+    },
+    "recommended_dispatch": {
+      "first_wave_parallel": [
+        "memory_recon",
+        "page_stabilizer"
+      ],
+      "second_wave_parallel": [
+        "dom_scraper",
+        "accessibility_mapper",
+        "form_mapper",
+        "text_mapper",
+        "network_mapper",
+        "state_mapper"
+      ],
+      "fallback_wave": [
+        "structure_mapper",
+        "vision_mapper"
+      ],
+      "sequential": [
+        "selector_scorer",
+        "candidate_validator",
+        "workflow_planner",
+        "workflow_generator"
+      ],
+      "on_failure": [
+        "repair_agent"
+      ]
+    },
+    "executed_agents": [
+      {
+        "name": "memory_recon",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 2,
+        "timeout_seconds": 20,
+        "owns": [
+          "memory search",
+          "prior selector retrieval",
+          "known failure filtering"
+        ],
+        "output_schema": "memory_evidence_bundle",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "page_stabilizer",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 1,
+        "timeout_seconds": 45,
+        "owns": [
+          "route stabilization instructions",
+          "page readiness checks",
+          "artifact manifest"
+        ],
+        "output_schema": "page_state_bundle",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "dom_scraper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 3,
+        "timeout_seconds": 45,
+        "owns": [
+          "interactive DOM inventory",
+          "attribute extraction",
+          "duplicate element grouping"
+        ],
+        "output_schema": "interactive_dom_map",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "accessibility_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 3,
+        "timeout_seconds": 45,
+        "owns": [
+          "role selectors",
+          "accessible names",
+          "label relationships"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "form_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 3,
+        "timeout_seconds": 45,
+        "owns": [
+          "input selectors",
+          "labels",
+          "placeholders",
+          "validation messages"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "text_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 2,
+        "timeout_seconds": 30,
+        "owns": [
+          "visible text selectors",
+          "heading/link/button text fallbacks"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "structure_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 2,
+        "timeout_seconds": 45,
+        "owns": [
+          "css fallback selectors",
+          "xpath fallback selectors",
+          "dynamic selector rejection"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "network_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 2,
+        "timeout_seconds": 45,
+        "owns": [
+          "API call summaries",
+          "response/status success checks",
+          "route transition checks"
+        ],
+        "output_schema": "success_check_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "state_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 1,
+        "timeout_seconds": 30,
+        "owns": [
+          "safe app-state extraction",
+          "route metadata",
+          "framework hydration hints"
+        ],
+        "output_schema": "state_hint_bundle",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "vision_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "vision_reasoning",
+        "model": "gpt-5.4",
+        "reasoning_effort": "medium",
+        "max_parallel": 1,
+        "timeout_seconds": 90,
+        "owns": [
+          "screenshot region analysis",
+          "visual fallback candidates",
+          "ambiguity notes"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "selector_scorer",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 1,
+        "timeout_seconds": 30,
+        "owns": [
+          "candidate merge",
+          "ranking",
+          "risk flags",
+          "duplicate removal"
+        ],
+        "output_schema": "ranked_selector_candidates",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "candidate_validator",
+        "sent": true,
+        "runtime": "playwright",
+        "model_profile": null,
+        "model": null,
+        "reasoning_effort": null,
+        "max_parallel": 8,
+        "timeout_seconds": 120,
+        "owns": [
+          "syntax checks",
+          "uniqueness checks",
+          "visibility checks",
+          "enabled/editable checks",
+          "safe action execution",
+          "success-check proof"
+        ],
+        "output_schema": "selector_validation_report",
+        "status": "deterministic",
+        "decision_summary": "Used Playwright to prove uniqueness, visibility, enabled state, and optional action success. Winner: {\"name\": \"START\", \"role\": \"button\", \"strategy\": \"role\"}."
+      },
+      {
+        "name": "workflow_planner",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "planner",
+        "model": "gpt-5.5",
+        "reasoning_effort": "high",
+        "max_parallel": 1,
+        "timeout_seconds": 180,
+        "owns": [
+          "workflow step ordering",
+          "success-check assignment",
+          "safety gate placement"
+        ],
+        "output_schema": "workflow_step_plan",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "workflow_generator",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "coding",
+        "model": "gpt-5.5",
+        "reasoning_effort": "medium",
+        "max_parallel": 1,
+        "timeout_seconds": 180,
+        "owns": [
+          "YAML workflow generation",
+          "browser test generation",
+          "verification command suggestions"
+        ],
+        "output_schema": "workflow_patch_plan",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      }
+    ],
+    "configured_agents": [
+      {
+        "name": "memory_recon",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 2,
+        "timeout_seconds": 20,
+        "owns": [
+          "memory search",
+          "prior selector retrieval",
+          "known failure filtering"
+        ],
+        "output_schema": "memory_evidence_bundle",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "page_stabilizer",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 1,
+        "timeout_seconds": 45,
+        "owns": [
+          "route stabilization instructions",
+          "page readiness checks",
+          "artifact manifest"
+        ],
+        "output_schema": "page_state_bundle",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "dom_scraper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 3,
+        "timeout_seconds": 45,
+        "owns": [
+          "interactive DOM inventory",
+          "attribute extraction",
+          "duplicate element grouping"
+        ],
+        "output_schema": "interactive_dom_map",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "accessibility_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 3,
+        "timeout_seconds": 45,
+        "owns": [
+          "role selectors",
+          "accessible names",
+          "label relationships"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "form_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 3,
+        "timeout_seconds": 45,
+        "owns": [
+          "input selectors",
+          "labels",
+          "placeholders",
+          "validation messages"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "text_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "ultra_fast",
+        "model": "gpt-5.3-codex-spark",
+        "reasoning_effort": "low",
+        "max_parallel": 2,
+        "timeout_seconds": 30,
+        "owns": [
+          "visible text selectors",
+          "heading/link/button text fallbacks"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "structure_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 2,
+        "timeout_seconds": 45,
+        "owns": [
+          "css fallback selectors",
+          "xpath fallback selectors",
+          "dynamic selector rejection"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "network_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 2,
+        "timeout_seconds": 45,
+        "owns": [
+          "API call summaries",
+          "response/status success checks",
+          "route transition checks"
+        ],
+        "output_schema": "success_check_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "state_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 1,
+        "timeout_seconds": 30,
+        "owns": [
+          "safe app-state extraction",
+          "route metadata",
+          "framework hydration hints"
+        ],
+        "output_schema": "state_hint_bundle",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "vision_mapper",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "vision_reasoning",
+        "model": "gpt-5.4",
+        "reasoning_effort": "medium",
+        "max_parallel": 1,
+        "timeout_seconds": 90,
+        "owns": [
+          "screenshot region analysis",
+          "visual fallback candidates",
+          "ambiguity notes"
+        ],
+        "output_schema": "selector_candidate_list",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "selector_scorer",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "fast_general",
+        "model": "gpt-5.4-mini",
+        "reasoning_effort": "high",
+        "max_parallel": 1,
+        "timeout_seconds": 30,
+        "owns": [
+          "candidate merge",
+          "ranking",
+          "risk flags",
+          "duplicate removal"
+        ],
+        "output_schema": "ranked_selector_candidates",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "candidate_validator",
+        "sent": true,
+        "runtime": "playwright",
+        "model_profile": null,
+        "model": null,
+        "reasoning_effort": null,
+        "max_parallel": 8,
+        "timeout_seconds": 120,
+        "owns": [
+          "syntax checks",
+          "uniqueness checks",
+          "visibility checks",
+          "enabled/editable checks",
+          "safe action execution",
+          "success-check proof"
+        ],
+        "output_schema": "selector_validation_report",
+        "status": "deterministic",
+        "decision_summary": "Used Playwright to prove uniqueness, visibility, enabled state, and optional action success. Winner: {\"name\": \"START\", \"role\": \"button\", \"strategy\": \"role\"}."
+      },
+      {
+        "name": "workflow_planner",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "planner",
+        "model": "gpt-5.5",
+        "reasoning_effort": "high",
+        "max_parallel": 1,
+        "timeout_seconds": 180,
+        "owns": [
+          "workflow step ordering",
+          "success-check assignment",
+          "safety gate placement"
+        ],
+        "output_schema": "workflow_step_plan",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "workflow_generator",
+        "sent": false,
+        "runtime": "codex_cli",
+        "model_profile": "coding",
+        "model": "gpt-5.5",
+        "reasoning_effort": "medium",
+        "max_parallel": 1,
+        "timeout_seconds": 180,
+        "owns": [
+          "YAML workflow generation",
+          "browser test generation",
+          "verification command suggestions"
+        ],
+        "output_schema": "workflow_patch_plan",
+        "attempted": false,
+        "status": "not_sent",
+        "decision_summary": "Subagent mode was disabled for this run.",
+        "duration_ms": null,
+        "proposed_candidates": 0
+      },
+      {
+        "name": "repair_agent",
+        "sent": false,
+        "runtime": "codex",
+        "model_profile": "coding",
+        "model": "gpt-5.5",
+        "reasoning_effort": "medium",
+        "max_parallel": 1,
+        "timeout_seconds": 180,
+        "owns": [
+          "failed validation diagnosis",
+          "selector repair",
+          "minimal code/test patch recommendations"
+        ],
+        "output_schema": "repair_plan"
+      }
+    ],
+    "decision_trace": [
+      "Loaded selector swarm configuration.",
+      "Opened the target page with Playwright and waited for page stability.",
+      "Captured screenshot, console errors, failed requests, and compact interactive DOM map.",
+      "Generated selector candidates from test ids, accessibility data, labels, text, ids, and structural fallbacks.",
+      "Boosted candidates matching the requested intent.",
+      "Validated deterministic candidates with Playwright checks before any Codex subagent dispatch.",
+      "Safe-click validation was disabled; proof stopped at selector presence/visibility/enabled checks."
+    ]
+  },
+  "subagent_results": [
+    {
+      "name": "memory_recon",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "fast_general",
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "high",
+      "timeout_seconds": 20,
+      "max_parallel": 2,
+      "owns": [
+        "memory search",
+        "prior selector retrieval",
+        "known failure filtering"
+      ],
+      "output_schema": "memory_evidence_bundle",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "page_stabilizer",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "ultra_fast",
+      "model": "gpt-5.3-codex-spark",
+      "reasoning_effort": "low",
+      "timeout_seconds": 45,
+      "max_parallel": 1,
+      "owns": [
+        "route stabilization instructions",
+        "page readiness checks",
+        "artifact manifest"
+      ],
+      "output_schema": "page_state_bundle",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "dom_scraper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "ultra_fast",
+      "model": "gpt-5.3-codex-spark",
+      "reasoning_effort": "low",
+      "timeout_seconds": 45,
+      "max_parallel": 3,
+      "owns": [
+        "interactive DOM inventory",
+        "attribute extraction",
+        "duplicate element grouping"
+      ],
+      "output_schema": "interactive_dom_map",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "accessibility_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "ultra_fast",
+      "model": "gpt-5.3-codex-spark",
+      "reasoning_effort": "low",
+      "timeout_seconds": 45,
+      "max_parallel": 3,
+      "owns": [
+        "role selectors",
+        "accessible names",
+        "label relationships"
+      ],
+      "output_schema": "selector_candidate_list",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "form_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "ultra_fast",
+      "model": "gpt-5.3-codex-spark",
+      "reasoning_effort": "low",
+      "timeout_seconds": 45,
+      "max_parallel": 3,
+      "owns": [
+        "input selectors",
+        "labels",
+        "placeholders",
+        "validation messages"
+      ],
+      "output_schema": "selector_candidate_list",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "text_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "ultra_fast",
+      "model": "gpt-5.3-codex-spark",
+      "reasoning_effort": "low",
+      "timeout_seconds": 30,
+      "max_parallel": 2,
+      "owns": [
+        "visible text selectors",
+        "heading/link/button text fallbacks"
+      ],
+      "output_schema": "selector_candidate_list",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "network_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "fast_general",
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "high",
+      "timeout_seconds": 45,
+      "max_parallel": 2,
+      "owns": [
+        "API call summaries",
+        "response/status success checks",
+        "route transition checks"
+      ],
+      "output_schema": "success_check_candidate_list",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "state_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "fast_general",
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "high",
+      "timeout_seconds": 30,
+      "max_parallel": 1,
+      "owns": [
+        "safe app-state extraction",
+        "route metadata",
+        "framework hydration hints"
+      ],
+      "output_schema": "state_hint_bundle",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "structure_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "fast_general",
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "high",
+      "timeout_seconds": 45,
+      "max_parallel": 2,
+      "owns": [
+        "css fallback selectors",
+        "xpath fallback selectors",
+        "dynamic selector rejection"
+      ],
+      "output_schema": "selector_candidate_list",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "vision_mapper",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "vision_reasoning",
+      "model": "gpt-5.4",
+      "reasoning_effort": "medium",
+      "timeout_seconds": 90,
+      "max_parallel": 1,
+      "owns": [
+        "screenshot region analysis",
+        "visual fallback candidates",
+        "ambiguity notes"
+      ],
+      "output_schema": "selector_candidate_list",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "selector_scorer",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "fast_general",
+      "model": "gpt-5.4-mini",
+      "reasoning_effort": "high",
+      "timeout_seconds": 30,
+      "max_parallel": 1,
+      "owns": [
+        "candidate merge",
+        "ranking",
+        "risk flags",
+        "duplicate removal"
+      ],
+      "output_schema": "ranked_selector_candidates",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "workflow_planner",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "planner",
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "timeout_seconds": 180,
+      "max_parallel": 1,
+      "owns": [
+        "workflow step ordering",
+        "success-check assignment",
+        "safety gate placement"
+      ],
+      "output_schema": "workflow_step_plan",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    },
+    {
+      "name": "workflow_generator",
+      "status": "not_sent",
+      "attempted": false,
+      "sent": false,
+      "runtime": "codex_cli",
+      "model_profile": "coding",
+      "model": "gpt-5.5",
+      "reasoning_effort": "medium",
+      "timeout_seconds": 180,
+      "max_parallel": 1,
+      "owns": [
+        "YAML workflow generation",
+        "browser test generation",
+        "verification command suggestions"
+      ],
+      "output_schema": "workflow_patch_plan",
+      "summary": "Subagent mode was disabled for this run.",
+      "proposed_candidates": [],
+      "notes": [],
+      "duration_ms": null
+    }
+  ],
+  "console_errors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    }
+  ],
+  "failed_requests": [
+    {
+      "url": "https://rpachallenge.com/Roboto-Regular.woff2",
+      "method": "GET",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://rpachallenge.com/Roboto-Regular.woff",
+      "method": "GET",
+      "error": "net::ERR_ABORTED"
+    }
+  ]
+}

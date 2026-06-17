@@ -1,0 +1,2 @@
+{"question_id": "intake.confirm_scope", "answer": "continue", "answered_at": "2026-06-16T20:31:51.862079+00:00"}
+{"question_id": "policy.review", "answer": "continue: user requested live RPA Challenge trial with public fixture data; submit each row once; no automatic submit retries", "answered_at": "2026-06-16T20:32:04.341855+00:00"}

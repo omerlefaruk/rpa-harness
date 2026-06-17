@@ -703,7 +703,7 @@ class YamlWorkflowRunner:
         }
 
     async def _execute_desktop_action(self, action_type: str, action: dict) -> Dict[str, Any]:
-        driver = await self._get_desktop_driver()
+        driver = await self._get_desktop_driver(action)
         op = action_type.split(".", 1)[1]
         timeout = self._optional_int(action.get("timeout")) or self.config.element_find_timeout
 
@@ -724,16 +724,28 @@ class YamlWorkflowRunner:
                 "current_window": window_title or action.get("app_name") or app_path,
             }
 
+        if op == "attach":
+            window_title = self._resolve_string(str(action.get("window_title", ""))) if action.get("window_title") else None
+            class_name = self._resolve_string(str(action.get("class_name", ""))) if action.get("class_name") else None
+            await driver.connect_to_app(title=window_title, class_name=class_name, timeout=timeout)
+            return {
+                "window_exists": True,
+                "window_title": window_title or class_name,
+                "current_window": window_title or class_name,
+            }
+
         if op == "click":
-            selector = self._desktop_selector(action.get("selector", {}))
-            element = await driver.find_element(timeout=timeout, **selector)
+            selector = await self._desktop_selector_for_action(driver, action.get("selector", {}))
+            element = None if "coordinates" in selector else await driver.find_element(timeout=timeout, **selector)
             if element is None:
-                raise RuntimeError(f"Desktop element not found: {selector}")
+                if "coordinates" not in selector:
+                    raise RuntimeError(f"Desktop element not found: {selector}")
             await driver.click(timeout=timeout, **selector)
             return {
                 "element_exists": True,
-                "elements": [element.to_dict()],
+                "elements": [element.to_dict()] if element else [],
                 "selector_visible": True,
+                "selector_quality": "coordinate_fallback" if "coordinates" in selector else "strong",
             }
 
         if op == "get_text":
@@ -747,6 +759,132 @@ class YamlWorkflowRunner:
                 "element_text": text,
                 "text": text,
                 "last_text": text,
+            }
+
+        if op == "type":
+            selector = self._desktop_selector(action.get("selector", {})) if action.get("selector") else {}
+            text = self._resolve_string(str(action.get("text", "")))
+            await driver.type_keys(text=text, timeout=timeout, **selector)
+            return {
+                "field_value": text,
+                "last_text": text,
+                "selector_visible": True if selector else None,
+            }
+
+        if op == "clipboard_paste":
+            selector = self._desktop_selector(action.get("selector", {})) if action.get("selector") else {}
+            if selector:
+                element = await driver.find_element(timeout=timeout, **selector)
+                if element is None:
+                    raise RuntimeError(f"Desktop element not found: {selector}")
+                await driver.click(timeout=timeout, **selector)
+            text = self._desktop_clipboard_text(action)
+            from harness.desktop.clipboard import ClipboardPaste
+
+            factory = getattr(self, "_clipboard_paste_factory", ClipboardPaste)
+            factory().paste_text(text)
+            return {
+                "clipboard_paste": True,
+                "field_value": "[REDACTED]" if action.get("secret") else text,
+                "selector_visible": True if selector else None,
+                "secret_redacted": bool(action.get("secret")),
+            }
+
+        if op == "press":
+            keys = self._resolve_string(str(action.get("keys", "")))
+            await driver.press_keys(keys)
+            return {"keys_pressed": keys, "last_text": keys}
+
+        if op == "menu_select":
+            path = self._resolve_string(str(action.get("path", "")))
+            if not hasattr(driver, "menu_select"):
+                raise RuntimeError(f"{getattr(driver, 'driver_type', 'desktop')} does not support menu_select")
+            await driver.menu_select(path)
+            return {"menu_path": path, "window_exists": True}
+
+        if op == "wait":
+            selector = self._desktop_selector(action.get("selector", {})) if action.get("selector") else None
+            if selector:
+                element = await driver.find_element(timeout=timeout, **selector)
+                if element is None:
+                    raise RuntimeError(f"Desktop wait element not found: {selector}")
+                return {"element_exists": True, "elements": [element.to_dict()], "selector_visible": True}
+            if action.get("window_title") or action.get("class_name"):
+                window_title = (
+                    self._resolve_string(str(action.get("window_title", "")))
+                    if action.get("window_title")
+                    else None
+                )
+                class_name = (
+                    self._resolve_string(str(action.get("class_name", "")))
+                    if action.get("class_name")
+                    else None
+                )
+                await driver.connect_to_app(title=window_title, class_name=class_name, timeout=timeout)
+                return {"window_exists": True, "window_title": window_title or class_name}
+            text = self._resolve_string(str(action.get("text", "")))
+            found_text = await self._desktop_wait_for_text(driver, text, timeout=timeout)
+            return {"last_text": found_text, "text": found_text}
+
+        if op == "screenshot":
+            path = await driver.screenshot(name=action.get("name"))
+            self._store_output(action, path)
+            return {"screenshot": path, "file_path": path}
+
+        if op == "dump_tree":
+            max_depth = self._optional_int(action.get("max_depth")) or 3
+            tree = await driver.dump_tree(max_depth=max_depth)
+            self._store_output(action, tree)
+            driver_type = str(getattr(driver, "driver_type", "")).lower()
+            tree_key = "win32_tree" if "win32" in driver_type else "uia_tree"
+            return {"tree": tree, tree_key: tree, "last_text": json.dumps(tree, default=str)}
+
+        if op in {"ocr_read", "ocr_wait"}:
+            image = await self._desktop_ocr_image(driver, action)
+            from harness.desktop.ocr import OcrEngine
+
+            engine = OcrEngine(os.getenv("RPA_OCR_COMMAND"))
+            if op == "ocr_wait":
+                result = engine.wait_for_text(
+                    image,
+                    self._resolve_string(str(action.get("text", ""))),
+                    secret_values=self._secret_values(),
+                    timeout=timeout,
+                )
+            else:
+                result = engine.read_image(
+                    image,
+                    secret_values=self._secret_values(),
+                    timeout=timeout,
+                )
+            text = str(result.get("text", ""))
+            self._store_output(action, text)
+            ocr_artifact = None
+            if self.failure._run_dir:
+                payload = {
+                    "status": result.get("status"),
+                    "reason": result.get("reason"),
+                    "matched": result.get("matched"),
+                    "image": result.get("image") or str(image),
+                    "region": action.get("region"),
+                    "text": text,
+                }
+                ocr_artifact = self._relative_evidence_path(
+                    self.failure.save_artifact(
+                        f"ocr_result_{int(time.time() * 1000)}.json",
+                        json.dumps(redact_value(payload), indent=2, default=str),
+                    )
+                )
+            return {
+                "ocr_status": result.get("status"),
+                "ocr_reason": result.get("reason"),
+                "ocr_text": text,
+                "text": text,
+                "last_text": text,
+                "screenshot": result.get("image") or str(image),
+                "ocr_artifact": ocr_artifact,
+                "region": action.get("region"),
+                "matched": result.get("matched"),
             }
 
         if op == "close":
@@ -989,8 +1127,12 @@ class YamlWorkflowRunner:
         self._drivers["api"] = driver
         return driver
 
-    async def _get_desktop_driver(self):
-        if "desktop" in self._drivers:
+    async def _get_desktop_driver(self, action: dict | None = None):
+        backend = self._desktop_backend(action or {})
+        key = f"desktop:{backend}"
+        if key in self._drivers:
+            return self._drivers[key]
+        if backend == "uia" and "desktop" in self._drivers:
             return self._drivers["desktop"]
 
         import sys
@@ -1001,16 +1143,102 @@ class YamlWorkflowRunner:
                 f"current platform is {sys.platform}."
             )
 
-        from harness.drivers.windows_ui import WindowsUIDriver
+        if backend == "win32":
+            from harness.drivers.win32_ui import Win32UIDriver
 
-        driver = WindowsUIDriver(config=self.config)
-        if not getattr(driver, "_pywinauto", None):
-            raise RuntimeError(
-                "Desktop YAML runtime requires pywinauto. Install the Windows optional "
-                "dependencies before running desktop workflows."
-            )
-        self._drivers["desktop"] = driver
+            driver = Win32UIDriver(config=self.config)
+            if not getattr(driver, "_win32gui", None):
+                raise RuntimeError(
+                    "Desktop YAML runtime requires pywin32. Install the Windows optional "
+                    "dependencies before running Win32 desktop workflows."
+                )
+        else:
+            from harness.drivers.windows_ui import WindowsUIDriver
+
+            driver = WindowsUIDriver(config=self.config)
+            if not getattr(driver, "_pywinauto", None):
+                raise RuntimeError(
+                    "Desktop YAML runtime requires pywinauto. Install the Windows optional "
+                    "dependencies before running desktop workflows."
+                )
+            self._drivers["desktop"] = driver
+        self._drivers[key] = driver
         return driver
+
+    def _desktop_backend(self, action: dict) -> str:
+        selector = action.get("selector") if isinstance(action.get("selector"), dict) else {}
+        backend = str(action.get("backend") or selector.get("backend") or "").lower()
+        strategy = str(selector.get("strategy") or "").lower()
+        if backend == "win32" or strategy.startswith("win32_") or strategy in {
+            "hwnd",
+            "class_name+name",
+            "class_name+control_type",
+        }:
+            return "win32"
+        return "uia"
+
+    async def _desktop_selector_for_action(self, driver: Any, selector: dict) -> Dict[str, Any]:
+        if str((selector or {}).get("strategy") or "").lower() != "coordinate":
+            return self._desktop_selector(selector)
+        if not getattr(self.config, "allow_coordinate_fallback", False):
+            raise RuntimeError("Coordinate desktop selector requires allow_coordinate_fallback=True")
+        value = selector.get("value") if isinstance(selector.get("value"), dict) else {}
+        if "x" in value or "y" in value:
+            raise RuntimeError("Absolute desktop coordinates are rejected; use x_ratio/y_ratio")
+        if "x_ratio" not in value or "y_ratio" not in value:
+            raise RuntimeError("Coordinate desktop selector requires x_ratio and y_ratio")
+        if not hasattr(driver, "window_rect"):
+            raise RuntimeError("Coordinate desktop selector requires driver.window_rect")
+        left, top, width, height = await driver.window_rect()
+        return {
+            "coordinates": (
+                int(left + (float(value["x_ratio"]) * width)),
+                int(top + (float(value["y_ratio"]) * height)),
+            )
+        }
+
+    async def _desktop_wait_for_text(self, driver: Any, expected: str, timeout: int) -> str:
+        deadline = time.time() + timeout
+        last_text = ""
+        while time.time() < deadline:
+            tree = await driver.dump_tree(max_depth=3)
+            last_text = json.dumps(tree, default=str)
+            if expected in last_text:
+                return last_text
+            time.sleep(0.2)
+        raise RuntimeError(f"Desktop text not found before timeout: {expected}")
+
+    def _desktop_clipboard_text(self, action: dict) -> str:
+        if action.get("secret"):
+            secret_ref = str(action.get("secret"))
+            if secret_ref in self._secrets:
+                return self._secrets[secret_ref].reveal()
+            return self._resolve_string(secret_ref)
+        return self._resolve_string(str(action.get("text", "")))
+
+    async def _desktop_ocr_image(self, driver: Any, action: dict) -> Path:
+        if action.get("screenshot"):
+            return Path(self._resolve_string(str(action["screenshot"])))
+        path = Path(await driver.screenshot(name=action.get("name") or "desktop_ocr.png"))
+        region = action.get("region") if isinstance(action.get("region"), dict) else {}
+        if {"x_ratio", "y_ratio", "width_ratio", "height_ratio"}.issubset(region):
+            try:
+                from PIL import Image
+
+                image = Image.open(path)
+                width, height = image.size
+                box = (
+                    int(float(region["x_ratio"]) * width),
+                    int(float(region["y_ratio"]) * height),
+                    int((float(region["x_ratio"]) + float(region["width_ratio"])) * width),
+                    int((float(region["y_ratio"]) + float(region["height_ratio"])) * height),
+                )
+                cropped = path.with_name(path.stem + "_ocr_region" + path.suffix)
+                image.crop(box).save(cropped)
+                return cropped
+            except Exception:
+                return path
+        return path
 
     def _attach_browser_evidence_handlers(self, driver):
         page = driver.page
@@ -1125,6 +1353,20 @@ class YamlWorkflowRunner:
         if strategy == "name+control_type":
             return {
                 "name": self._resolve_string(str(selector.get("name", ""))),
+                "control_type": self._resolve_string(str(selector.get("control_type", ""))),
+            }
+        if strategy == "win32_control_id":
+            return {"control_id": value}
+        if strategy == "hwnd":
+            return {"hwnd": value}
+        if strategy == "class_name+name":
+            return {
+                "class_name": self._resolve_string(str(selector.get("class_name", ""))),
+                "name": self._resolve_string(str(selector.get("name", ""))),
+            }
+        if strategy == "class_name+control_type":
+            return {
+                "class_name": self._resolve_string(str(selector.get("class_name", ""))),
                 "control_type": self._resolve_string(str(selector.get("control_type", ""))),
             }
 
@@ -1877,22 +2119,87 @@ class YamlWorkflowRunner:
                 self.failure.save_artifact("api_response.json", json.dumps(api_preview, indent=2))
             )
 
-        desktop = self._drivers.get("desktop")
+        action = step.get("action") if isinstance(step, dict) else {}
+        desktop = self._desktop_driver_for_evidence(action if isinstance(action, dict) else {})
         if desktop:
+            driver_type = str(getattr(desktop, "driver_type", "windows_ui"))
+            backend = "win32" if "win32" in driver_type.lower() else "uia"
+            try:
+                screenshot_path = Path(await desktop.screenshot(name="desktop_failure.png"))
+                if screenshot_path.exists():
+                    evidence["desktop_screenshot"] = self._relative_evidence_path(
+                        self.failure.save_screenshot(data=screenshot_path.read_bytes())
+                    )
+                else:
+                    evidence["desktop_screenshot"] = self._relative_evidence_path(
+                        str(screenshot_path)
+                    )
+            except Exception as exc:
+                evidence["desktop_screenshot_error"] = str(exc)
             try:
                 tree = await desktop.dump_tree(max_depth=3)
-                evidence["uia_tree"] = self._relative_evidence_path(
-                    self.failure.save_artifact("uia_tree.json", json.dumps(tree, indent=2))
+                tree_key = "win32_tree" if backend == "win32" else "uia_tree"
+                evidence[tree_key] = self._relative_evidence_path(
+                    self.failure.save_artifact(f"{tree_key}.json", json.dumps(tree, indent=2))
                 )
             except Exception as exc:
-                evidence["uia_tree_error"] = str(exc)
+                evidence[f"{backend}_tree_error"] = str(exc)
+            selector_quality, weak_step_reason, verification_method = (
+                self._desktop_step_evidence_metadata(step if isinstance(step, dict) else {})
+            )
             evidence["desktop"] = {
                 "driver": getattr(desktop, "driver_type", "windows_ui"),
+                "backend": backend,
                 "app_name": getattr(desktop, "_app_name", None),
                 "connected": getattr(desktop, "_connected", None),
+                "selector_quality": selector_quality,
+                "weak_step_reason": weak_step_reason,
+                "verification_method": verification_method,
             }
 
         return evidence
+
+    def _desktop_driver_for_evidence(self, action: dict) -> Any:
+        if str(action.get("type", "")).startswith("desktop."):
+            backend = self._desktop_backend(action)
+            return self._drivers.get(f"desktop:{backend}") or (
+                self._drivers.get("desktop") if backend == "uia" else None
+            )
+        return (
+            self._drivers.get("desktop")
+            or self._drivers.get("desktop:uia")
+            or self._drivers.get("desktop:win32")
+        )
+
+    def _desktop_step_evidence_metadata(
+        self,
+        step: dict,
+    ) -> tuple[str | None, str | None, str | None]:
+        action = step.get("action") if isinstance(step.get("action"), dict) else {}
+        selector = action.get("selector") if isinstance(action.get("selector"), dict) else {}
+        try:
+            from harness.rpa.schema import _selector_quality
+
+            selector_quality = _selector_quality(action)
+        except Exception:
+            selector_quality = None
+        weak_step_reason = (
+            action.get("weak_step_reason")
+            or selector.get("weak_step_reason")
+            or selector.get("reason")
+        )
+        if selector_quality in {"weak", "coordinate_fallback"} and not weak_step_reason:
+            weak_step_reason = "weak desktop selector fallback requires evidence-backed repair"
+        checks = step.get("success_check") or []
+        if isinstance(checks, dict):
+            checks = [checks]
+        verification_types = [
+            str(check.get("type"))
+            for check in checks
+            if isinstance(check, dict) and check.get("type")
+        ]
+        verification_method = ", ".join(verification_types) if verification_types else None
+        return selector_quality, weak_step_reason, verification_method
 
     async def _close_drivers(self):
         for driver in list(self._drivers.values()):

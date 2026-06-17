@@ -133,11 +133,18 @@ class WindowsUIDriver(AbstractBaseDriver):
 
     async def type_keys(self, text: str, with_spaces: bool = True,
                         name: Optional[str] = None, automation_id: Optional[str] = None,
+                        class_name: Optional[str] = None, control_type: Optional[str] = None,
                         timeout: int = 10):
         self.logger.info(f"Typing: '{text[:50]}'")
         el = None
-        if name or automation_id:
-            el = await self.find_element(name=name, automation_id=automation_id, timeout=timeout)
+        if name or automation_id or class_name or control_type:
+            el = await self.find_element(
+                name=name,
+                automation_id=automation_id,
+                class_name=class_name,
+                control_type=control_type,
+                timeout=timeout,
+            )
 
         if el and el.native_element:
             await asyncio.to_thread(el.native_element.type_keys, text, with_spaces=with_spaces)
@@ -154,11 +161,18 @@ class WindowsUIDriver(AbstractBaseDriver):
         import pyautogui
         pyautogui.hotkey(*keys.split("+"))
 
+    async def menu_select(self, path: str):
+        if not self._window:
+            raise RuntimeError("menu_select requires an attached window")
+        await asyncio.to_thread(self._window.menu_select, path)
+
     async def get_text(self, name: Optional[str] = None,
                        automation_id: Optional[str] = None,
-                       class_name: Optional[str] = None, timeout: int = 10) -> Optional[str]:
+                       class_name: Optional[str] = None, control_type: Optional[str] = None,
+                       timeout: int = 10) -> Optional[str]:
         el = await self.find_element(name=name, automation_id=automation_id,
-                                     class_name=class_name, timeout=timeout)
+                                     class_name=class_name, control_type=control_type,
+                                     timeout=timeout)
         if el and el.native_element:
             try:
                 return await asyncio.to_thread(el.native_element.window_text)
@@ -292,6 +306,12 @@ class WindowsUIDriver(AbstractBaseDriver):
 
     async def close(self):
         await self.close_app()
+
+    async def window_rect(self) -> Tuple[int, int, int, int]:
+        if not self._window:
+            raise RuntimeError("window_rect requires an attached window")
+        rect = await asyncio.to_thread(self._window.rectangle)
+        return rect.left, rect.top, rect.width(), rect.height()
 
     async def _click_at(self, x: int, y: int):
         import pyautogui

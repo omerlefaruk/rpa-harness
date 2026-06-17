@@ -14,7 +14,7 @@ from typing import Any
 from harness.security import redact_value
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def default_db_path() -> Path:
@@ -135,10 +135,17 @@ class ObservabilityDB:
                 screenshot_path TEXT,
                 dom_snapshot_path TEXT,
                 uia_snapshot_path TEXT,
+                win32_snapshot_path TEXT,
+                ocr_artifact_path TEXT,
                 api_preview_path TEXT,
                 logs_path TEXT,
                 selector_evidence_path TEXT,
                 repair_packet_path TEXT,
+                desktop_backend TEXT,
+                selector_quality TEXT,
+                weak_step_reason TEXT,
+                verification_method TEXT,
+                desktop_summary_redacted TEXT,
                 redaction_status TEXT
             );
             CREATE TABLE IF NOT EXISTS selector_failures (
@@ -192,6 +199,18 @@ class ObservabilityDB:
             CREATE INDEX IF NOT EXISTS idx_evidence_run_phase_step ON evidence_artifacts(run_id, phase_id, step_id);
             CREATE INDEX IF NOT EXISTS idx_repair_packets_run ON repair_packets(run_id);
             """
+        )
+        self._ensure_columns(
+            "evidence_artifacts",
+            {
+                "win32_snapshot_path": "TEXT",
+                "ocr_artifact_path": "TEXT",
+                "desktop_backend": "TEXT",
+                "selector_quality": "TEXT",
+                "weak_step_reason": "TEXT",
+                "verification_method": "TEXT",
+                "desktop_summary_redacted": "TEXT",
+            },
         )
         self.conn.execute(
             "INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)",
@@ -282,6 +301,39 @@ class ObservabilityDB:
 
     def get_selector_failures(self) -> list[dict[str, Any]]:
         return self._rows("SELECT * FROM selector_failures ORDER BY created_at DESC", [])
+
+    def get_desktop_evidence(self, run_id: str | None = None) -> list[dict[str, Any]]:
+        desktop_filter = (
+            "uia_snapshot_path IS NOT NULL OR "
+            "win32_snapshot_path IS NOT NULL OR "
+            "ocr_artifact_path IS NOT NULL OR "
+            "desktop_backend IS NOT NULL OR "
+            "selector_quality IS NOT NULL"
+        )
+        if run_id:
+            return self._rows(
+                f"""
+                SELECT * FROM evidence_artifacts
+                WHERE run_id = ? AND ({desktop_filter})
+                ORDER BY id DESC
+                """,
+                [run_id],
+            )
+        return self._rows(
+            f"""
+            SELECT * FROM evidence_artifacts
+            WHERE {desktop_filter}
+            ORDER BY id DESC
+            """,
+            [],
+        )
+
+    def get_desktop_evidence_item(self, evidence_id: int) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT * FROM evidence_artifacts WHERE id = ?",
+            (evidence_id,),
+        ).fetchone()
+        return dict(row) if row else None
 
     def get_record_failures(self) -> list[dict[str, Any]]:
         return self._rows("SELECT * FROM records WHERE status = 'failed' ORDER BY id DESC", [])
@@ -422,15 +474,19 @@ class ObservabilityDB:
         evidence = redact_value(_read_json(run_dir / "evidence_bundle.json"))
         repair = redact_value(_read_json(run_dir / "repair_packet.json"))
         artifacts = evidence.get("artifacts") or {}
+        desktop = evidence.get("desktop") if isinstance(evidence.get("desktop"), dict) else {}
         if evidence:
             self.conn.execute(
                 """
                 INSERT INTO evidence_artifacts (
                     run_id, workflow, phase_id, step_id, record_id, failure_kind,
                     evidence_bundle_path, screenshot_path, dom_snapshot_path,
-                    uia_snapshot_path, api_preview_path, logs_path,
-                    selector_evidence_path, repair_packet_path, redaction_status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    uia_snapshot_path, win32_snapshot_path, ocr_artifact_path,
+                    api_preview_path, logs_path, selector_evidence_path,
+                    repair_packet_path, desktop_backend, selector_quality,
+                    weak_step_reason, verification_method, desktop_summary_redacted,
+                    redaction_status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
@@ -443,10 +499,17 @@ class ObservabilityDB:
                     _join(run_dir, artifacts.get("screenshot")),
                     _join(run_dir, artifacts.get("dom_snapshot")),
                     _join(run_dir, artifacts.get("uia_snapshot")),
+                    _join(run_dir, artifacts.get("win32_snapshot") or artifacts.get("win32_tree")),
+                    _join(run_dir, artifacts.get("ocr_artifact") or artifacts.get("ocr")),
                     _join(run_dir, artifacts.get("api_preview")),
                     _join(run_dir, artifacts.get("logs")),
                     _join(run_dir, artifacts.get("selector_evidence")),
                     _join(run_dir, artifacts.get("repair_packet")),
+                    desktop.get("backend") or desktop.get("driver"),
+                    desktop.get("selector_quality"),
+                    desktop.get("weak_step_reason"),
+                    desktop.get("verification_method"),
+                    json.dumps(redact_value(desktop), default=str) if desktop else None,
                     (evidence.get("redaction") or {}).get("status"),
                 ),
             )
@@ -473,6 +536,12 @@ class ObservabilityDB:
 
     def _rows(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
         return [dict(row) for row in self.conn.execute(sql, params).fetchall()]
+
+    def _ensure_columns(self, table: str, columns: dict[str, str]) -> None:
+        existing = {row["name"] for row in self.conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        for name, definition in columns.items():
+            if name not in existing:
+                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
 
 def index_runs(runs_dir: str | Path = "runs", db_path: str | Path | None = None) -> dict[str, Any]:

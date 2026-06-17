@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "session_id": "[REDACTED]",
+  "status": "waiting",
+  "phase": "review",
+  "target_url": null,
+  "workflow_path": "C:\\Users\\Rau\\Desktop\\rpa-harness\\.pytest_tmp\\test_copilot_auto_cli_reaches_0\\workflow.yaml",
+  "approvals": {},
+  "discovery": {
+    "status": "skipped",
+    "reason": "No target_url provided."
+  },
+  "validation": {
+    "total_steps": 1,
+    "steps_with_success_checks": 1,
+    "missing_success_checks": [],
+    "weak_success_checks": [
+      "done[0]: always_pass"
+    ],
+    "errors": [],
+    "warnings": [
+      "weak success_check: done[0]: always_pass"
+    ],
+    "status": "passed",
+    "tier": "fast",
+    "workflow_hash": "90476de22fd1804c118cc2f0cffb69156f81f575323ca43cd32e0249b77e9671"
+  },
+  "preflight": {
+    "status": "passed",
+    "workflow_id": "copilot_noop",
+    "workflow_name": "Copilot Noop",
+    "preflight": {
+      "status": "passed",
+      "passed_checks": [],
+      "warnings": [],
+      "blocking_errors": []
+    },
+    "run_id": "20260617T011912_copilot_noop",
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop"
+  },
+  "run": {
+    "status": "passed",
+    "workflow_id": "copilot_noop",
+    "workflow_name": "Copilot Noop",
+    "steps_completed": 1,
+    "steps": [
+      {
+        "step_id": "done",
+        "phase": "default",
+        "action_type": "no_op",
+        "status": "passed",
+        "duration_ms": 0.0,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "done",
+        "intent": "",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "always_pass",
+            "expected": "always",
+            "actual": "passed",
+            "message": "No-op check",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "yes",
+          "reason": "Action is read-only or local."
+        },
+        "error": ""
+      }
+    ],
+    "duration_ms": 121.58322334289551,
+    "rulebook_audit": {
+      "score": 0,
+      "warnings": [
+        "missing rulebook field: workflow.owner",
+        "missing rulebook field: workflow.target_systems",
+        "missing rulebook field: workflow.input_schema",
+        "missing rulebook field: workflow.success_condition",
+        "missing rulebook field: workflow.safe_test_case",
+        "missing rulebook field: workflow.allowed_side_effects",
+        "missing rulebook field: workflow.rerun_policy",
+        "missing rulebook field: workflow.escalation_owner",
+        "missing rulebook field: workflow.output_destination/system_of_record",
+        "missing rulebook field: steps[0].intent",
+        "missing rulebook field: steps[0].current_stage",
+        "missing rulebook field: steps[0].preconditions",
+        "missing rulebook field: steps[0].failure_path",
+        "missing rulebook field: steps[0].proof"
+      ],
+      "missing_fields": [
+        "workflow.owner",
+        "workflow.target_systems",
+        "workflow.input_schema",
+        "workflow.success_condition",
+        "workflow.safe_test_case",
+        "workflow.allowed_side_effects",
+        "workflow.rerun_policy",
+        "workflow.escalation_owner",
+        "workflow.output_destination/system_of_record",
+        "steps[0].intent",
+        "steps[0].current_stage",
+        "steps[0].preconditions",
+        "steps[0].failure_path",
+        "steps[0].proof"
+      ],
+      "suggestions": [
+        {
+          "field": "workflow.owner",
+          "severity": "warning",
+          "suggestion": "Set owner to the team or person responsible for production operation."
+        },
+        {
+          "field": "workflow.target_systems",
+          "severity": "warning",
+          "suggestion": "List the external apps, APIs, files, or databases touched by this workflow."
+        },
+        {
+          "field": "workflow.input_schema",
+          "severity": "warning",
+          "suggestion": "Declare required input columns/fields and their expected types."
+        },
+        {
+          "field": "workflow.success_condition",
+          "severity": "warning",
+          "suggestion": "Describe the final verified business state, not just runner completion."
+        },
+        {
+          "field": "workflow.safe_test_case",
+          "severity": "warning",
+          "suggestion": "Name a safe record or fixture that can be used before production runs."
+        },
+        {
+          "field": "workflow.allowed_side_effects",
+          "severity": "warning",
+          "suggestion": "List exactly which writes, sends, uploads, exports, or updates are allowed."
+        },
+        {
+          "field": "workflow.rerun_policy",
+          "severity": "warning",
+          "suggestion": "Explain when reruns are safe and what idempotency checks are required."
+        },
+        {
+          "field": "workflow.escalation_owner",
+          "severity": "warning",
+          "suggestion": "Set who should review ambiguous or unsafe failures."
+        },
+        {
+          "field": "workflow.output_destination/system_of_record",
+          "severity": "warning",
+          "suggestion": "Identify the output location or authoritative system to verify after the run."
+        },
+        {
+          "field": "steps[0].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[0].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[0].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[0].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[0].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        }
+      ],
+      "summary": "Rulebook contract is not production-ready; 14 fields are missing.",
+      "ready_for_unattended_production": false
+    },
+    "run_id": "20260617T011912_copilot_noop",
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop",
+    "rpa_memory": {
+      "enabled": true,
+      "required": false,
+      "status": "available",
+      "worker_url": "http://127.0.0.1:37777",
+      "last_error": null
+    },
+    "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop\\report.html"
+  },
+  "artifacts": {
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop",
+    "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop\\report.html"
+  },
+  "next_question": {
+    "id": "review.promote",
+    "question": "Review the run evidence and promote this automation when it is ready.",
+    "choices": [
+      "promote",
+      "continue",
+      "stop"
+    ],
+    "default": "promote",
+    "details": {
+      "status": "passed",
+      "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop",
+      "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260617T011912_copilot_noop\\report.html"
+    },
+    "created_at": "2026-06-16T22:19:12.951570+00:00"
+  },
+  "updated_at": "2026-06-16T22:19:12.953568+00:00"
+}

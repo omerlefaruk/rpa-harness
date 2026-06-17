@@ -1,0 +1,24 @@
+name: rezervasyon_puan_reviews
+log_level: INFO
+report_dir: ./reports
+screenshot_dir: ./screenshots
+headless: true
+browser: chromium
+
+variables:
+  input_excel: C:/Users/Rau/Desktop/Archive/TM-57-Rezervasyon_Puan/data/Branches.xlsx
+  sheet: Taksim Analiz
+  output_json: runs/rezervasyon_puan_reviews/reviews_last_30_days.json
+  output_html: reports/rezervasyon_puan_reviews/reviews_last_30_days.html
+  output_excel: reports/rezervasyon_puan_reviews/reviews_last_30_days.xlsx
+  raw_output_dir: runs/rezervasyon_puan_reviews/raw
+  evidence_dir: runs/rezervasyon_puan_reviews/evidence
+  run_mode: full
+  timeout_ms: 20000
+  browser_profile_dir: runs/rezervasyon_puan_reviews/chrome_cdp_workflow_profile
+  browser_headed: true
+  browser_cdp: true
+  browser_cdp_port: 9225
+  expedia_canonical_fallback: true
+  google_scrolls: 12
+  debug_evidence: false

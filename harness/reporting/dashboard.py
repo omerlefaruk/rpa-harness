@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import subprocess
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -82,8 +82,9 @@ def create_dashboard(
 
     @app.get("/api/runs")
     async def list_runs():
+        manifest_runs = collect_run_manifests(root_path / "runs")
         db_runs = _query_or_empty(root_path, lambda db: db.list_runs(limit=100))
-        return {"runs": db_runs or collect_run_manifests(root_path / "runs")}
+        return {"runs": _merge_runs(manifest_runs, db_runs)}
 
     @app.get("/api/failures")
     async def list_failures():
@@ -100,6 +101,24 @@ def create_dashboard(
     @app.get("/api/selector-failures")
     async def selector_failures():
         return {"selector_failures": _query_or_empty(root_path, lambda db: db.get_selector_failures())}
+
+    @app.get("/api/desktop/evidence")
+    async def desktop_evidence(run_id: str | None = None):
+        return {"evidence": _query_or_empty(root_path, lambda db: db.get_desktop_evidence(run_id=run_id))}
+
+    @app.get("/api/desktop/evidence/{evidence_id}")
+    async def desktop_evidence_item(evidence_id: int):
+        db_path = _observability_db_path(root_path)
+        if not db_path.exists():
+            index_runs(root_path / "runs", db_path)
+        db = ObservabilityDB(db_path)
+        try:
+            item = db.get_desktop_evidence_item(evidence_id)
+        finally:
+            db.close()
+        if not item:
+            raise HTTPException(status_code=404, detail="desktop evidence not found")
+        return item
 
     @app.get("/api/repair-packets")
     async def repair_packets():
@@ -134,8 +153,13 @@ def create_dashboard(
 
     @app.get("/api/runs/{run_id}/timeline")
     async def run_timeline(run_id: str, after_id: int | None = None):
-        events = _query_or_empty(root_path, lambda db: db.get_run_timeline(run_id, after_id=after_id))
-        if not events and not _resolve_run_dir(root_path / "runs", run_id).exists():
+        run_dir = _resolve_run_dir(root_path / "runs", run_id)
+        events = []
+        if run_dir.exists():
+            events = _timeline_events_from_file(run_dir / "timeline.jsonl", after_id=after_id)
+        if not events:
+            events = _query_or_empty(root_path, lambda db: db.get_run_timeline(run_id, after_id=after_id))
+        if not events and not run_dir.exists():
             raise HTTPException(status_code=404, detail="run not found")
         return {"events": events}
 
@@ -290,7 +314,7 @@ async def _sse_timeline(path: Path, after_id: int | None = None):
             finished = any(event.get("event") == "run.finished" for event in events)
             if finished:
                 return
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
 
 
 def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]:
@@ -350,8 +374,12 @@ def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any
                 "run_id": data.get("run_id") or manifest.parent.name,
                 "workflow": data.get("workflow"),
                 "status": data.get("status"),
+                "started_at": data.get("started_at"),
+                "finished_at": data.get("finished_at"),
+                "duration_ms": data.get("duration_ms"),
                 "summary": data.get("summary") or {},
                 "report": str(manifest.parent / "report.html"),
+                "report_path": str(manifest.parent / "report.html"),
                 "manifest": str(manifest),
                 "records": str(manifest.parent / "records.jsonl")
                 if (manifest.parent / "records.jsonl").exists()
@@ -359,6 +387,18 @@ def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any
                 "modified": datetime.fromtimestamp(manifest.stat().st_mtime).isoformat(),
             }
         )
+    return runs
+
+
+def _merge_runs(primary: list[dict[str, Any]], secondary: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    runs: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for run in [*primary, *secondary]:
+        run_id = str(run.get("run_id") or "")
+        if not run_id or run_id in seen:
+            continue
+        seen.add(run_id)
+        runs.append(run)
     return runs
 
 

@@ -405,11 +405,20 @@ def _default_side_effect(action_type: Any) -> str:
 def _selector_quality(action: Any) -> str:
     selector = action.get("selector") if isinstance(action, dict) else None
     strategy = str((selector or {}).get("strategy") or "").lower()
-    if strategy in {"data-testid", "testid", "role", "label", "automation_id"}:
+    if strategy in {"data-testid", "testid", "role", "label", "automation_id", "name+control_type"}:
         return "strong"
-    if strategy in {"placeholder", "text", "id", "name", "css"}:
+    if strategy in {
+        "placeholder",
+        "text",
+        "id",
+        "name",
+        "css",
+        "win32_control_id",
+        "class_name",
+        "class_name+control_type",
+    }:
         return "medium"
-    if strategy in {"xpath", "image", "coordinate"}:
+    if strategy in {"xpath", "image", "ocr", "tree_path", "coordinate"}:
         return "coordinate_fallback" if strategy == "coordinate" else "weak"
     return "strong" if not selector else "weak"
 

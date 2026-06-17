@@ -4,10 +4,13 @@ Adapted from automation-harness with added batch processing,
 record-level retry, and on_success callback.
 """
 
+import html
+import json
 import traceback
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
@@ -132,6 +135,9 @@ class RPAWorkflow:
         self._last_record_attempts: int = 0
         self._pending_record_evidence: list[dict] = []
         self._resume_ledger = self._build_resume_ledger()
+        self._run_id: Optional[str] = None
+        self._run_dir: Optional[Path] = None
+        self._timeline_event_id = 0
 
     async def setup(self):
         pass
@@ -194,6 +200,7 @@ class RPAWorkflow:
         self._trace.start_step(name, index=self._step_index)
         self.result.data["execution_trace"] = self._trace.to_metadata()
         self.logger.info(f"  {step.name}")
+        self._timeline("step.started", status="running", phase=name, step_id=step.name)
         return step
 
     def step_done(self, step: WorkflowStep, output_data: dict = None,
@@ -207,10 +214,20 @@ class RPAWorkflow:
             step.duration_ms = delta.total_seconds() * 1000
         self._trace.finish_current(status.value, error=error)
         self.result.data["execution_trace"] = self._trace.to_metadata()
+        self._timeline(
+            f"step.{status.value}",
+            status=status.value,
+            phase=step.name.split(": ", 1)[-1],
+            step_id=step.name,
+            duration_ms=step.duration_ms,
+            message=error,
+        )
+        self._write_manifest(self.result.status.value)
 
     async def _execute(self) -> WorkflowResult:
         self.result.start_time = datetime.now()
         self.result.status = WorkflowStatus.RUNNING
+        self._start_live_run()
 
         try:
             setup_step = self.step("Workflow Setup")
@@ -283,6 +300,7 @@ class RPAWorkflow:
                     )
                 finally:
                     self._refresh_record_summary()
+                    self._write_manifest(self.result.status.value)
 
             self.step_done(processing_step)
 
@@ -294,6 +312,7 @@ class RPAWorkflow:
                 self.result.status = WorkflowStatus.PASSED
             else:
                 self.result.status = WorkflowStatus.FAILED
+            self._write_manifest(self.result.status.value)
 
         except Exception as e:
             self.result.status = WorkflowStatus.FAILED
@@ -304,6 +323,7 @@ class RPAWorkflow:
                 "The workflow crashed before it could finish.",
                 context={"workflow": self.name, "error": str(e)},
             )
+            self._timeline("run.failed", status="failed", failure_kind="workflow_error", message=str(e))
 
         finally:
             try:
@@ -328,6 +348,9 @@ class RPAWorkflow:
                 f"{self.result.skipped_records} skipped, "
                 f"{self.result.retried_records} retried"
             )
+            self._timeline("run.finished", status=self.result.status.value)
+            self._write_manifest(self.result.status.value, finished=True)
+            self._write_live_report()
 
         return self.result
 
@@ -455,6 +478,15 @@ class RPAWorkflow:
                 },
             )
             self.result.data.setdefault("resume_ledger_entries", []).append(ledger_entry)
+        self._write_record(entry)
+        self._timeline(
+            f"record.{entry['status']}",
+            status=entry["status"],
+            phase=entry.get("stage"),
+            record_id=entry["record_id"],
+            failure_kind="record_failed" if entry["status"] == "failed" else None,
+            message=entry.get("reason"),
+        )
         return entry
 
     def _refresh_record_summary(self) -> dict:
@@ -494,3 +526,119 @@ class RPAWorkflow:
         if not path:
             return None
         return ResumeLedger(path)
+
+    def _start_live_run(self) -> None:
+        timestamp = self.result.start_time or datetime.now()
+        self._run_id = f"{self.name}_{timestamp.strftime('%Y%m%d_%H%M%S_%f')}"
+        variables = getattr(self.config, "variables", {}) or {}
+        self._run_dir = Path(str(variables.get("runs_dir") or "runs")) / self._run_id
+        self._run_dir.mkdir(parents=True, exist_ok=True)
+        self.result.data["run_id"] = self._run_id
+        self.result.data["run_dir"] = str(self._run_dir)
+        self._timeline("run.started", status="running")
+        self._write_manifest("running")
+
+    @staticmethod
+    def _now() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _timeline(self, event: str, **fields: Any) -> None:
+        if not self._run_dir or not self._run_id:
+            return
+        self._timeline_event_id += 1
+        entry = {
+            "event_id": self._timeline_event_id,
+            "timestamp": self._now(),
+            "run_id": self._run_id,
+            "workflow": self.name,
+            "event": event,
+        }
+        entry.update({key: value for key, value in fields.items() if value is not None})
+        with (self._run_dir / "timeline.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(redact_value(entry), default=str) + "\n")
+
+    def _write_record(self, entry: dict) -> None:
+        if not self._run_dir or not self._run_id:
+            return
+        record = {
+            "schema_version": 1,
+            "run_id": self._run_id,
+            "workflow": self.name,
+            "record_id": entry.get("record_id"),
+            "status": entry.get("status"),
+            "failed_step": entry.get("stage") if entry.get("status") == "failed" else None,
+            "failure_kind": "record_failed" if entry.get("status") == "failed" else None,
+            "retry_count": max(int(entry.get("attempts") or 1) - 1, 0),
+            "safe_retry": False,
+            "timestamp": self._now(),
+            "finished_at": self._now(),
+        }
+        with (self._run_dir / "records.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(redact_value(record), default=str) + "\n")
+
+    def _write_manifest(self, status: str, *, finished: bool = False) -> None:
+        if not self._run_dir or not self._run_id:
+            return
+        summary = {
+            "total_steps": len(self.result.steps),
+            "passed_steps": sum(1 for step in self.result.steps if step.status == StepStatus.PASSED),
+            "failed_steps": sum(1 for step in self.result.steps if step.status == StepStatus.FAILED),
+            "total_records": self.result.total_records,
+            "passed_records": self.result.processed_records,
+            "failed_records": self.result.failed_records,
+            "skipped_records": self.result.skipped_records,
+        }
+        manifest = {
+            "schema_version": 1,
+            "run_id": self._run_id,
+            "workflow": self.name,
+            "workflow_path": None,
+            "status": status,
+            "started_at": self.result.start_time.isoformat() if self.result.start_time else None,
+            "finished_at": self.result.end_time.isoformat() if finished and self.result.end_time else None,
+            "duration_ms": self.result.duration_ms if finished else None,
+            "report": "report.html",
+            "timeline": "timeline.jsonl",
+            "records": "records.jsonl" if (self._run_dir / "records.jsonl").exists() else None,
+            "run_directory": str(self._run_dir.resolve()),
+            "redaction": {"status": "passed"},
+            "summary": summary,
+        }
+        (self._run_dir / "run_manifest.json").write_text(
+            json.dumps(redact_value(manifest), indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    def _write_live_report(self) -> None:
+        if not self._run_dir:
+            return
+        report = {
+            "manifest": json.loads((self._run_dir / "run_manifest.json").read_text(encoding="utf-8")),
+            "result": self.result.to_dict(),
+        }
+        (self._run_dir / "report.json").write_text(
+            json.dumps(redact_value(report), indent=2, default=str),
+            encoding="utf-8",
+        )
+        def cell(value: Any) -> str:
+            return html.escape(str(redact_value(value) if value is not None else ""))
+
+        rows = "".join(
+            "<tr>"
+            f"<td>{cell(step.name)}</td>"
+            f"<td>{cell(step.status.value)}</td>"
+            f"<td>{step.duration_ms:.0f}</td>"
+            f"<td>{cell(step.error_message)}</td>"
+            "</tr>"
+            for step in self.result.steps
+        )
+        (self._run_dir / "report.html").write_text(
+            "<!doctype html><html><head><meta charset='utf-8'><title>RPA Workflow Run</title>"
+            "<style>body{font-family:Segoe UI,Arial,sans-serif;margin:32px}"
+            "table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style></head><body>"
+            f"<h1>{cell(self.name)}</h1><p>Status: {cell(self.result.status.value)}</p>"
+            f"<p>Records: {self.result.processed_records}/{self.result.total_records} passed</p>"
+            "<table><tr><th>Step</th><th>Status</th><th>ms</th><th>Error</th></tr>"
+            f"{rows}</table></body></html>",
+            encoding="utf-8",
+        )

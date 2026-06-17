@@ -1,5 +1,6 @@
 """Capability characterization for Python RPAWorkflow and Excel workflows."""
 
+import json
 from pathlib import Path
 from typing import Any, Optional
 
@@ -14,6 +15,7 @@ from harness.verification import CheckRunner, CheckType, SuccessCheck
 
 
 def _config(tmp_path: Path, **variables: Any) -> HarnessConfig:
+    variables.setdefault("runs_dir", str(tmp_path / "runs"))
     return HarnessConfig(
         headless=True,
         enable_vision=False,
@@ -94,6 +96,31 @@ async def test_all_records_pass_and_on_success_runs(tmp_path):
     assert result.processed_records == 2
     assert result.failed_records == 0
     assert workflow.successes == ["A", "B"]
+
+
+@pytest.mark.asyncio
+async def test_python_rpa_workflow_writes_live_dashboard_artifacts(tmp_path):
+    result = await _execute(AllPassWorkflow(_config(tmp_path)))
+
+    run_dir = Path(result.data["run_dir"])
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    events = [
+        json.loads(line)["event"]
+        for line in (run_dir / "timeline.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    records = [
+        json.loads(line)
+        for line in (run_dir / "records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert manifest["run_id"] == result.data["run_id"]
+    assert manifest["workflow"] == "all_pass_capability"
+    assert manifest["status"] == "passed"
+    assert manifest["summary"]["passed_records"] == 2
+    assert "run.started" in events
+    assert "run.finished" in events
+    assert [record["record_id"] for record in records] == ["A", "B"]
+    assert (run_dir / "report.html").exists()
 
 
 class PassMismatchWorkflow(RPAWorkflow):

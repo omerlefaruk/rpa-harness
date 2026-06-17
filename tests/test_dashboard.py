@@ -1,7 +1,12 @@
+import asyncio
+import threading
+from time import perf_counter
+
 import pytest
 from fastapi.testclient import TestClient
 
 from harness.builder import create_builder_session
+from harness.reporting import dashboard
 from harness.reporting.dashboard import create_dashboard, read_jsonl_tail, serve_dashboard
 
 
@@ -85,3 +90,29 @@ def test_read_jsonl_tail_skips_invalid_lines(tmp_path):
     entries = read_jsonl_tail(path, limit=3)
 
     assert [entry["status"] for entry in entries] == ["ok", "fail"]
+
+
+@pytest.mark.asyncio
+async def test_sse_timeline_poll_wait_does_not_block_event_loop(tmp_path, monkeypatch):
+    path = tmp_path / "timeline.jsonl"
+    original_sleep = asyncio.sleep
+
+    async def fast_sleep(_: float):
+        await original_sleep(0)
+
+    monkeypatch.setattr(dashboard.asyncio, "sleep", fast_sleep)
+    timer = threading.Timer(
+        0.01,
+        lambda: path.write_text('{"event_id":1,"event":"run.finished"}\n', encoding="utf-8"),
+    )
+    timer.start()
+    stream = dashboard._sse_timeline(path)
+    started = perf_counter()
+    try:
+        event = await stream.__anext__()
+    finally:
+        timer.cancel()
+        await stream.aclose()
+
+    assert "run.finished" in event
+    assert perf_counter() - started < 0.2

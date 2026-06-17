@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Browser Selector Swarm Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 32px; color: #1f2933; }
+    h1, h2 { margin-bottom: 8px; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0; }
+    .metric { border: 1px solid #d7dde5; border-radius: 8px; padding: 12px; background: #f8fafc; }
+    .metric b { display: block; font-size: 13px; color: #52606d; margin-bottom: 4px; }
+    .winner { border: 1px solid #8bd3a8; background: #effaf3; border-radius: 8px; padding: 14px; }
+    .no-winner { border: 1px solid #f5b7b1; background: #fff5f3; border-radius: 8px; padding: 14px; }
+    img { max-width: 100%; border: 1px solid #d7dde5; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    th, td { border: 1px solid #d7dde5; padding: 8px; vertical-align: top; }
+    th { background: #eef2f7; text-align: left; }
+    code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Browser Selector Swarm Report</h1>
+  <p><b>URL:</b> file:///C:/Users/Rau/Desktop/rpa-harness/workflows/capabilities/local_browser_form.html</p>
+  <p><b>Title:</b> Capability Fixture</p>
+  <div class="summary">
+    <div class="metric"><b>Status</b>passed</div>
+    <div class="metric"><b>Intent</b>Save</div>
+    <div class="metric"><b>Subagent Policy</b>off</div>
+    <div class="metric"><b>Interactive Elements</b>9</div>
+    <div class="metric"><b>Candidates</b>24</div>
+    <div class="metric"><b>Validated</b>1</div>
+    <div class="metric"><b>Console Errors</b>0</div>
+    <div class="metric"><b>Failed Requests</b>0</div>
+  </div>
+
+  <h2>Winner</h2>
+  <div class="winner">
+    <pre>{
+  &quot;selector&quot;: {
+    &quot;strategy&quot;: &quot;data-testid&quot;,
+    &quot;value&quot;: &quot;submit-button&quot;
+  },
+  &quot;source&quot;: &quot;data_testid&quot;,
+  &quot;score&quot;: 150,
+  &quot;element_index&quot;: 7,
+  &quot;intent_hint&quot;: &quot;button: Save&quot;,
+  &quot;reasons&quot;: [
+    &quot;data-testid is purpose-built for automation&quot;,
+    &quot;matches requested intent: Save&quot;
+  ],
+  &quot;risk_flags&quot;: []
+}</pre>
+  </div>
+
+  <h2>Orchestrator</h2>
+  <div class="metric">
+    <b>browser_selector_swarm_orchestrator</b>
+    Runtime: harness.selectors.browser_swarm.run_browser_selector_swarm<br>
+    Configured planner model: gpt-5.5<br>
+    Configured thinking level: high<br>
+    Model used in this run: False<br>
+    The current implementation used deterministic Python and Playwright. The planner model is the configured model for future LLM planning handoff.
+  </div>
+  <p>Report exposes configuration, reasoning_effort, and decision summaries. It does not expose private chain-of-thought.</p>
+
+  <h2>Decision Trace</h2>
+  <ol><li>Loaded selector swarm configuration.</li>
+<li>Opened the target page with Playwright and waited for page stability.</li>
+<li>Captured screenshot, console errors, failed requests, and compact interactive DOM map.</li>
+<li>Generated selector candidates from test ids, accessibility data, labels, text, ids, and structural fallbacks.</li>
+<li>Boosted candidates matching the requested intent.</li>
+<li>Validated deterministic candidates with Playwright checks before any Codex subagent dispatch.</li>
+<li>Safe-click validation was disabled; proof stopped at selector presence/visibility/enabled checks.</li></ol>
+
+  <h2>Executed Workers</h2>
+  <table>
+    <thead>
+      <tr><th>Agent/Worker</th><th>Sent</th><th>Runtime</th><th>Status</th><th>Model</th><th>Thinking Level</th><th>Decision Summary</th></tr>
+    </thead>
+    <tbody><tr><td>memory_recon</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.4-mini</td><td>high</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>page_stabilizer</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.3-codex-spark</td><td>low</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>dom_scraper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.3-codex-spark</td><td>low</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>accessibility_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.3-codex-spark</td><td>low</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>form_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.3-codex-spark</td><td>low</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>text_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.3-codex-spark</td><td>low</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>structure_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.4-mini</td><td>high</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>network_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.4-mini</td><td>high</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>state_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.4-mini</td><td>high</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>vision_mapper</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.4</td><td>medium</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>selector_scorer</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.4-mini</td><td>high</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>candidate_validator</td><td>True</td><td>playwright</td><td>deterministic</td><td></td><td></td><td>Used Playwright to prove uniqueness, visibility, enabled state, and optional action success. Winner: {&quot;strategy&quot;: &quot;data-testid&quot;, &quot;value&quot;: &quot;submit-button&quot;}.</td></tr>
+<tr><td>workflow_planner</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.5</td><td>high</td><td>Subagent mode was disabled for this run.</td></tr>
+<tr><td>workflow_generator</td><td>False</td><td>codex_cli</td><td>not_sent</td><td>gpt-5.5</td><td>medium</td><td>Subagent mode was disabled for this run.</td></tr></tbody>
+  </table>
+
+  <h2>Configured Subagents</h2>
+  <table>
+    <thead>
+      <tr><th>Subagent</th><th>Runtime</th><th>Model</th><th>Thinking Level</th><th>Max Parallel</th><th>Timeout</th><th>Owns</th></tr>
+    </thead>
+    <tbody><tr><td>memory_recon</td><td>codex_cli</td><td>gpt-5.4-mini</td><td>high</td><td>2</td><td>20</td><td>memory search, prior selector retrieval, known failure filtering</td></tr>
+<tr><td>page_stabilizer</td><td>codex_cli</td><td>gpt-5.3-codex-spark</td><td>low</td><td>1</td><td>45</td><td>route stabilization instructions, page readiness checks, artifact manifest</td></tr>
+<tr><td>dom_scraper</td><td>codex_cli</td><td>gpt-5.3-codex-spark</td><td>low</td><td>3</td><td>45</td><td>interactive DOM inventory, attribute extraction, duplicate element grouping</td></tr>
+<tr><td>accessibility_mapper</td><td>codex_cli</td><td>gpt-5.3-codex-spark</td><td>low</td><td>3</td><td>45</td><td>role selectors, accessible names, label relationships</td></tr>
+<tr><td>form_mapper</td><td>codex_cli</td><td>gpt-5.3-codex-spark</td><td>low</td><td>3</td><td>45</td><td>input selectors, labels, placeholders, validation messages</td></tr>
+<tr><td>text_mapper</td><td>codex_cli</td><td>gpt-5.3-codex-spark</td><td>low</td><td>2</td><td>30</td><td>visible text selectors, heading/link/button text fallbacks</td></tr>
+<tr><td>structure_mapper</td><td>codex_cli</td><td>gpt-5.4-mini</td><td>high</td><td>2</td><td>45</td><td>css fallback selectors, xpath fallback selectors, dynamic selector rejection</td></tr>
+<tr><td>network_mapper</td><td>codex_cli</td><td>gpt-5.4-mini</td><td>high</td><td>2</td><td>45</td><td>API call summaries, response/status success checks, route transition checks</td></tr>
+<tr><td>state_mapper</td><td>codex_cli</td><td>gpt-5.4-mini</td><td>high</td><td>1</td><td>30</td><td>safe app-state extraction, route metadata, framework hydration hints</td></tr>
+<tr><td>vision_mapper</td><td>codex_cli</td><td>gpt-5.4</td><td>medium</td><td>1</td><td>90</td><td>screenshot region analysis, visual fallback candidates, ambiguity notes</td></tr>
+<tr><td>selector_scorer</td><td>codex_cli</td><td>gpt-5.4-mini</td><td>high</td><td>1</td><td>30</td><td>candidate merge, ranking, risk flags, duplicate removal</td></tr>
+<tr><td>candidate_validator</td><td>playwright</td><td></td><td></td><td>8</td><td>120</td><td>syntax checks, uniqueness checks, visibility checks, enabled/editable checks, safe action execution, success-check proof</td></tr>
+<tr><td>workflow_planner</td><td>codex_cli</td><td>gpt-5.5</td><td>high</td><td>1</td><td>180</td><td>workflow step ordering, success-check assignment, safety gate placement</td></tr>
+<tr><td>workflow_generator</td><td>codex_cli</td><td>gpt-5.5</td><td>medium</td><td>1</td><td>180</td><td>YAML workflow generation, browser test generation, verification command suggestions</td></tr>
+<tr><td>repair_agent</td><td>codex</td><td>gpt-5.5</td><td>medium</td><td>1</td><td>180</td><td>failed validation diagnosis, selector repair, minimal code/test patch recommendations</td></tr></tbody>
+  </table>
+
+  <h2>Screenshot</h2>
+  <img src="screenshot.png" alt="Browser screenshot">
+
+  <h2>Validation Results</h2>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Selector</th><th>Passed</th><th>Count</th><th>Visible</th><th>Enabled</th><th>Action</th><th>Success Check</th><th>Error</th></tr>
+    </thead>
+    <tbody><tr><td>1</td><td><code>{&quot;strategy&quot;: &quot;data-testid&quot;, &quot;value&quot;: &quot;submit-button&quot;}</code></td><td>True</td><td>1</td><td>True</td><td>True</td><td></td><td></td><td></td></tr></tbody>
+  </table>
+
+  <h2>Top Candidates</h2>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Selector</th><th>Score</th><th>Source</th><th>Intent Hint</th><th>Risk Flags</th></tr>
+    </thead>
+    <tbody><tr><td>1</td><td><code>{&quot;strategy&quot;: &quot;data-testid&quot;, &quot;value&quot;: &quot;submit-button&quot;}</code></td><td>150</td><td>data_testid</td><td>button: Save</td><td></td></tr>
+<tr><td>2</td><td><code>{&quot;name&quot;: &quot;Save&quot;, &quot;role&quot;: &quot;button&quot;, &quot;strategy&quot;: &quot;role&quot;}</code></td><td>142</td><td>accessibility</td><td>button: Save</td><td></td></tr>
+<tr><td>3</td><td><code>{&quot;strategy&quot;: &quot;text&quot;, &quot;value&quot;: &quot;Save&quot;}</code></td><td>118</td><td>visible_text</td><td>button: Save</td><td>text selectors can break on copy changes</td></tr>
+<tr><td>4</td><td><code>{&quot;strategy&quot;: &quot;css&quot;, &quot;value&quot;: &quot;button&quot;}</code></td><td>85</td><td>structure</td><td>button: Save</td><td>structural fallback</td></tr>
+<tr><td>5</td><td><code>{&quot;name&quot;: &quot;Name&quot;, &quot;role&quot;: &quot;textbox&quot;, &quot;strategy&quot;: &quot;role&quot;}</code></td><td>92</td><td>accessibility</td><td>input: Name</td><td></td></tr>
+<tr><td>6</td><td><code>{&quot;name&quot;: &quot;Plan&quot;, &quot;role&quot;: &quot;combobox&quot;, &quot;strategy&quot;: &quot;role&quot;}</code></td><td>92</td><td>accessibility</td><td>select: Plan</td><td></td></tr>
+<tr><td>7</td><td><code>{&quot;name&quot;: &quot;Password&quot;, &quot;role&quot;: &quot;textbox&quot;, &quot;strategy&quot;: &quot;role&quot;}</code></td><td>92</td><td>accessibility</td><td>input: Password</td><td></td></tr>
+<tr><td>8</td><td><code>{&quot;name&quot;: &quot;Show advanced&quot;, &quot;role&quot;: &quot;checkbox&quot;, &quot;strategy&quot;: &quot;role&quot;}</code></td><td>92</td><td>accessibility</td><td>input: Show advanced</td><td></td></tr>
+<tr><td>9</td><td><code>{&quot;strategy&quot;: &quot;label&quot;, &quot;value&quot;: &quot;Name&quot;}</code></td><td>90</td><td>form</td><td>input: Name</td><td></td></tr>
+<tr><td>10</td><td><code>{&quot;strategy&quot;: &quot;label&quot;, &quot;value&quot;: &quot;Plan&quot;}</code></td><td>90</td><td>form</td><td>select: Plan</td><td></td></tr>
+<tr><td>11</td><td><code>{&quot;strategy&quot;: &quot;label&quot;, &quot;value&quot;: &quot;Password&quot;}</code></td><td>90</td><td>form</td><td>input: Password</td><td></td></tr>
+<tr><td>12</td><td><code>{&quot;strategy&quot;: &quot;label&quot;, &quot;value&quot;: &quot;Show advanced&quot;}</code></td><td>90</td><td>form</td><td>input: Show advanced</td><td></td></tr>
+<tr><td>13</td><td><code>{&quot;strategy&quot;: &quot;name&quot;, &quot;value&quot;: &quot;name&quot;}</code></td><td>82</td><td>name</td><td>input: Name</td><td></td></tr>
+<tr><td>14</td><td><code>{&quot;strategy&quot;: &quot;name&quot;, &quot;value&quot;: &quot;plan&quot;}</code></td><td>82</td><td>name</td><td>select: Plan</td><td></td></tr>
+<tr><td>15</td><td><code>{&quot;strategy&quot;: &quot;name&quot;, &quot;value&quot;: &quot;toggle&quot;}</code></td><td>82</td><td>name</td><td>input: Show advanced</td><td></td></tr>
+<tr><td>16</td><td><code>{&quot;strategy&quot;: &quot;name&quot;, &quot;value&quot;: &quot;password&quot;}</code></td><td>82</td><td>name</td><td>input: Password</td><td></td></tr>
+<tr><td>17</td><td><code>{&quot;strategy&quot;: &quot;id&quot;, &quot;value&quot;: &quot;name&quot;}</code></td><td>64</td><td>id</td><td>input: Name</td><td></td></tr>
+<tr><td>18</td><td><code>{&quot;strategy&quot;: &quot;id&quot;, &quot;value&quot;: &quot;plan&quot;}</code></td><td>64</td><td>id</td><td>select: Plan</td><td></td></tr>
+<tr><td>19</td><td><code>{&quot;strategy&quot;: &quot;id&quot;, &quot;value&quot;: &quot;toggle&quot;}</code></td><td>64</td><td>id</td><td>input: Show advanced</td><td></td></tr>
+<tr><td>20</td><td><code>{&quot;strategy&quot;: &quot;id&quot;, &quot;value&quot;: &quot;password&quot;}</code></td><td>64</td><td>id</td><td>input: Password</td><td></td></tr>
+<tr><td>21</td><td><code>{&quot;strategy&quot;: &quot;css&quot;, &quot;value&quot;: &quot;input[id=\&quot;name\&quot;]&quot;}</code></td><td>35</td><td>structure</td><td>input: Name</td><td>structural fallback</td></tr>
+<tr><td>22</td><td><code>{&quot;strategy&quot;: &quot;css&quot;, &quot;value&quot;: &quot;select[id=\&quot;plan\&quot;]&quot;}</code></td><td>35</td><td>structure</td><td>select: Plan</td><td>structural fallback</td></tr>
+<tr><td>23</td><td><code>{&quot;strategy&quot;: &quot;css&quot;, &quot;value&quot;: &quot;input[id=\&quot;toggle\&quot;]&quot;}</code></td><td>35</td><td>structure</td><td>input: Show advanced</td><td>structural fallback</td></tr>
+<tr><td>24</td><td><code>{&quot;strategy&quot;: &quot;css&quot;, &quot;value&quot;: &quot;input[id=\&quot;password\&quot;]&quot;}</code></td><td>35</td><td>structure</td><td>input: Password</td><td>structural fallback</td></tr></tbody>
+  </table>
+</body>
+</html>

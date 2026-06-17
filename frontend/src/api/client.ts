@@ -24,6 +24,7 @@ export type TimelineEvent = {
   action_type?: string;
   failure_kind?: string;
   evidence_bundle?: string;
+  duration_ms?: number;
   message?: string;
 };
 
@@ -35,7 +36,7 @@ export type RecordResult = {
   status?: string;
   failed_step?: string;
   failure_kind?: string;
-  safe_retry?: string;
+  safe_retry?: boolean | string;
   evidence_bundle_path?: string;
 };
 
@@ -48,9 +49,36 @@ export type Failure = {
   action_type?: string;
   status?: string;
   failure_kind?: string;
+  safe_retry?: boolean | string;
+  recommended_next_action?: string;
   evidence_bundle_path?: string;
   repair_packet_path?: string;
+  selector_evidence_path?: string;
   message?: string;
+};
+
+export type RunStep = Failure & {
+  duration_ms?: number;
+  side_effect?: string;
+  retryable?: boolean | number;
+  selector_quality?: string;
+};
+
+export type DesktopEvidence = Failure & {
+  id?: number;
+  screenshot_path?: string;
+  gif_path?: string;
+  recording_path?: string;
+  video_path?: string;
+  dom_snapshot_path?: string;
+  uia_snapshot_path?: string;
+  win32_snapshot_path?: string;
+  ocr_artifact_path?: string;
+  api_preview_path?: string;
+  logs_path?: string;
+  desktop_backend?: string;
+  selector_quality?: string;
+  verification_method?: string;
 };
 
 export type WorkflowGraph = {
@@ -73,6 +101,15 @@ export type WorkflowGraph = {
   summary: Record<string, number>;
 };
 
+export type RunDetail = {
+  manifest?: Run & Record<string, unknown>;
+  timeline?: TimelineEvent[];
+  records?: RecordResult[];
+  report_html?: string;
+  failure_report?: Record<string, unknown>;
+  repair_packet?: Record<string, unknown>;
+};
+
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
@@ -83,10 +120,14 @@ async function getJson<T>(url: string): Promise<T> {
 
 export const api = {
   listRuns: () => getJson<{ runs: Run[] }>("/api/runs"),
-  getRun: (runId: string) => getJson<Record<string, unknown>>(`/api/runs/${encodeURIComponent(runId)}`),
+  getRun: (runId: string) => getJson<RunDetail>(`/api/runs/${encodeURIComponent(runId)}`),
   getTimeline: (runId: string) => getJson<{ events: TimelineEvent[] }>(`/api/runs/${encodeURIComponent(runId)}/timeline`),
   pollEvents: (runId: string, afterId = 0) =>
     getJson<{ events: TimelineEvent[] }>(`/api/runs/${encodeURIComponent(runId)}/events?after_id=${afterId}`),
+  getRunSteps: (runId: string) => getJson<{ steps: RunStep[] }>(`/api/runs/${encodeURIComponent(runId)}/steps`),
+  getRunRecords: (runId: string) => getJson<{ records: RecordResult[] }>(`/api/runs/${encodeURIComponent(runId)}/records`),
+  getRunFailures: (runId: string) => getJson<{ failures: Failure[] }>(`/api/runs/${encodeURIComponent(runId)}/failures`),
+  getDesktopEvidence: (runId: string) => getJson<{ evidence: DesktopEvidence[] }>(`/api/desktop/evidence?run_id=${encodeURIComponent(runId)}`),
   getRecords: () => getJson<{ records: RecordResult[] }>("/api/records"),
   getFailures: () => getJson<{ failures: Failure[] }>("/api/failures"),
   getSelectors: () => getJson<{ selector_failures: Failure[] }>("/api/selector-failures"),

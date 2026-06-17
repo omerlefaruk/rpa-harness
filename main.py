@@ -170,6 +170,19 @@ Examples:
     parser.add_argument("--builder-session-id", help="Optional session id for --build-start")
     parser.add_argument("--capture-desktop", help="Create a blocked desktop capture session for an app/window")
     parser.add_argument("--capture-session-dir", help="Builder session directory for --capture-desktop")
+    parser.add_argument("--desktop-ai-assist", help="Run governed desktop AI assist against an evidence session")
+    parser.add_argument(
+        "--desktop-ai-mode",
+        "--mode",
+        dest="desktop_ai_mode",
+        choices=["inspect", "draft", "repair", "execute-approved"],
+        default="inspect",
+        help="Desktop AI assist mode",
+    )
+    parser.add_argument(
+        "--desktop-ai-proposal",
+        help="Approved proposal JSON for --desktop-ai-mode execute-approved",
+    )
     parser.add_argument("--discovery-validate-fixtures", action="store_true", help="Validate local discovery fixtures")
     parser.add_argument("--repair-selector", help="Run directory containing selector repair evidence")
     parser.add_argument("--repair-approve", action="store_true", help="Allow validated selector patch application")
@@ -417,6 +430,20 @@ async def main():
 
     if args.capture_desktop:
         print(f"Capture session: {_capture_desktop(args.capture_desktop, args.capture_session_dir)}")
+        return
+
+    if args.desktop_ai_assist:
+        import json
+
+        from harness.desktop.ai_controller import DesktopAIController
+
+        result = DesktopAIController(args.desktop_ai_assist).run(
+            mode=args.desktop_ai_mode,
+            proposal_path=args.desktop_ai_proposal,
+        )
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") == "blocked":
+            sys.exit(1)
         return
 
     if args.discovery_validate_fixtures:

@@ -230,6 +230,7 @@ class FailureReport:
         failures = report.get("verification_failures") or []
         if failures:
             failed_check = failures[0]
+        desktop = evidence.get("desktop") if isinstance(evidence.get("desktop"), dict) else {}
         return {
             "schema_version": "1",
             "run_id": report.get("run_id"),
@@ -244,15 +245,18 @@ class FailureReport:
             else None,
             "input_record_id": report.get("input_record_id"),
             "artifacts": {
-                "screenshot": evidence.get("screenshot"),
+                "screenshot": evidence.get("screenshot") or evidence.get("desktop_screenshot"),
                 "dom_snapshot": evidence.get("dom_snapshot"),
                 "uia_snapshot": evidence.get("uia_tree"),
+                "win32_snapshot": evidence.get("win32_tree"),
+                "ocr_artifact": evidence.get("ocr_artifact"),
                 "api_preview": evidence.get("api_response"),
                 "logs": self._logs_path(),
                 "selector_evidence": evidence.get("selector_repair"),
                 "repair_packet": evidence.get("repair_packet"),
                 "artifact_paths": evidence.get("artifact_paths") or [],
             },
+            "desktop": desktop,
             "verification": {
                 "checks_attempted": len(failures),
                 "failed_check": failed_check,

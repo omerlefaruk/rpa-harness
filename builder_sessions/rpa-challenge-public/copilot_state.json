@@ -1,0 +1,5542 @@
+{
+  "schema_version": 1,
+  "session_id": "rpa-challenge-public",
+  "path": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public",
+  "task_path": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa_challenge_task.md",
+  "task_spec": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\task_spec.md",
+  "status": "waiting",
+  "phase": "review",
+  "phases": [
+    "intake",
+    "discovery",
+    "draft",
+    "validate",
+    "preflight",
+    "safe_run",
+    "review",
+    "promoted"
+  ],
+  "workflow_path": "C:\\Users\\Rau\\Desktop\\rpa-harness\\workflows\\rpa_challenge\\main.yaml",
+  "target_url": "https://rpachallenge.com/",
+  "intent": "Submit",
+  "discovery": {
+    "browser_selector_swarm": {
+      "status": "passed",
+      "url": "https://rpachallenge.com/",
+      "summary": {
+        "intent": "Submit",
+        "wait_until": "domcontentloaded",
+        "subagent_policy": "off",
+        "subagent_escalation_reasons": [],
+        "interactive_elements": 18,
+        "candidates": 47,
+        "validated": 1,
+        "console_errors": 2,
+        "failed_requests": 2
+      },
+      "artifacts": {
+        "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151",
+        "screenshot": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151\\screenshot.png",
+        "raw_html": null,
+        "redacted_dom": null,
+        "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151\\selector_swarm_report.json",
+        "html_report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\builder_sessions\\rpa-challenge-public\\discovery\\selector_swarm_20260616_233151\\selector_swarm_report.html"
+      },
+      "winner": {
+        "selector": {
+          "strategy": "role",
+          "role": "button",
+          "name": "START"
+        },
+        "source": "accessibility",
+        "score": 92,
+        "element_index": 9,
+        "intent_hint": "button: START",
+        "reasons": [
+          "role plus accessible name is stable and readable"
+        ],
+        "risk_flags": []
+      }
+    }
+  },
+  "validation": {
+    "total_steps": 82,
+    "steps_with_success_checks": 82,
+    "missing_success_checks": [],
+    "weak_success_checks": [],
+    "errors": [],
+    "warnings": []
+  },
+  "preflight": {
+    "status": "passed",
+    "workflow_id": "rpa_challenge_public_form",
+    "workflow_name": "RPA Challenge Public Form",
+    "preflight": {
+      "status": "passed",
+      "passed_checks": [],
+      "warnings": [],
+      "blocking_errors": []
+    },
+    "run_id": "20260616T233211_rpa_challenge_public_form",
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form"
+  },
+  "run": {
+    "status": "passed",
+    "workflow_id": "rpa_challenge_public_form",
+    "workflow_name": "RPA Challenge Public Form",
+    "steps_completed": 82,
+    "steps": [
+      {
+        "step_id": "open_challenge",
+        "phase": "default",
+        "action_type": "browser.goto",
+        "status": "passed",
+        "duration_ms": 1383.1806182861328,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "open_challenge",
+        "intent": "Open the public RPA Challenge page.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "url_contains",
+            "expected": "rpachallenge.com",
+            "actual": "https://rpachallenge.com/",
+            "message": "",
+            "evidence": {}
+          },
+          {
+            "passed": true,
+            "check_type": "visible_text",
+            "expected": "RPA Challenge",
+            "actual": "RPA Challenge\nInput Forms\nShortest Path\nMovie Search\nInvoice Extraction\nRPA Stock Market\nInstructions\nEN\n\n\n1. The goal of this challenge is to create a workflow that will input data from a spreadsheet into the form fields on the screen.\n2. Beware! The fields will change position on the screen after every submission throughout 10 rounds thus the workflow must correctly identify where each spreadsheet record must be typed every time.\n3. The actual countdown of the challenge will begin once you cli...[truncated]",
+            "message": "",
+            "evidence": {}
+          },
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "yes",
+          "reason": "Action is read-only or local."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "start_challenge",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 55.00078201293945,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "start_challenge",
+        "intent": "Start the timed challenge after the form is visible.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "yes",
+          "reason": "Action is read-only or local."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 59.00073051452637,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_first_name",
+        "intent": "Round 1: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "John",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 53.99942398071289,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_last_name",
+        "intent": "Round 1: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Smith",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 46.00048065185547,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_company_name",
+        "intent": "Round 1: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "IT Solutions",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 41.00632667541504,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_role_in_company",
+        "intent": "Round 1: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Analyst",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 49.99995231628418,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_address",
+        "intent": "Round 1: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "98 North Road",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.000139236450195,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_email",
+        "intent": "Round 1: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "jsmith@itsolutions.co.uk",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 46.999454498291016,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_fill_phone_number",
+        "intent": "Round 1: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40716543298",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_01_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 74.00250434875488,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_01_submit",
+        "intent": "Round 1: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.99759864807129,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_first_name",
+        "intent": "Round 2: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Jane",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.00348663330078,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_last_name",
+        "intent": "Round 2: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Dorsey",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.00324821472168,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_company_name",
+        "intent": "Round 2: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "MediCare",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 56.999921798706055,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_role_in_company",
+        "intent": "Round 2: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Medical Engineer",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.0006160736084,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_address",
+        "intent": "Round 2: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "11 Crown Street",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 56.99968338012695,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_email",
+        "intent": "Round 2: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "jdorsey@mc.com",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 52.99854278564453,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_fill_phone_number",
+        "intent": "Round 2: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40791345621",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_02_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 64.99886512756348,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_02_submit",
+        "intent": "Round 2: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.999982833862305,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_first_name",
+        "intent": "Round 3: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Albert",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 43.00069808959961,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_last_name",
+        "intent": "Round 3: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Kipling",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.00395393371582,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_company_name",
+        "intent": "Round 3: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Waterfront",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 55.00173568725586,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_role_in_company",
+        "intent": "Round 3: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Accountant",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 53.998470306396484,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_address",
+        "intent": "Round 3: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "22 Guild Street",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 55.00054359436035,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_email",
+        "intent": "Round 3: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "kipling@waterfront.com",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.9997444152832,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_fill_phone_number",
+        "intent": "Round 3: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40735416854",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_03_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 71.00129127502441,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_03_submit",
+        "intent": "Round 3: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 49.99589920043945,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_first_name",
+        "intent": "Round 4: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Michael",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 53.429365158081055,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_last_name",
+        "intent": "Round 4: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Robertson",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 57.813405990600586,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_company_name",
+        "intent": "Round 4: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "MediCare",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 51.99766159057617,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_role_in_company",
+        "intent": "Round 4: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "IT Specialist",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 55.9992790222168,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_address",
+        "intent": "Round 4: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "17 Farburn Terrace",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.999351501464844,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_email",
+        "intent": "Round 4: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "mrobertson@mc.com",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 43.00212860107422,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_fill_phone_number",
+        "intent": "Round 4: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40733652145",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_04_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 66.99895858764648,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_04_submit",
+        "intent": "Round 4: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 41.0008430480957,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_first_name",
+        "intent": "Round 5: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Doug",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 53.99918556213379,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_last_name",
+        "intent": "Round 5: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Derrick",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.99982833862305,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_company_name",
+        "intent": "Round 5: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Timepath Inc.",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 55.998802185058594,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_role_in_company",
+        "intent": "Round 5: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Analyst",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 47.00303077697754,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_address",
+        "intent": "Round 5: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "99 Shire Oak Road",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 41.99957847595215,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_email",
+        "intent": "Round 5: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "dderrick@timepath.co.uk",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 48.003435134887695,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_fill_phone_number",
+        "intent": "Round 5: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40799885412",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_05_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 67.99960136413574,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_05_submit",
+        "intent": "Round 5: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 43.03741455078125,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_first_name",
+        "intent": "Round 6: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Jessie",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.742013931274414,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_last_name",
+        "intent": "Round 6: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Marlowe",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.069528579711914,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_company_name",
+        "intent": "Round 6: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Aperture Inc.",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.525529861450195,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_role_in_company",
+        "intent": "Round 6: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Scientist",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 46.00095748901367,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_address",
+        "intent": "Round 6: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "27 Cheshire Street",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 50.00162124633789,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_email",
+        "intent": "Round 6: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "jmarlowe@aperture.us",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.000532150268555,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_fill_phone_number",
+        "intent": "Round 6: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40733154268",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_06_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 67.00015068054199,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_06_submit",
+        "intent": "Round 6: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 41.00322723388672,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_first_name",
+        "intent": "Round 7: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Stan",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.741621017456055,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_last_name",
+        "intent": "Round 7: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Hamm",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 42.02151298522949,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_company_name",
+        "intent": "Round 7: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Sugarwell",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 56.03742599487305,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_role_in_company",
+        "intent": "Round 7: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Advisor",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.00062561035156,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_address",
+        "intent": "Round 7: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "10 Dam Road",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 41.24903678894043,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_email",
+        "intent": "Round 7: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "shamm@sugarwell.org",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 47.00207710266113,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_fill_phone_number",
+        "intent": "Round 7: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40712462257",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_07_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 58.99977684020996,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_07_submit",
+        "intent": "Round 7: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 45.999765396118164,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_first_name",
+        "intent": "Round 8: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Michelle",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.001102447509766,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_last_name",
+        "intent": "Round 8: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Norton",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.000864028930664,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_company_name",
+        "intent": "Round 8: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Aperture Inc.",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 50.99940299987793,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_role_in_company",
+        "intent": "Round 8: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Scientist",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 46.00071907043457,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_address",
+        "intent": "Round 8: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "13 White Rabbit Street",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 52.0014762878418,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_email",
+        "intent": "Round 8: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "mnorton@aperture.us",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 54.999589920043945,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_fill_phone_number",
+        "intent": "Round 8: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40731254562",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_08_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 69.99921798706055,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_08_submit",
+        "intent": "Round 8: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 46.004295349121094,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_first_name",
+        "intent": "Round 9: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Stacy",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 48.000335693359375,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_last_name",
+        "intent": "Round 9: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Shelby",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 46.00119590759277,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_company_name",
+        "intent": "Round 9: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "TechDev",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 51.77927017211914,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_role_in_company",
+        "intent": "Round 9: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "HR Manager",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.42238807678223,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_address",
+        "intent": "Round 9: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "19 Pineapple Boulevard",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 44.35396194458008,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_email",
+        "intent": "Round 9: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "sshelby@techdev.com",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 43.99585723876953,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_fill_phone_number",
+        "intent": "Round 9: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40741785214",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_09_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 57.00278282165527,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_09_submit",
+        "intent": "Round 9: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "selector_visible",
+            "expected": "element visible",
+            "actual": "True",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_first_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 52.999258041381836,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_first_name",
+        "intent": "Round 10: fill First Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Lara",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_last_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 57.000160217285156,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_last_name",
+        "intent": "Round 10: fill Last Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Palmer",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_company_name",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 53.000688552856445,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_company_name",
+        "intent": "Round 10: fill Company Name.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Timepath Inc.",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_role_in_company",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 52.001237869262695,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_role_in_company",
+        "intent": "Round 10: fill Role in Company.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "Programmer",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_address",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 43.006181716918945,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_address",
+        "intent": "Round 10: fill Address.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "87 Orange Street",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_email",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 41.97335243225098,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_email",
+        "intent": "Round 10: fill Email.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "lpalmer@timepath.co.uk",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_fill_phone_number",
+        "phase": "default",
+        "action_type": "browser.fill",
+        "status": "passed",
+        "duration_ms": 45.59659957885742,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_fill_phone_number",
+        "intent": "Round 10: fill Phone Number.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "field_has_value",
+            "expected": "non-empty",
+            "actual": "40731653845",
+            "message": "Field has value",
+            "evidence": {
+              "redacted": false
+            }
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "unknown",
+          "reason": "No side_effect/retryable metadata declared."
+        },
+        "error": ""
+      },
+      {
+        "step_id": "round_10_submit",
+        "phase": "default",
+        "action_type": "browser.click",
+        "status": "passed",
+        "duration_ms": 58.550357818603516,
+        "attempts": 1,
+        "max_attempts": 1,
+        "current_stage": "round_10_submit",
+        "intent": "Round 10: submit the completed form.",
+        "proof": "",
+        "failure_path": "",
+        "checks": [
+          {
+            "passed": true,
+            "check_type": "visible_text",
+            "expected": "Your success rate is",
+            "actual": "RPA Challenge\nInput Forms\nShortest Path\nMovie Search\nInvoice Extraction\nRPA Stock Market\nInstructions\nEN\n\n\n1. The goal of this challenge is to create a workflow that will input data from a spreadsheet into the form fields on the screen.\n2. Beware! The fields will change position on the screen after every submission throughout 10 rounds thus the workflow must correctly identify where each spreadsheet record must be typed every time.\n3. The actual countdown of the challenge will begin once you cli...[truncated]",
+            "message": "",
+            "evidence": {}
+          }
+        ],
+        "destructive": false,
+        "safe_retry": {
+          "status": "no",
+          "reason": "Step may write to an external system."
+        },
+        "error": ""
+      }
+    ],
+    "duration_ms": 7701.648950576782,
+    "rulebook_audit": {
+      "score": 1,
+      "warnings": [
+        "missing rulebook field: steps[0].intent",
+        "missing rulebook field: steps[0].current_stage",
+        "missing rulebook field: steps[0].preconditions",
+        "missing rulebook field: steps[0].failure_path",
+        "missing rulebook field: steps[0].proof",
+        "missing rulebook field: steps[1].intent",
+        "missing rulebook field: steps[1].current_stage",
+        "missing rulebook field: steps[1].preconditions",
+        "missing rulebook field: steps[1].failure_path",
+        "missing rulebook field: steps[1].proof",
+        "missing rulebook field: steps[2].intent",
+        "missing rulebook field: steps[2].current_stage",
+        "missing rulebook field: steps[2].preconditions",
+        "missing rulebook field: steps[2].failure_path",
+        "missing rulebook field: steps[2].proof",
+        "missing rulebook field: steps[3].intent",
+        "missing rulebook field: steps[3].current_stage",
+        "missing rulebook field: steps[3].preconditions",
+        "missing rulebook field: steps[3].failure_path",
+        "missing rulebook field: steps[3].proof",
+        "missing rulebook field: steps[4].intent",
+        "missing rulebook field: steps[4].current_stage",
+        "missing rulebook field: steps[4].preconditions",
+        "missing rulebook field: steps[4].failure_path",
+        "missing rulebook field: steps[4].proof",
+        "missing rulebook field: steps[5].intent",
+        "missing rulebook field: steps[5].current_stage",
+        "missing rulebook field: steps[5].preconditions",
+        "missing rulebook field: steps[5].failure_path",
+        "missing rulebook field: steps[5].proof",
+        "missing rulebook field: steps[6].intent",
+        "missing rulebook field: steps[6].current_stage",
+        "missing rulebook field: steps[6].preconditions",
+        "missing rulebook field: steps[6].failure_path",
+        "missing rulebook field: steps[6].proof",
+        "missing rulebook field: steps[7].intent",
+        "missing rulebook field: steps[7].current_stage",
+        "missing rulebook field: steps[7].preconditions",
+        "missing rulebook field: steps[7].failure_path",
+        "missing rulebook field: steps[7].proof",
+        "missing rulebook field: steps[8].intent",
+        "missing rulebook field: steps[8].current_stage",
+        "missing rulebook field: steps[8].preconditions",
+        "missing rulebook field: steps[8].failure_path",
+        "missing rulebook field: steps[8].proof",
+        "missing rulebook field: steps[9].intent",
+        "missing rulebook field: steps[9].current_stage",
+        "missing rulebook field: steps[9].preconditions",
+        "missing rulebook field: steps[9].failure_path",
+        "missing rulebook field: steps[9].proof",
+        "missing rulebook field: steps[10].intent",
+        "missing rulebook field: steps[10].current_stage",
+        "missing rulebook field: steps[10].preconditions",
+        "missing rulebook field: steps[10].failure_path",
+        "missing rulebook field: steps[10].proof",
+        "missing rulebook field: steps[11].intent",
+        "missing rulebook field: steps[11].current_stage",
+        "missing rulebook field: steps[11].preconditions",
+        "missing rulebook field: steps[11].failure_path",
+        "missing rulebook field: steps[11].proof",
+        "missing rulebook field: steps[12].intent",
+        "missing rulebook field: steps[12].current_stage",
+        "missing rulebook field: steps[12].preconditions",
+        "missing rulebook field: steps[12].failure_path",
+        "missing rulebook field: steps[12].proof",
+        "missing rulebook field: steps[13].intent",
+        "missing rulebook field: steps[13].current_stage",
+        "missing rulebook field: steps[13].preconditions",
+        "missing rulebook field: steps[13].failure_path",
+        "missing rulebook field: steps[13].proof",
+        "missing rulebook field: steps[14].intent",
+        "missing rulebook field: steps[14].current_stage",
+        "missing rulebook field: steps[14].preconditions",
+        "missing rulebook field: steps[14].failure_path",
+        "missing rulebook field: steps[14].proof",
+        "missing rulebook field: steps[15].intent",
+        "missing rulebook field: steps[15].current_stage",
+        "missing rulebook field: steps[15].preconditions",
+        "missing rulebook field: steps[15].failure_path",
+        "missing rulebook field: steps[15].proof",
+        "missing rulebook field: steps[16].intent",
+        "missing rulebook field: steps[16].current_stage",
+        "missing rulebook field: steps[16].preconditions",
+        "missing rulebook field: steps[16].failure_path",
+        "missing rulebook field: steps[16].proof",
+        "missing rulebook field: steps[17].intent",
+        "missing rulebook field: steps[17].current_stage",
+        "missing rulebook field: steps[17].preconditions",
+        "missing rulebook field: steps[17].failure_path",
+        "missing rulebook field: steps[17].proof",
+        "missing rulebook field: steps[18].intent",
+        "missing rulebook field: steps[18].current_stage",
+        "missing rulebook field: steps[18].preconditions",
+        "missing rulebook field: steps[18].failure_path",
+        "missing rulebook field: steps[18].proof",
+        "missing rulebook field: steps[19].intent",
+        "missing rulebook field: steps[19].current_stage",
+        "missing rulebook field: steps[19].preconditions",
+        "missing rulebook field: steps[19].failure_path",
+        "missing rulebook field: steps[19].proof",
+        "missing rulebook field: steps[20].intent",
+        "missing rulebook field: steps[20].current_stage",
+        "missing rulebook field: steps[20].preconditions",
+        "missing rulebook field: steps[20].failure_path",
+        "missing rulebook field: steps[20].proof",
+        "missing rulebook field: steps[21].intent",
+        "missing rulebook field: steps[21].current_stage",
+        "missing rulebook field: steps[21].preconditions",
+        "missing rulebook field: steps[21].failure_path",
+        "missing rulebook field: steps[21].proof",
+        "missing rulebook field: steps[22].intent",
+        "missing rulebook field: steps[22].current_stage",
+        "missing rulebook field: steps[22].preconditions",
+        "missing rulebook field: steps[22].failure_path",
+        "missing rulebook field: steps[22].proof",
+        "missing rulebook field: steps[23].intent",
+        "missing rulebook field: steps[23].current_stage",
+        "missing rulebook field: steps[23].preconditions",
+        "missing rulebook field: steps[23].failure_path",
+        "missing rulebook field: steps[23].proof",
+        "missing rulebook field: steps[24].intent",
+        "missing rulebook field: steps[24].current_stage",
+        "missing rulebook field: steps[24].preconditions",
+        "missing rulebook field: steps[24].failure_path",
+        "missing rulebook field: steps[24].proof",
+        "missing rulebook field: steps[25].intent",
+        "missing rulebook field: steps[25].current_stage",
+        "missing rulebook field: steps[25].preconditions",
+        "missing rulebook field: steps[25].failure_path",
+        "missing rulebook field: steps[25].proof",
+        "missing rulebook field: steps[26].intent",
+        "missing rulebook field: steps[26].current_stage",
+        "missing rulebook field: steps[26].preconditions",
+        "missing rulebook field: steps[26].failure_path",
+        "missing rulebook field: steps[26].proof",
+        "missing rulebook field: steps[27].intent",
+        "missing rulebook field: steps[27].current_stage",
+        "missing rulebook field: steps[27].preconditions",
+        "missing rulebook field: steps[27].failure_path",
+        "missing rulebook field: steps[27].proof",
+        "missing rulebook field: steps[28].intent",
+        "missing rulebook field: steps[28].current_stage",
+        "missing rulebook field: steps[28].preconditions",
+        "missing rulebook field: steps[28].failure_path",
+        "missing rulebook field: steps[28].proof",
+        "missing rulebook field: steps[29].intent",
+        "missing rulebook field: steps[29].current_stage",
+        "missing rulebook field: steps[29].preconditions",
+        "missing rulebook field: steps[29].failure_path",
+        "missing rulebook field: steps[29].proof",
+        "missing rulebook field: steps[30].intent",
+        "missing rulebook field: steps[30].current_stage",
+        "missing rulebook field: steps[30].preconditions",
+        "missing rulebook field: steps[30].failure_path",
+        "missing rulebook field: steps[30].proof",
+        "missing rulebook field: steps[31].intent",
+        "missing rulebook field: steps[31].current_stage",
+        "missing rulebook field: steps[31].preconditions",
+        "missing rulebook field: steps[31].failure_path",
+        "missing rulebook field: steps[31].proof",
+        "missing rulebook field: steps[32].intent",
+        "missing rulebook field: steps[32].current_stage",
+        "missing rulebook field: steps[32].preconditions",
+        "missing rulebook field: steps[32].failure_path",
+        "missing rulebook field: steps[32].proof",
+        "missing rulebook field: steps[33].intent",
+        "missing rulebook field: steps[33].current_stage",
+        "missing rulebook field: steps[33].preconditions",
+        "missing rulebook field: steps[33].failure_path",
+        "missing rulebook field: steps[33].proof",
+        "missing rulebook field: steps[34].intent",
+        "missing rulebook field: steps[34].current_stage",
+        "missing rulebook field: steps[34].preconditions",
+        "missing rulebook field: steps[34].failure_path",
+        "missing rulebook field: steps[34].proof",
+        "missing rulebook field: steps[35].intent",
+        "missing rulebook field: steps[35].current_stage",
+        "missing rulebook field: steps[35].preconditions",
+        "missing rulebook field: steps[35].failure_path",
+        "missing rulebook field: steps[35].proof",
+        "missing rulebook field: steps[36].intent",
+        "missing rulebook field: steps[36].current_stage",
+        "missing rulebook field: steps[36].preconditions",
+        "missing rulebook field: steps[36].failure_path",
+        "missing rulebook field: steps[36].proof",
+        "missing rulebook field: steps[37].intent",
+        "missing rulebook field: steps[37].current_stage",
+        "missing rulebook field: steps[37].preconditions",
+        "missing rulebook field: steps[37].failure_path",
+        "missing rulebook field: steps[37].proof",
+        "missing rulebook field: steps[38].intent",
+        "missing rulebook field: steps[38].current_stage",
+        "missing rulebook field: steps[38].preconditions",
+        "missing rulebook field: steps[38].failure_path",
+        "missing rulebook field: steps[38].proof",
+        "missing rulebook field: steps[39].intent",
+        "missing rulebook field: steps[39].current_stage",
+        "missing rulebook field: steps[39].preconditions",
+        "missing rulebook field: steps[39].failure_path",
+        "missing rulebook field: steps[39].proof",
+        "missing rulebook field: steps[40].intent",
+        "missing rulebook field: steps[40].current_stage",
+        "missing rulebook field: steps[40].preconditions",
+        "missing rulebook field: steps[40].failure_path",
+        "missing rulebook field: steps[40].proof",
+        "missing rulebook field: steps[41].intent",
+        "missing rulebook field: steps[41].current_stage",
+        "missing rulebook field: steps[41].preconditions",
+        "missing rulebook field: steps[41].failure_path",
+        "missing rulebook field: steps[41].proof",
+        "missing rulebook field: steps[42].intent",
+        "missing rulebook field: steps[42].current_stage",
+        "missing rulebook field: steps[42].preconditions",
+        "missing rulebook field: steps[42].failure_path",
+        "missing rulebook field: steps[42].proof",
+        "missing rulebook field: steps[43].intent",
+        "missing rulebook field: steps[43].current_stage",
+        "missing rulebook field: steps[43].preconditions",
+        "missing rulebook field: steps[43].failure_path",
+        "missing rulebook field: steps[43].proof",
+        "missing rulebook field: steps[44].intent",
+        "missing rulebook field: steps[44].current_stage",
+        "missing rulebook field: steps[44].preconditions",
+        "missing rulebook field: steps[44].failure_path",
+        "missing rulebook field: steps[44].proof",
+        "missing rulebook field: steps[45].intent",
+        "missing rulebook field: steps[45].current_stage",
+        "missing rulebook field: steps[45].preconditions",
+        "missing rulebook field: steps[45].failure_path",
+        "missing rulebook field: steps[45].proof",
+        "missing rulebook field: steps[46].intent",
+        "missing rulebook field: steps[46].current_stage",
+        "missing rulebook field: steps[46].preconditions",
+        "missing rulebook field: steps[46].failure_path",
+        "missing rulebook field: steps[46].proof",
+        "missing rulebook field: steps[47].intent",
+        "missing rulebook field: steps[47].current_stage",
+        "missing rulebook field: steps[47].preconditions",
+        "missing rulebook field: steps[47].failure_path",
+        "missing rulebook field: steps[47].proof",
+        "missing rulebook field: steps[48].intent",
+        "missing rulebook field: steps[48].current_stage",
+        "missing rulebook field: steps[48].preconditions",
+        "missing rulebook field: steps[48].failure_path",
+        "missing rulebook field: steps[48].proof",
+        "missing rulebook field: steps[49].intent",
+        "missing rulebook field: steps[49].current_stage",
+        "missing rulebook field: steps[49].preconditions",
+        "missing rulebook field: steps[49].failure_path",
+        "missing rulebook field: steps[49].proof",
+        "missing rulebook field: steps[50].intent",
+        "missing rulebook field: steps[50].current_stage",
+        "missing rulebook field: steps[50].preconditions",
+        "missing rulebook field: steps[50].failure_path",
+        "missing rulebook field: steps[50].proof",
+        "missing rulebook field: steps[51].intent",
+        "missing rulebook field: steps[51].current_stage",
+        "missing rulebook field: steps[51].preconditions",
+        "missing rulebook field: steps[51].failure_path",
+        "missing rulebook field: steps[51].proof",
+        "missing rulebook field: steps[52].intent",
+        "missing rulebook field: steps[52].current_stage",
+        "missing rulebook field: steps[52].preconditions",
+        "missing rulebook field: steps[52].failure_path",
+        "missing rulebook field: steps[52].proof",
+        "missing rulebook field: steps[53].intent",
+        "missing rulebook field: steps[53].current_stage",
+        "missing rulebook field: steps[53].preconditions",
+        "missing rulebook field: steps[53].failure_path",
+        "missing rulebook field: steps[53].proof",
+        "missing rulebook field: steps[54].intent",
+        "missing rulebook field: steps[54].current_stage",
+        "missing rulebook field: steps[54].preconditions",
+        "missing rulebook field: steps[54].failure_path",
+        "missing rulebook field: steps[54].proof",
+        "missing rulebook field: steps[55].intent",
+        "missing rulebook field: steps[55].current_stage",
+        "missing rulebook field: steps[55].preconditions",
+        "missing rulebook field: steps[55].failure_path",
+        "missing rulebook field: steps[55].proof",
+        "missing rulebook field: steps[56].intent",
+        "missing rulebook field: steps[56].current_stage",
+        "missing rulebook field: steps[56].preconditions",
+        "missing rulebook field: steps[56].failure_path",
+        "missing rulebook field: steps[56].proof",
+        "missing rulebook field: steps[57].intent",
+        "missing rulebook field: steps[57].current_stage",
+        "missing rulebook field: steps[57].preconditions",
+        "missing rulebook field: steps[57].failure_path",
+        "missing rulebook field: steps[57].proof",
+        "missing rulebook field: steps[58].intent",
+        "missing rulebook field: steps[58].current_stage",
+        "missing rulebook field: steps[58].preconditions",
+        "missing rulebook field: steps[58].failure_path",
+        "missing rulebook field: steps[58].proof",
+        "missing rulebook field: steps[59].intent",
+        "missing rulebook field: steps[59].current_stage",
+        "missing rulebook field: steps[59].preconditions",
+        "missing rulebook field: steps[59].failure_path",
+        "missing rulebook field: steps[59].proof",
+        "missing rulebook field: steps[60].intent",
+        "missing rulebook field: steps[60].current_stage",
+        "missing rulebook field: steps[60].preconditions",
+        "missing rulebook field: steps[60].failure_path",
+        "missing rulebook field: steps[60].proof",
+        "missing rulebook field: steps[61].intent",
+        "missing rulebook field: steps[61].current_stage",
+        "missing rulebook field: steps[61].preconditions",
+        "missing rulebook field: steps[61].failure_path",
+        "missing rulebook field: steps[61].proof",
+        "missing rulebook field: steps[62].intent",
+        "missing rulebook field: steps[62].current_stage",
+        "missing rulebook field: steps[62].preconditions",
+        "missing rulebook field: steps[62].failure_path",
+        "missing rulebook field: steps[62].proof",
+        "missing rulebook field: steps[63].intent",
+        "missing rulebook field: steps[63].current_stage",
+        "missing rulebook field: steps[63].preconditions",
+        "missing rulebook field: steps[63].failure_path",
+        "missing rulebook field: steps[63].proof",
+        "missing rulebook field: steps[64].intent",
+        "missing rulebook field: steps[64].current_stage",
+        "missing rulebook field: steps[64].preconditions",
+        "missing rulebook field: steps[64].failure_path",
+        "missing rulebook field: steps[64].proof",
+        "missing rulebook field: steps[65].intent",
+        "missing rulebook field: steps[65].current_stage",
+        "missing rulebook field: steps[65].preconditions",
+        "missing rulebook field: steps[65].failure_path",
+        "missing rulebook field: steps[65].proof",
+        "missing rulebook field: steps[66].intent",
+        "missing rulebook field: steps[66].current_stage",
+        "missing rulebook field: steps[66].preconditions",
+        "missing rulebook field: steps[66].failure_path",
+        "missing rulebook field: steps[66].proof",
+        "missing rulebook field: steps[67].intent",
+        "missing rulebook field: steps[67].current_stage",
+        "missing rulebook field: steps[67].preconditions",
+        "missing rulebook field: steps[67].failure_path",
+        "missing rulebook field: steps[67].proof",
+        "missing rulebook field: steps[68].intent",
+        "missing rulebook field: steps[68].current_stage",
+        "missing rulebook field: steps[68].preconditions",
+        "missing rulebook field: steps[68].failure_path",
+        "missing rulebook field: steps[68].proof",
+        "missing rulebook field: steps[69].intent",
+        "missing rulebook field: steps[69].current_stage",
+        "missing rulebook field: steps[69].preconditions",
+        "missing rulebook field: steps[69].failure_path",
+        "missing rulebook field: steps[69].proof",
+        "missing rulebook field: steps[70].intent",
+        "missing rulebook field: steps[70].current_stage",
+        "missing rulebook field: steps[70].preconditions",
+        "missing rulebook field: steps[70].failure_path",
+        "missing rulebook field: steps[70].proof",
+        "missing rulebook field: steps[71].intent",
+        "missing rulebook field: steps[71].current_stage",
+        "missing rulebook field: steps[71].preconditions",
+        "missing rulebook field: steps[71].failure_path",
+        "missing rulebook field: steps[71].proof",
+        "missing rulebook field: steps[72].intent",
+        "missing rulebook field: steps[72].current_stage",
+        "missing rulebook field: steps[72].preconditions",
+        "missing rulebook field: steps[72].failure_path",
+        "missing rulebook field: steps[72].proof",
+        "missing rulebook field: steps[73].intent",
+        "missing rulebook field: steps[73].current_stage",
+        "missing rulebook field: steps[73].preconditions",
+        "missing rulebook field: steps[73].failure_path",
+        "missing rulebook field: steps[73].proof",
+        "missing rulebook field: steps[74].intent",
+        "missing rulebook field: steps[74].current_stage",
+        "missing rulebook field: steps[74].preconditions",
+        "missing rulebook field: steps[74].failure_path",
+        "missing rulebook field: steps[74].proof",
+        "missing rulebook field: steps[75].intent",
+        "missing rulebook field: steps[75].current_stage",
+        "missing rulebook field: steps[75].preconditions",
+        "missing rulebook field: steps[75].failure_path",
+        "missing rulebook field: steps[75].proof",
+        "missing rulebook field: steps[76].intent",
+        "missing rulebook field: steps[76].current_stage",
+        "missing rulebook field: steps[76].preconditions",
+        "missing rulebook field: steps[76].failure_path",
+        "missing rulebook field: steps[76].proof",
+        "missing rulebook field: steps[77].intent",
+        "missing rulebook field: steps[77].current_stage",
+        "missing rulebook field: steps[77].preconditions",
+        "missing rulebook field: steps[77].failure_path",
+        "missing rulebook field: steps[77].proof",
+        "missing rulebook field: steps[78].intent",
+        "missing rulebook field: steps[78].current_stage",
+        "missing rulebook field: steps[78].preconditions",
+        "missing rulebook field: steps[78].failure_path",
+        "missing rulebook field: steps[78].proof",
+        "missing rulebook field: steps[79].intent",
+        "missing rulebook field: steps[79].current_stage",
+        "missing rulebook field: steps[79].preconditions",
+        "missing rulebook field: steps[79].failure_path",
+        "missing rulebook field: steps[79].proof",
+        "missing rulebook field: steps[80].intent",
+        "missing rulebook field: steps[80].current_stage",
+        "missing rulebook field: steps[80].preconditions",
+        "missing rulebook field: steps[80].failure_path",
+        "missing rulebook field: steps[80].proof",
+        "missing rulebook field: steps[81].intent",
+        "missing rulebook field: steps[81].current_stage",
+        "missing rulebook field: steps[81].preconditions",
+        "missing rulebook field: steps[81].failure_path",
+        "missing rulebook field: steps[81].proof"
+      ],
+      "missing_fields": [
+        "steps[0].intent",
+        "steps[0].current_stage",
+        "steps[0].preconditions",
+        "steps[0].failure_path",
+        "steps[0].proof",
+        "steps[1].intent",
+        "steps[1].current_stage",
+        "steps[1].preconditions",
+        "steps[1].failure_path",
+        "steps[1].proof",
+        "steps[2].intent",
+        "steps[2].current_stage",
+        "steps[2].preconditions",
+        "steps[2].failure_path",
+        "steps[2].proof",
+        "steps[3].intent",
+        "steps[3].current_stage",
+        "steps[3].preconditions",
+        "steps[3].failure_path",
+        "steps[3].proof",
+        "steps[4].intent",
+        "steps[4].current_stage",
+        "steps[4].preconditions",
+        "steps[4].failure_path",
+        "steps[4].proof",
+        "steps[5].intent",
+        "steps[5].current_stage",
+        "steps[5].preconditions",
+        "steps[5].failure_path",
+        "steps[5].proof",
+        "steps[6].intent",
+        "steps[6].current_stage",
+        "steps[6].preconditions",
+        "steps[6].failure_path",
+        "steps[6].proof",
+        "steps[7].intent",
+        "steps[7].current_stage",
+        "steps[7].preconditions",
+        "steps[7].failure_path",
+        "steps[7].proof",
+        "steps[8].intent",
+        "steps[8].current_stage",
+        "steps[8].preconditions",
+        "steps[8].failure_path",
+        "steps[8].proof",
+        "steps[9].intent",
+        "steps[9].current_stage",
+        "steps[9].preconditions",
+        "steps[9].failure_path",
+        "steps[9].proof",
+        "steps[10].intent",
+        "steps[10].current_stage",
+        "steps[10].preconditions",
+        "steps[10].failure_path",
+        "steps[10].proof",
+        "steps[11].intent",
+        "steps[11].current_stage",
+        "steps[11].preconditions",
+        "steps[11].failure_path",
+        "steps[11].proof",
+        "steps[12].intent",
+        "steps[12].current_stage",
+        "steps[12].preconditions",
+        "steps[12].failure_path",
+        "steps[12].proof",
+        "steps[13].intent",
+        "steps[13].current_stage",
+        "steps[13].preconditions",
+        "steps[13].failure_path",
+        "steps[13].proof",
+        "steps[14].intent",
+        "steps[14].current_stage",
+        "steps[14].preconditions",
+        "steps[14].failure_path",
+        "steps[14].proof",
+        "steps[15].intent",
+        "steps[15].current_stage",
+        "steps[15].preconditions",
+        "steps[15].failure_path",
+        "steps[15].proof",
+        "steps[16].intent",
+        "steps[16].current_stage",
+        "steps[16].preconditions",
+        "steps[16].failure_path",
+        "steps[16].proof",
+        "steps[17].intent",
+        "steps[17].current_stage",
+        "steps[17].preconditions",
+        "steps[17].failure_path",
+        "steps[17].proof",
+        "steps[18].intent",
+        "steps[18].current_stage",
+        "steps[18].preconditions",
+        "steps[18].failure_path",
+        "steps[18].proof",
+        "steps[19].intent",
+        "steps[19].current_stage",
+        "steps[19].preconditions",
+        "steps[19].failure_path",
+        "steps[19].proof",
+        "steps[20].intent",
+        "steps[20].current_stage",
+        "steps[20].preconditions",
+        "steps[20].failure_path",
+        "steps[20].proof",
+        "steps[21].intent",
+        "steps[21].current_stage",
+        "steps[21].preconditions",
+        "steps[21].failure_path",
+        "steps[21].proof",
+        "steps[22].intent",
+        "steps[22].current_stage",
+        "steps[22].preconditions",
+        "steps[22].failure_path",
+        "steps[22].proof",
+        "steps[23].intent",
+        "steps[23].current_stage",
+        "steps[23].preconditions",
+        "steps[23].failure_path",
+        "steps[23].proof",
+        "steps[24].intent",
+        "steps[24].current_stage",
+        "steps[24].preconditions",
+        "steps[24].failure_path",
+        "steps[24].proof",
+        "steps[25].intent",
+        "steps[25].current_stage",
+        "steps[25].preconditions",
+        "steps[25].failure_path",
+        "steps[25].proof",
+        "steps[26].intent",
+        "steps[26].current_stage",
+        "steps[26].preconditions",
+        "steps[26].failure_path",
+        "steps[26].proof",
+        "steps[27].intent",
+        "steps[27].current_stage",
+        "steps[27].preconditions",
+        "steps[27].failure_path",
+        "steps[27].proof",
+        "steps[28].intent",
+        "steps[28].current_stage",
+        "steps[28].preconditions",
+        "steps[28].failure_path",
+        "steps[28].proof",
+        "steps[29].intent",
+        "steps[29].current_stage",
+        "steps[29].preconditions",
+        "steps[29].failure_path",
+        "steps[29].proof",
+        "steps[30].intent",
+        "steps[30].current_stage",
+        "steps[30].preconditions",
+        "steps[30].failure_path",
+        "steps[30].proof",
+        "steps[31].intent",
+        "steps[31].current_stage",
+        "steps[31].preconditions",
+        "steps[31].failure_path",
+        "steps[31].proof",
+        "steps[32].intent",
+        "steps[32].current_stage",
+        "steps[32].preconditions",
+        "steps[32].failure_path",
+        "steps[32].proof",
+        "steps[33].intent",
+        "steps[33].current_stage",
+        "steps[33].preconditions",
+        "steps[33].failure_path",
+        "steps[33].proof",
+        "steps[34].intent",
+        "steps[34].current_stage",
+        "steps[34].preconditions",
+        "steps[34].failure_path",
+        "steps[34].proof",
+        "steps[35].intent",
+        "steps[35].current_stage",
+        "steps[35].preconditions",
+        "steps[35].failure_path",
+        "steps[35].proof",
+        "steps[36].intent",
+        "steps[36].current_stage",
+        "steps[36].preconditions",
+        "steps[36].failure_path",
+        "steps[36].proof",
+        "steps[37].intent",
+        "steps[37].current_stage",
+        "steps[37].preconditions",
+        "steps[37].failure_path",
+        "steps[37].proof",
+        "steps[38].intent",
+        "steps[38].current_stage",
+        "steps[38].preconditions",
+        "steps[38].failure_path",
+        "steps[38].proof",
+        "steps[39].intent",
+        "steps[39].current_stage",
+        "steps[39].preconditions",
+        "steps[39].failure_path",
+        "steps[39].proof",
+        "steps[40].intent",
+        "steps[40].current_stage",
+        "steps[40].preconditions",
+        "steps[40].failure_path",
+        "steps[40].proof",
+        "steps[41].intent",
+        "steps[41].current_stage",
+        "steps[41].preconditions",
+        "steps[41].failure_path",
+        "steps[41].proof",
+        "steps[42].intent",
+        "steps[42].current_stage",
+        "steps[42].preconditions",
+        "steps[42].failure_path",
+        "steps[42].proof",
+        "steps[43].intent",
+        "steps[43].current_stage",
+        "steps[43].preconditions",
+        "steps[43].failure_path",
+        "steps[43].proof",
+        "steps[44].intent",
+        "steps[44].current_stage",
+        "steps[44].preconditions",
+        "steps[44].failure_path",
+        "steps[44].proof",
+        "steps[45].intent",
+        "steps[45].current_stage",
+        "steps[45].preconditions",
+        "steps[45].failure_path",
+        "steps[45].proof",
+        "steps[46].intent",
+        "steps[46].current_stage",
+        "steps[46].preconditions",
+        "steps[46].failure_path",
+        "steps[46].proof",
+        "steps[47].intent",
+        "steps[47].current_stage",
+        "steps[47].preconditions",
+        "steps[47].failure_path",
+        "steps[47].proof",
+        "steps[48].intent",
+        "steps[48].current_stage",
+        "steps[48].preconditions",
+        "steps[48].failure_path",
+        "steps[48].proof",
+        "steps[49].intent",
+        "steps[49].current_stage",
+        "steps[49].preconditions",
+        "steps[49].failure_path",
+        "steps[49].proof",
+        "steps[50].intent",
+        "steps[50].current_stage",
+        "steps[50].preconditions",
+        "steps[50].failure_path",
+        "steps[50].proof",
+        "steps[51].intent",
+        "steps[51].current_stage",
+        "steps[51].preconditions",
+        "steps[51].failure_path",
+        "steps[51].proof",
+        "steps[52].intent",
+        "steps[52].current_stage",
+        "steps[52].preconditions",
+        "steps[52].failure_path",
+        "steps[52].proof",
+        "steps[53].intent",
+        "steps[53].current_stage",
+        "steps[53].preconditions",
+        "steps[53].failure_path",
+        "steps[53].proof",
+        "steps[54].intent",
+        "steps[54].current_stage",
+        "steps[54].preconditions",
+        "steps[54].failure_path",
+        "steps[54].proof",
+        "steps[55].intent",
+        "steps[55].current_stage",
+        "steps[55].preconditions",
+        "steps[55].failure_path",
+        "steps[55].proof",
+        "steps[56].intent",
+        "steps[56].current_stage",
+        "steps[56].preconditions",
+        "steps[56].failure_path",
+        "steps[56].proof",
+        "steps[57].intent",
+        "steps[57].current_stage",
+        "steps[57].preconditions",
+        "steps[57].failure_path",
+        "steps[57].proof",
+        "steps[58].intent",
+        "steps[58].current_stage",
+        "steps[58].preconditions",
+        "steps[58].failure_path",
+        "steps[58].proof",
+        "steps[59].intent",
+        "steps[59].current_stage",
+        "steps[59].preconditions",
+        "steps[59].failure_path",
+        "steps[59].proof",
+        "steps[60].intent",
+        "steps[60].current_stage",
+        "steps[60].preconditions",
+        "steps[60].failure_path",
+        "steps[60].proof",
+        "steps[61].intent",
+        "steps[61].current_stage",
+        "steps[61].preconditions",
+        "steps[61].failure_path",
+        "steps[61].proof",
+        "steps[62].intent",
+        "steps[62].current_stage",
+        "steps[62].preconditions",
+        "steps[62].failure_path",
+        "steps[62].proof",
+        "steps[63].intent",
+        "steps[63].current_stage",
+        "steps[63].preconditions",
+        "steps[63].failure_path",
+        "steps[63].proof",
+        "steps[64].intent",
+        "steps[64].current_stage",
+        "steps[64].preconditions",
+        "steps[64].failure_path",
+        "steps[64].proof",
+        "steps[65].intent",
+        "steps[65].current_stage",
+        "steps[65].preconditions",
+        "steps[65].failure_path",
+        "steps[65].proof",
+        "steps[66].intent",
+        "steps[66].current_stage",
+        "steps[66].preconditions",
+        "steps[66].failure_path",
+        "steps[66].proof",
+        "steps[67].intent",
+        "steps[67].current_stage",
+        "steps[67].preconditions",
+        "steps[67].failure_path",
+        "steps[67].proof",
+        "steps[68].intent",
+        "steps[68].current_stage",
+        "steps[68].preconditions",
+        "steps[68].failure_path",
+        "steps[68].proof",
+        "steps[69].intent",
+        "steps[69].current_stage",
+        "steps[69].preconditions",
+        "steps[69].failure_path",
+        "steps[69].proof",
+        "steps[70].intent",
+        "steps[70].current_stage",
+        "steps[70].preconditions",
+        "steps[70].failure_path",
+        "steps[70].proof",
+        "steps[71].intent",
+        "steps[71].current_stage",
+        "steps[71].preconditions",
+        "steps[71].failure_path",
+        "steps[71].proof",
+        "steps[72].intent",
+        "steps[72].current_stage",
+        "steps[72].preconditions",
+        "steps[72].failure_path",
+        "steps[72].proof",
+        "steps[73].intent",
+        "steps[73].current_stage",
+        "steps[73].preconditions",
+        "steps[73].failure_path",
+        "steps[73].proof",
+        "steps[74].intent",
+        "steps[74].current_stage",
+        "steps[74].preconditions",
+        "steps[74].failure_path",
+        "steps[74].proof",
+        "steps[75].intent",
+        "steps[75].current_stage",
+        "steps[75].preconditions",
+        "steps[75].failure_path",
+        "steps[75].proof",
+        "steps[76].intent",
+        "steps[76].current_stage",
+        "steps[76].preconditions",
+        "steps[76].failure_path",
+        "steps[76].proof",
+        "steps[77].intent",
+        "steps[77].current_stage",
+        "steps[77].preconditions",
+        "steps[77].failure_path",
+        "steps[77].proof",
+        "steps[78].intent",
+        "steps[78].current_stage",
+        "steps[78].preconditions",
+        "steps[78].failure_path",
+        "steps[78].proof",
+        "steps[79].intent",
+        "steps[79].current_stage",
+        "steps[79].preconditions",
+        "steps[79].failure_path",
+        "steps[79].proof",
+        "steps[80].intent",
+        "steps[80].current_stage",
+        "steps[80].preconditions",
+        "steps[80].failure_path",
+        "steps[80].proof",
+        "steps[81].intent",
+        "steps[81].current_stage",
+        "steps[81].preconditions",
+        "steps[81].failure_path",
+        "steps[81].proof"
+      ],
+      "suggestions": [
+        {
+          "field": "steps[0].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[0].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[0].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[0].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[0].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[1].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[1].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[1].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[1].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[1].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[2].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[2].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[2].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[2].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[2].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[3].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[3].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[3].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[3].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[3].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[4].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[4].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[4].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[4].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[4].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[5].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[5].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[5].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[5].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[5].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[6].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[6].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[6].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[6].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[6].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[7].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[7].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[7].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[7].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[7].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[8].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[8].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[8].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[8].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[8].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[9].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[9].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[9].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[9].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[9].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[10].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[10].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[10].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[10].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[10].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[11].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[11].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[11].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[11].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[11].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[12].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[12].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[12].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[12].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[12].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[13].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[13].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[13].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[13].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[13].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[14].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[14].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[14].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[14].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[14].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[15].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[15].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[15].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[15].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[15].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[16].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[16].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[16].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[16].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[16].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[17].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[17].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[17].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[17].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[17].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[18].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[18].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[18].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[18].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[18].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[19].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[19].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[19].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[19].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[19].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[20].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[20].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[20].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[20].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[20].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[21].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[21].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[21].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[21].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[21].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[22].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[22].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[22].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[22].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[22].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[23].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[23].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[23].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[23].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[23].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[24].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[24].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[24].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[24].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[24].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[25].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[25].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[25].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[25].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[25].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[26].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[26].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[26].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[26].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[26].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[27].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[27].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[27].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[27].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[27].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[28].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[28].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[28].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[28].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[28].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[29].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[29].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[29].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[29].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[29].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[30].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[30].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[30].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[30].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[30].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[31].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[31].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[31].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[31].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[31].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[32].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[32].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[32].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[32].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[32].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[33].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[33].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[33].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[33].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[33].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[34].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[34].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[34].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[34].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[34].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[35].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[35].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[35].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[35].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[35].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[36].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[36].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[36].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[36].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[36].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[37].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[37].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[37].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[37].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[37].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[38].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[38].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[38].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[38].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[38].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[39].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[39].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[39].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[39].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[39].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[40].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[40].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[40].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[40].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[40].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[41].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[41].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[41].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[41].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[41].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[42].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[42].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[42].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[42].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[42].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[43].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[43].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[43].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[43].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[43].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[44].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[44].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[44].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[44].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[44].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[45].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[45].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[45].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[45].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[45].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[46].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[46].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[46].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[46].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[46].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[47].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[47].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[47].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[47].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[47].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[48].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[48].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[48].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[48].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[48].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[49].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[49].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[49].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[49].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[49].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[50].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[50].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[50].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[50].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[50].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[51].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[51].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[51].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[51].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[51].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[52].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[52].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[52].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[52].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[52].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[53].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[53].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[53].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[53].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[53].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[54].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[54].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[54].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[54].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[54].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[55].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[55].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[55].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[55].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[55].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[56].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[56].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[56].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[56].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[56].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[57].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[57].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[57].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[57].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[57].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[58].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[58].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[58].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[58].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[58].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[59].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[59].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[59].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[59].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[59].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[60].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[60].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[60].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[60].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[60].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[61].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[61].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[61].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[61].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[61].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[62].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[62].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[62].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[62].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[62].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[63].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[63].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[63].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[63].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[63].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[64].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[64].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[64].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[64].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[64].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[65].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[65].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[65].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[65].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[65].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[66].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[66].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[66].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[66].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[66].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[67].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[67].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[67].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[67].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[67].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[68].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[68].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[68].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[68].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[68].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[69].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[69].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[69].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[69].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[69].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[70].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[70].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[70].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[70].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[70].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[71].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[71].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[71].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[71].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[71].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[72].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[72].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[72].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[72].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[72].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[73].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[73].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[73].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[73].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[73].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[74].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[74].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[74].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[74].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[74].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[75].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[75].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[75].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[75].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[75].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[76].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[76].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[76].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[76].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[76].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[77].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[77].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[77].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[77].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[77].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[78].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[78].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[78].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[78].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[78].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[79].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[79].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[79].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[79].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[79].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[80].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[80].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[80].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[80].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[80].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        },
+        {
+          "field": "steps[81].intent",
+          "severity": "warning",
+          "suggestion": "Add the business result this step is meant to produce."
+        },
+        {
+          "field": "steps[81].current_stage",
+          "severity": "warning",
+          "suggestion": "Use a business-readable stage name such as open_customer_record or verify_export_file."
+        },
+        {
+          "field": "steps[81].preconditions",
+          "severity": "warning",
+          "suggestion": "List what must be true before the step performs side effects."
+        },
+        {
+          "field": "steps[81].failure_path",
+          "severity": "warning",
+          "suggestion": "Declare whether the workflow stops, skips, retries, or escalates when proof is absent."
+        },
+        {
+          "field": "steps[81].proof",
+          "severity": "warning",
+          "suggestion": "Identify the evidence source proving the postcondition."
+        }
+      ],
+      "summary": "Rulebook contract is not production-ready; 410 fields are missing.",
+      "ready_for_unattended_production": false
+    },
+    "run_id": "20260616T233211_rpa_challenge_public_form",
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form",
+    "rpa_memory": {
+      "enabled": true,
+      "required": false,
+      "status": "available",
+      "worker_url": "http://127.0.0.1:37777",
+      "last_error": null
+    },
+    "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form\\report.html"
+  },
+  "artifacts": {
+    "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form",
+    "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form\\report.html"
+  },
+  "approvals": {
+    "policy.review": "continue: user requested live RPA Challenge trial with public fixture data; submit each row once; no automatic submit retries"
+  },
+  "created_at": "2026-06-16T20:31:51.848081+00:00",
+  "updated_at": "2026-06-16T20:32:19.647109+00:00",
+  "next_question": {
+    "id": "review.promote",
+    "question": "Review the run evidence and promote this automation when it is ready.",
+    "choices": [
+      "promote",
+      "continue",
+      "stop"
+    ],
+    "default": "promote",
+    "details": {
+      "status": "passed",
+      "run_dir": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form",
+      "report": "C:\\Users\\Rau\\Desktop\\rpa-harness\\runs\\20260616T233211_rpa_challenge_public_form\\report.html"
+    },
+    "created_at": "2026-06-16T20:32:19.647109+00:00"
+  }
+}

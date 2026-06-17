@@ -127,8 +127,18 @@ DESTRUCTIVE_API_ACTIONS = {
 
 DESKTOP_ACTIONS = {
     "desktop.launch",
+    "desktop.attach",
     "desktop.click",
+    "desktop.type",
+    "desktop.clipboard_paste",
+    "desktop.press",
+    "desktop.menu_select",
+    "desktop.wait",
     "desktop.get_text",
+    "desktop.ocr_read",
+    "desktop.ocr_wait",
+    "desktop.screenshot",
+    "desktop.dump_tree",
     "desktop.close",
 }
 
@@ -482,10 +492,40 @@ def _validate_action_fields(step_id: str, action_type: str, action: dict) -> Lis
     elif action_type == "desktop.launch":
         if not action.get("app_path") and not action.get("path"):
             errors.append(f"schema: Step '{step_id}' {action_type} requires 'app_path' or 'path'")
+    elif action_type == "desktop.attach":
+        if not action.get("window_title") and not action.get("class_name"):
+            errors.append(
+                f"schema: Step '{step_id}' {action_type} requires 'window_title' or 'class_name'"
+            )
     elif action_type in {"desktop.click", "desktop.get_text"}:
         _require_selector(action, step_id, action_type, errors)
         if action_type == "desktop.get_text" and not action.get("output"):
             errors.append(f"schema: Step '{step_id}' {action_type} requires action.output")
+    elif action_type == "desktop.type":
+        _require(action, "text", step_id, action_type, errors)
+    elif action_type == "desktop.clipboard_paste":
+        if not action.get("text") and not action.get("secret"):
+            errors.append(f"schema: Step '{step_id}' {action_type} requires 'text' or 'secret'")
+    elif action_type == "desktop.press":
+        _require(action, "keys", step_id, action_type, errors)
+    elif action_type == "desktop.menu_select":
+        _require(action, "path", step_id, action_type, errors)
+    elif action_type == "desktop.wait":
+        if not action.get("selector") and not action.get("window_title") and not action.get("text"):
+            errors.append(
+                f"schema: Step '{step_id}' {action_type} requires selector, 'window_title', or 'text'"
+            )
+    elif action_type == "desktop.ocr_read":
+        if not action.get("selector") and not action.get("region") and not action.get("screenshot"):
+            errors.append(
+                f"schema: Step '{step_id}' {action_type} requires selector, 'region', or 'screenshot'"
+            )
+    elif action_type == "desktop.ocr_wait":
+        _require(action, "text", step_id, action_type, errors)
+        if not action.get("selector") and not action.get("region") and not action.get("screenshot"):
+            errors.append(
+                f"schema: Step '{step_id}' {action_type} requires selector, 'region', or 'screenshot'"
+            )
     elif action_type in EXCEL_ACTIONS:
         if not action.get("path") and not action.get("file_path"):
             errors.append(f"schema: Step '{step_id}' {action_type} requires 'path' or 'file_path'")
@@ -538,6 +578,15 @@ def _validate_workflow_action_rules(workflow: dict, step: dict, credentials: dic
                     errors.append(
                         f"security: Step '{step_id}' references undeclared secret '{secret_name}'"
                     )
+            if (
+                action_type == "desktop.clipboard_paste"
+                and path.endswith(".secret")
+                and not SECRET_REF_RE.search(value)
+                and value not in credentials
+            ):
+                errors.append(
+                    f"security: Step '{step_id}' references undeclared secret '{value}'"
+                )
             if path.endswith(".url") or path.endswith(".path"):
                 if SECRET_REF_RE.search(value):
                     errors.append(f"security: Step '{step_id}' cannot use secrets in URL/path")
@@ -549,8 +598,11 @@ def _validate_security_literals(step: dict) -> List[str]:
     errors: List[str] = []
     step_id = step.get("id", "unknown")
     action = step.get("action", {}) or {}
+    action_type = action.get("type", "unknown")
     for path, value in _walk_values(action, prefix=f"steps.{step_id}.action"):
         key = path.rsplit(".", 1)[-1]
+        if action_type == "desktop.clipboard_paste" and key == "secret":
+            continue
         if is_sensitive_key(key) and isinstance(value, str):
             if value and not SECRET_REF_RE.search(value):
                 errors.append(f"security: Step '{step_id}' has literal sensitive value at {path}")

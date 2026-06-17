@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "session_id": "[REDACTED]",
+  "task_file": "C:\\Users\\Rau\\Desktop\\rpa-harness\\.pytest_tmp\\test_autopilot_cli_outputs_jso0\\task.md",
+  "status": "created",
+  "created_at": "2026-06-16T19:44:36.577309+00:00",
+  "artifacts": [
+    "task_spec.md",
+    "assumptions.md",
+    "questions.json"
+  ]
+}
