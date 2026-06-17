@@ -407,7 +407,7 @@ steps:
 
 @pytest.mark.asyncio
 async def test_retry_run_retries_only_safe_failed_records(tmp_path, monkeypatch):
-    from main import _retry_run
+    from harness.reporting.run_artifacts import retry_run
 
     monkeypatch.chdir(tmp_path)
     wf_path = tmp_path / "retry.yaml"
@@ -456,7 +456,7 @@ steps:
         encoding="utf-8",
     )
 
-    result = await _retry_run("old-run", failed_records=True)
+    result = await retry_run("old-run", failed_records=True)
 
     assert result["status"] == "passed"
     assert result["retried_records"] == ["SAFE"]
@@ -601,7 +601,8 @@ steps:
 
 def test_run_artifact_cli_helpers(tmp_path, monkeypatch, capsys):
     from harness.builder import capture_desktop_session, validate_discovery_fixtures
-    from main import _print_run_logs, _run_report_path, _start_builder_session
+    from harness.reporting.run_artifacts import print_run_logs, run_report_path
+    from main import _start_builder_session
 
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "runs" / "run-1"
@@ -614,11 +615,11 @@ def test_run_artifact_cli_helpers(tmp_path, monkeypatch, capsys):
     task = tmp_path / "task.md"
     task.write_text("Build login flow with token=secret-value", encoding="utf-8")
 
-    _print_run_logs("run-1", tail=1, step=None)
+    print_run_logs("run-1", tail=1, step=None)
     output = capsys.readouterr().out
     assert "second" in output
     assert "first" not in output
-    assert _run_report_path("run-1") == (run_dir / "report.html").resolve()
+    assert run_report_path("run-1") == (run_dir / "report.html").resolve()
 
     session = _start_builder_session(str(task), "session-1")
     assert (session / "task_spec.md").exists()

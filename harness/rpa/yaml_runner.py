@@ -46,6 +46,8 @@ from harness.verification.checks import CheckRunner
 INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 VARIABLE_REF_RE = re.compile(r"\$\{variables\.([A-Za-z_][A-Za-z0-9_]*)\}")
 SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
+FILE_PWD_REF_RE = re.compile(r"file://\$PWD(?![A-Za-z0-9_])")
+PWD_REF_RE = re.compile(r"(?<![A-Za-z0-9_])\$PWD(?![A-Za-z0-9_])")
 
 SUPPORTED_RUNTIME_PREFIXES = ("browser.", "api.", "desktop.", "excel.")
 
@@ -1468,8 +1470,14 @@ class YamlWorkflowRunner:
     def _resolve_string(self, value: str) -> str:
         result = value
         cwd = Path.cwd().resolve()
-        result = result.replace("file://${PWD}", cwd.as_uri())
-        result = result.replace("${PWD}", str(cwd))
+
+        def replace_pwd(text: str) -> str:
+            text = text.replace("file://${PWD}", cwd.as_uri())
+            text = FILE_PWD_REF_RE.sub(cwd.as_uri(), text)
+            text = text.replace("${PWD}", cwd.as_posix())
+            return PWD_REF_RE.sub(cwd.as_posix(), text)
+
+        result = replace_pwd(result)
 
         def replace_input(match):
             return str(self._inputs.get(match.group(1), match.group(0)))
@@ -1486,8 +1494,7 @@ class YamlWorkflowRunner:
         result = INPUT_REF_RE.sub(replace_input, result)
         result = VARIABLE_REF_RE.sub(replace_variable, result)
         result = SECRET_REF_RE.sub(replace_secret, result)
-        result = result.replace("file://${PWD}", cwd.as_uri())
-        result = result.replace("${PWD}", str(cwd))
+        result = replace_pwd(result)
         return os.path.expandvars(result)
 
     def _store_output(self, action: dict, value: Any):

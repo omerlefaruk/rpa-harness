@@ -51,6 +51,45 @@ def test_default_schema_validates_and_generates_graph(tmp_path):
     assert graph["summary"]["steps_with_success_checks"] == 1
 
 
+def test_workflow_graph_cli_preserves_default_schema_metadata(tmp_path):
+    workflow = tmp_path / "default_schema.yaml"
+    workflow.write_text(
+        """
+schema_version: 2
+name: human_gate_graph
+targets:
+  portal:
+    type: browser
+phases:
+  - id: review
+    steps:
+      - id: approve
+        target: portal
+        type: human_gate
+        choices:
+          - approve
+          - stop
+        default_safe_action: stop
+        action:
+          type: no_op
+        success_checks:
+          - type: always_pass
+""",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "main.py", "--workflow-graph", str(workflow)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    graph = json.loads(completed.stdout)
+
+    assert graph["summary"]["human_gates"] == 1
+    assert graph["summary"]["steps_with_success_checks"] == 1
+
+
 def test_default_schema_rejects_missing_success_check_and_unsafe_retry():
     workflow = {
         "schema_version": 2,
@@ -186,6 +225,23 @@ def test_observability_indexes_runs_idempotently_and_redacts(tmp_path):
 def test_dashboard_api_artifact_and_live_polling_are_safe(tmp_path):
     run = tmp_path / "runs" / "run-1"
     run.mkdir(parents=True)
+    workflow = tmp_path / "workflows" / "fixture.yaml"
+    workflow.parent.mkdir()
+    workflow.write_text(
+        """
+id: dashboard_graph
+name: Dashboard Graph
+version: "1.0"
+type: api
+steps:
+  - id: done
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""",
+        encoding="utf-8",
+    )
     (run / "run_manifest.json").write_text(
         json.dumps({"run_id": "run-1", "workflow": "wf", "status": "failed", "run_directory": str(run)}),
         encoding="utf-8",
@@ -206,6 +262,8 @@ def test_dashboard_api_artifact_and_live_polling_are_safe(tmp_path):
     assert CANARY not in json.dumps(events)
     assert client.get("/api/artifacts", params={"run_id": "run-1", "path": "report.html"}).status_code == 200
     assert client.get("/api/artifacts", params={"run_id": "run-1", "path": "../secret.txt"}).status_code == 403
+    graph = client.get("/api/workflows/workflows/fixture.yaml/graph").json()
+    assert graph["workflow"] == "Dashboard Graph"
 
 
 def test_operator_cli_migrates_graphs_and_indexes(tmp_path):

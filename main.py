@@ -19,6 +19,14 @@ from pathlib import Path
 
 from harness.config import HarnessConfig
 from harness.orchestrator import AutomationHarness
+from harness.reporting.run_artifacts import (
+    live_tail,
+    print_run_logs,
+    print_run_manifest,
+    print_runs_list,
+    retry_run,
+    run_report_path,
+)
 
 
 def configure_console_encoding():
@@ -441,19 +449,19 @@ async def main():
         return
 
     if args.runs_list:
-        _print_runs_list()
+        print_runs_list()
         return
 
     if args.runs_show:
-        _print_run_manifest(args.runs_show)
+        print_run_manifest(args.runs_show)
         return
 
     if args.logs_show:
-        _print_run_logs(args.logs_show, tail=args.logs_tail, step=args.log_step)
+        print_run_logs(args.logs_show, tail=args.logs_tail, step=args.log_step)
         return
 
     if args.report_open:
-        print(_run_report_path(args.report_open))
+        print(run_report_path(args.report_open))
         return
 
     if args.build_start:
@@ -606,7 +614,7 @@ async def main():
     if args.retry_run:
         import json
 
-        result = await _retry_run(args.retry_run, failed_records=args.failed_records, config=build_config(args))
+        result = await retry_run(args.retry_run, failed_records=args.failed_records, config=build_config(args))
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") != "passed":
             sys.exit(1)
@@ -717,7 +725,7 @@ async def main():
         return
 
     if args.live_tail:
-        _live_tail(args.live_tail, runs_dir=args.runs_dir)
+        live_tail(args.live_tail, runs_dir=args.runs_dir)
         return
 
     if args.validate_yaml:
@@ -912,169 +920,6 @@ def _telegram_channel_or_skip():
         )
         return None, telegram_config
     return TelegramBotChannel(telegram_config), telegram_config
-
-
-def _print_runs_list(runs_dir: str = "runs", limit: int = 20):
-    import json
-
-    root = Path(runs_dir)
-    rows = []
-    for manifest in sorted(root.glob("*/run_manifest.json"), reverse=True):
-        try:
-            data = json.loads(manifest.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        rows.append(data)
-        if len(rows) >= limit:
-            break
-    if not rows:
-        print("No runs found.")
-        return
-    for row in rows:
-        summary = row.get("summary") or {}
-        print(
-            f"{row.get('run_id')}  {row.get('status')}  {row.get('workflow')}  "
-            f"steps {summary.get('passed_steps', 0)}/{summary.get('total_steps', 0)}  "
-            f"report {row.get('run_directory')}/report.html"
-        )
-
-
-def _resolve_run_dir(run: str) -> Path:
-    path = Path(run)
-    if not path.exists():
-        path = Path("runs") / run
-    if path.is_file():
-        path = path.parent
-    if not path.exists():
-        print(f"Run not found: {run}", file=sys.stderr)
-        sys.exit(1)
-    return path
-
-
-def _print_run_manifest(run: str):
-    import json
-
-    path = _resolve_run_dir(run)
-    manifest = path / "run_manifest.json"
-    if not manifest.exists():
-        print(f"Run manifest not found: {run}", file=sys.stderr)
-        sys.exit(1)
-    print(json.dumps(json.loads(manifest.read_text(encoding="utf-8")), indent=2, default=str))
-
-
-def _print_run_logs(run: str, tail: int | None = None, step: str | None = None):
-    import json
-
-    path = _resolve_run_dir(run) / "logs.jsonl"
-    if not path.exists():
-        print(f"Run logs not found: {path}", file=sys.stderr)
-        sys.exit(1)
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if step:
-        lines = [
-            line for line in lines
-            if _jsonl_step(line) == step
-        ]
-    if tail is not None:
-        lines = lines[-max(tail, 0):]
-    for line in lines:
-        try:
-            print(json.dumps(json.loads(line), ensure_ascii=False, default=str))
-        except json.JSONDecodeError:
-            print(line)
-
-
-def _jsonl_step(line: str) -> str | None:
-    import json
-
-    try:
-        return json.loads(line).get("step")
-    except json.JSONDecodeError:
-        return None
-
-
-def _run_report_path(run: str) -> Path:
-    path = _resolve_run_dir(run) / "report.html"
-    if not path.exists():
-        print(f"Run report not found: {path}", file=sys.stderr)
-        sys.exit(1)
-    return path.resolve()
-
-
-def _live_tail(run: str, runs_dir: str = "runs"):
-    import json
-    import time
-
-    run_dir = _resolve_run_dir(run) if Path(run).exists() else Path(runs_dir) / run
-    timeline = run_dir / "timeline.jsonl"
-    if not timeline.exists():
-        print(f"Timeline not found: {timeline}", file=sys.stderr)
-        sys.exit(1)
-    seen = 0
-    while True:
-        lines = timeline.read_text(encoding="utf-8", errors="replace").splitlines()
-        for line in lines[seen:]:
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            print(json.dumps(event, default=str))
-            if event.get("event") == "run.finished":
-                return
-        seen = len(lines)
-        time.sleep(0.5)
-
-
-async def _retry_run(run: str, *, failed_records: bool = False, config: HarnessConfig | None = None) -> dict:
-    import json
-
-    from harness.rpa.yaml_runner import YamlWorkflowRunner
-
-    run_dir = _resolve_run_dir(run)
-    manifest_path = run_dir / "run_manifest.json"
-    if not manifest_path.exists():
-        return {"status": "blocked", "reason": "run_manifest.json not found", "run_dir": str(run_dir)}
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    workflow_path = manifest.get("workflow_path")
-    if not workflow_path:
-        return {"status": "blocked", "reason": "manifest does not include workflow_path", "run_dir": str(run_dir)}
-    if not failed_records:
-        return {"status": "blocked", "reason": "Only --failed-records retry is supported safely."}
-    records = _latest_records(run_dir / "records.jsonl")
-    failed = [
-        record for record in records.values()
-        if record.get("status") == "failed" and (record.get("safe_retry") or {}).get("status") == "yes"
-    ]
-    if not failed:
-        return {"status": "blocked", "reason": "No safe failed records to retry.", "run_dir": str(run_dir)}
-    results = []
-    runner = YamlWorkflowRunner(config or HarnessConfig.from_env())
-    for record in failed:
-        results.append(await runner.run(workflow_path, only_record=str(record.get("record_id"))))
-    return {
-        "status": "passed" if all(item.get("status") == "passed" for item in results) else "failed",
-        "retried_records": [record.get("record_id") for record in failed],
-        "results": results,
-    }
-
-
-def _latest_records(path: Path) -> dict[str, dict]:
-    import json
-
-    latest: dict[str, dict] = {}
-    if not path.exists():
-        return latest
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        record_id = str(record.get("record_id") or "")
-        if record_id:
-            latest[record_id] = record
-    return latest
 
 
 def _start_builder_session(task_path: str, session_id: str | None = None) -> Path:
