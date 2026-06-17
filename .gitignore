@@ -2,6 +2,7 @@
 reports/
 runs/*
 !runs/.gitkeep
+builder_sessions/
 screenshots/
 downloads/
 logs/

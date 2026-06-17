@@ -44,6 +44,8 @@ def write_workflow_template(
     owner: str = "ops",
     target_system: str = "target-system",
 ) -> Path:
+    destination = Path(path)
+    _ensure_project_workflow_destination(destination)
     workflow = workflow_template(
         template=template,
         workflow_id=workflow_id,
@@ -51,10 +53,21 @@ def write_workflow_template(
         owner=owner,
         target_system=target_system,
     )
-    destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(yaml.safe_dump(workflow, sort_keys=False), encoding="utf-8")
     return destination
+
+
+def _ensure_project_workflow_destination(destination: Path) -> None:
+    parts = [part.lower() for part in destination.parts]
+    is_project_workflow = any(
+        part == "projects"
+        and index + 2 < len(parts)
+        and parts[index + 2] == "workflows"
+        for index, part in enumerate(parts)
+    )
+    if not is_project_workflow or destination.name != "main.yaml":
+        raise ValueError("Workflow templates must be written under projects/<project>/workflows/main.yaml")
 
 
 def prompt_for_workflow(path: str | Path) -> Path:

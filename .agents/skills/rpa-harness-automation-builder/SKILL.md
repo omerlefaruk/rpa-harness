@@ -54,6 +54,60 @@ For old desktop apps with weak/no UIA, try Win32, menus, keyboard navigation, cl
 - repair_packet.json or repair_packet.md
 - report.html
 
+## Autopilot mode
+
+When the user wants no manual CLI work, the user should not be asked to run
+commands. The orchestrator agent should create or update a task file, then call
+the one-shot copilot command itself:
+
+```bash
+python main.py --copilot-auto task.md --builder-session-id SESSION
+```
+
+`--copilot-auto` auto-confirms intake from the prompt, runs discovery,
+validation, preflight, and safe execution, then stops only at a real question or
+the final review gate. Ask the user in chat for the active `next_question`, then
+answer it with:
+
+```bash
+python main.py --copilot-answer SESSION --copilot-question-id QUESTION --copilot-response ANSWER
+python main.py --copilot-auto SESSION
+```
+
+For fast browser URL iterations, prefer:
+
+```bash
+python main.py --copilot-try-url https://example.test --copilot-try-workflow workflow.yaml --builder-session-id SESSION
+```
+
+This creates the task file, reuses cached selector discovery when available,
+asks policy questions before discovery, runs validation/preflight/execution, and
+writes `copilot_report.json` plus `copilot_report.md`.
+
+For already-authored deterministic workflow tasks, the older JSON-returning
+autopilot command is still available:
+
+```bash
+python main.py --autopilot-build task.md --autopilot-workflow workflow.yaml
+```
+
+Use `.agents/config/autopilot.yaml` as the policy gate and
+`.agents/config/agent_command_manifest.json` as the approved command list.
+Autopilot must still validate, preflight, execute, and inspect report artifacts.
+If policy blocks external writes, submit actions, or coordinate fallback, return
+the blocked JSON result instead of improvising.
+
+## OKF maintenance
+
+When durable repo knowledge changes, especially docs, workflow schema, CLI
+commands, skills, hooks, project layout, or agent/copilot policy, update
+`docs/okf`, then run:
+
+```bash
+python scripts/okf.py generate-indexes docs/okf
+python scripts/okf.py validate docs/okf
+```
+
 ## Never do
 
 - Do not hardcode or expose secret values.

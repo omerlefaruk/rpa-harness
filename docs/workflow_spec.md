@@ -87,7 +87,7 @@ production readiness.
 Use `--new-workflow` to create a rulebook-shaped YAML starting point:
 
 ```bash
-python main.py --new-workflow workflows/new_api.yaml --workflow-template api_read_write --workflow-id new_api
+python main.py --new-workflow projects/new_api/workflows/main.yaml --workflow-template api_read_write --workflow-id new_api
 ```
 
 Available templates:
@@ -139,12 +139,12 @@ YAML workflow runs now create a run folder under `runs/<run_id>/` with:
 Typical operator flow:
 
 ```bash
-python main.py --validate-yaml workflows/upload_invoices.yaml
-python main.py --preflight-yaml workflows/upload_invoices.yaml
-python main.py --run-yaml workflows/upload_invoices.yaml --phase login
-python main.py --run-yaml workflows/upload_invoices.yaml --pause-before submit_invoice
-python main.py --run-yaml workflows/upload_invoices.yaml --pause-after-phase login
-python main.py --run-yaml workflows/upload_invoices.yaml --until-step submit_invoice
+python main.py --validate-yaml projects/upload_invoices/workflows/main.yaml
+python main.py --preflight-yaml projects/upload_invoices/workflows/main.yaml
+python main.py --run-yaml projects/upload_invoices/workflows/main.yaml --phase login
+python main.py --run-yaml projects/upload_invoices/workflows/main.yaml --pause-before submit_invoice
+python main.py --run-yaml projects/upload_invoices/workflows/main.yaml --pause-after-phase login
+python main.py --run-yaml projects/upload_invoices/workflows/main.yaml --until-step submit_invoice
 python main.py --runs-list
 python main.py --runs-show RUN_ID
 ```

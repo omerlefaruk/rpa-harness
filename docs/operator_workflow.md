@@ -3,11 +3,11 @@
 Recommended flow:
 
 ```bash
-python main.py --migrate-workflow workflows/legacy.yaml --workflow-output workflows/current.yaml --migration-report migration_report.md
-python main.py --validate-yaml workflows/current.yaml
-python main.py --preflight-yaml workflows/current.yaml
-python main.py --workflow-graph workflows/current.yaml --workflow-graph-output workflow_graph.json
-python main.py --run-yaml workflows/current.yaml --phase login
+python main.py --migrate-workflow projects/current/workflows/legacy.yaml --workflow-output projects/current/workflows/main.yaml --migration-report migration_report.md
+python main.py --validate-yaml projects/current/workflows/main.yaml
+python main.py --preflight-yaml projects/current/workflows/main.yaml
+python main.py --workflow-graph projects/current/workflows/main.yaml --workflow-graph-output workflow_graph.json
+python main.py --run-yaml projects/current/workflows/main.yaml --phase login
 python main.py --live-tail RUN_ID
 python main.py --observability-index --runs-dir runs
 python main.py --serve --port 8080

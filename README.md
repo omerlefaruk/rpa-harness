@@ -10,12 +10,26 @@ The core rule is simple: an action executing is not success. A workflow step onl
 python main.py --validate-yaml workflows/examples/default_schema_example.yaml
 python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
 python main.py --run-yaml workflows/examples/minimal_example.yaml
+python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
+python main.py --config projects/example_data_verification/config.yaml --run-workflows --discover-wf projects/example_data_verification
 python main.py --observability-index --runs-dir runs
 python main.py --serve --port 8080
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
 python main.py --report-open <RUN_ID>
 ```
+
+## OKF knowledge bundle
+
+Repo knowledge is published as an OKF v0.1 bundle under `docs/okf`:
+
+```bash
+python scripts/okf.py validate docs/okf
+python scripts/okf.py generate-indexes docs/okf
+git config core.hooksPath .githooks
+```
+
+The pre-commit hook validates the OKF bundle and runs `tests/test_okf_bundle.py`.
 
 ## Generated run artifacts
 
@@ -39,7 +53,18 @@ A run directory may contain:
 
 ## Default schema and dashboard
 
-New workflows should use the phase-based default schema. Legacy flat workflows can be migrated:
+Real projects must live under `projects/<project>/`:
+
+```text
+projects/<project>/
+  workflows/main.yaml
+  config.yaml
+  tests/test_workflow.py
+  README.md
+```
+
+Shared harness examples remain under `workflows/examples/` and `workflows/capabilities/`.
+New project workflows should use the phase-based default schema. Legacy flat examples can be migrated:
 
 ```bash
 python main.py --migrate-workflow workflows/examples/minimal_example.yaml --workflow-output workflows/examples/minimal_example.schema.yaml --migration-report migration_report.md

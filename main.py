@@ -7,7 +7,7 @@ Usage:
     python main.py --agent "Login to example.com and verify dashboard" --headless
     python main.py --serve --port 8080
     python main.py --rpa-memory-serve
-    python main.py --run-workflows --discover-wf ./tests/rpa
+    python main.py --run-workflows --discover-wf projects/example_data_verification
     python main.py --browser-selector-swarm https://example.com/login
 """
 
@@ -53,6 +53,7 @@ Examples:
     parser.add_argument("--workflow-name", "-wn", help="Specific workflow name")
     parser.add_argument("--report", default="html,json", help="Report formats (html,json)")
     parser.add_argument("--browser", choices=["chromium", "firefox", "webkit"])
+    parser.add_argument("--browser-cdp", help="Attach to an existing Chromium CDP endpoint, for example http://127.0.0.1:9222")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--slow-mo", type=int, default=0)
     parser.add_argument("--no-vision", action="store_true")
@@ -60,6 +61,21 @@ Examples:
     parser.add_argument("--vision-model", default="gpt-4o")
     parser.add_argument("--agent-model", default="gpt-4o")
     parser.add_argument("--agent-max-steps", type=int)
+    parser.add_argument("--copilot", action="store_true", help="Ask live operator questions instead of ending at YAML pauses")
+    parser.add_argument("--copilot-question-mode", choices=["console"], help="Question channel for --copilot")
+    parser.add_argument("--copilot-build", help="Start a phase-by-phase copilot automation build from a task markdown file")
+    parser.add_argument("--copilot-session", help="Show a copilot builder session JSON state")
+    parser.add_argument("--copilot-answer", help="Answer a copilot session question")
+    parser.add_argument("--copilot-question-id", help="Question id for --copilot-answer")
+    parser.add_argument("--copilot-response", help="Answer text for --copilot-answer")
+    parser.add_argument("--copilot-advance", help="Advance a copilot session to the next automatic phase")
+    parser.add_argument("--copilot-auto", help="Start a task path or continue a session until a copilot question/review gate")
+    parser.add_argument("--copilot-try-url", help="Start the fast copilot URL path for a browser automation target")
+    parser.add_argument("--copilot-try-workflow", help="Workflow YAML to use with --copilot-try-url")
+    parser.add_argument("--copilot-try-intent", help="Discovery intent to use with --copilot-try-url")
+    parser.add_argument("--autopilot-build", help="Agent-facing build/run task markdown file")
+    parser.add_argument("--autopilot-workflow", help="Workflow YAML for --autopilot-build")
+    parser.add_argument("--autopilot-policy", default=".agents/config/autopilot.yaml", help="Policy YAML for --autopilot-build")
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument("--log-level", default="INFO")
     parser.add_argument("--serve", action="store_true", help="Start web dashboard")
@@ -224,6 +240,8 @@ def build_config(args) -> HarnessConfig:
 
     if args.browser:
         config.browser = args.browser
+    if args.browser_cdp:
+        config.browser_cdp_endpoint = args.browser_cdp
     if args.headless:
         config.headless = True
     if args.slow_mo:
@@ -238,6 +256,10 @@ def build_config(args) -> HarnessConfig:
         config.agent_model = args.agent_model
     if args.agent_max_steps:
         config.agent_max_steps = args.agent_max_steps
+    if args.copilot:
+        config.copilot_enabled = True
+    if args.copilot_question_mode:
+        config.copilot_question_mode = args.copilot_question_mode
     if args.max_workers:
         config.max_workers = args.max_workers
     if args.log_level:
@@ -428,6 +450,93 @@ async def main():
         print(f"Builder session: {_start_builder_session(args.build_start, args.builder_session_id)}")
         return
 
+    if args.copilot_build:
+        import json
+
+        from harness.copilot_session import read_copilot_session, start_copilot_session
+
+        session_dir = start_copilot_session(
+            args.copilot_build,
+            session_id=args.builder_session_id,
+        )
+        print(json.dumps(read_copilot_session(session_dir.name), indent=2, default=str))
+        return
+
+    if args.copilot_session:
+        import json
+
+        from harness.copilot_session import read_copilot_session
+
+        print(json.dumps(read_copilot_session(args.copilot_session), indent=2, default=str))
+        return
+
+    if args.copilot_answer:
+        import json
+
+        from harness.copilot_session import answer_copilot_question
+
+        if not args.copilot_question_id or args.copilot_response is None:
+            print("--copilot-answer requires --copilot-question-id and --copilot-response", file=sys.stderr)
+            sys.exit(2)
+        result = answer_copilot_question(
+            args.copilot_answer,
+            args.copilot_question_id,
+            args.copilot_response,
+        )
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") in {"blocked", "failed"}:
+            sys.exit(1)
+        return
+
+    if args.copilot_advance:
+        import contextlib
+        import json
+
+        from harness.copilot_session import advance_copilot_session
+
+        with contextlib.redirect_stdout(sys.stderr):
+            result = await advance_copilot_session(args.copilot_advance, config=build_config(args))
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") in {"blocked", "failed"}:
+            sys.exit(1)
+        return
+
+    if args.copilot_auto:
+        import contextlib
+        import json
+
+        from harness.copilot_session import run_copilot_auto
+
+        with contextlib.redirect_stdout(sys.stderr):
+            result = await run_copilot_auto(
+                args.copilot_auto,
+                session_id=args.builder_session_id,
+                config=build_config(args),
+            )
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") in {"blocked", "failed"}:
+            sys.exit(1)
+        return
+
+    if args.copilot_try_url:
+        import contextlib
+        import json
+
+        from harness.copilot_session import run_copilot_try_url
+
+        with contextlib.redirect_stdout(sys.stderr):
+            result = await run_copilot_try_url(
+                args.copilot_try_url,
+                workflow_path=args.copilot_try_workflow,
+                intent=args.copilot_try_intent,
+                session_id=args.builder_session_id,
+                config=build_config(args),
+            )
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") in {"blocked", "failed"}:
+            sys.exit(1)
+        return
+
     if args.capture_desktop:
         print(f"Capture session: {_capture_desktop(args.capture_desktop, args.capture_session_dir)}")
         return
@@ -462,6 +571,25 @@ async def main():
         result = production_selector_repair(args.repair_selector, approve=args.repair_approve)
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") not in {"applied", "ready"}:
+            sys.exit(1)
+        return
+
+    if args.autopilot_build:
+        import contextlib
+        import json
+
+        from harness.autopilot import run_autopilot_build
+
+        config = build_config(args)
+        with contextlib.redirect_stdout(sys.stderr):
+            result = await run_autopilot_build(
+                args.autopilot_build,
+                workflow_path=args.autopilot_workflow,
+                config=config,
+                policy_path=args.autopilot_policy,
+            )
+        print(json.dumps(result, indent=2, default=str))
+        if result.get("status") != "passed":
             sys.exit(1)
         return
 
@@ -751,6 +879,7 @@ async def main():
             args.runs_list,
             args.runs_show,
             args.live_tail,
+            args.autopilot_build,
             args.browser_selector_swarm,
         ]
     ):

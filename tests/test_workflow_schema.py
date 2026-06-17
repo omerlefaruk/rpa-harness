@@ -345,6 +345,37 @@ steps:
 
 
 @pytest.mark.asyncio
+async def test_yaml_runner_only_record_filters_for_each_records(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "loop_records.yaml"
+    wf_path.write_text("""
+id: loop_records
+name: Loop Records
+version: "1.0"
+type: api
+inputs:
+  rows:
+    - invoice_id: A
+    - invoice_id: B
+steps:
+  - id: process_row
+    phase: process_records
+    for_each:
+      input: rows
+      record_id: invoice_id
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+
+    result = await YamlWorkflowRunner().run(str(wf_path), only_record="B")
+
+    assert result["status"] == "passed"
+    assert [step["record_id"] for step in result["steps"]] == ["B"]
+
+
+@pytest.mark.asyncio
 async def test_retry_run_retries_only_safe_failed_records(tmp_path, monkeypatch):
     from main import _retry_run
 
@@ -434,6 +465,55 @@ steps:
     assert paused["status"] == "paused"
     assert [step["step_id"] for step in paused["steps"]] == ["open_login"]
     assert json.loads((Path(paused["run_dir"]) / "run_manifest.json").read_text())["status"] == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_yaml_runner_copilot_pause_asks_and_continues(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    wf_path = tmp_path / "copilot.yaml"
+    wf_path.write_text("""
+id: copilot_pause
+name: Copilot Pause
+version: "1.0"
+type: api
+steps:
+  - id: open_login
+    phase: login
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+  - id: submit_invoice
+    phase: process_records
+    side_effect: external_write
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
+""")
+    config = HarnessConfig()
+    config.copilot_enabled = True
+
+    class FakeCopilot:
+        def __init__(self):
+            self.questions = []
+
+        async def ask(self, **kwargs):
+            self.questions.append(kwargs)
+            return {"action": "continue", "answer": "continue", "question_id": "q-1"}
+
+    runner = YamlWorkflowRunner(config)
+    fake = FakeCopilot()
+    runner._copilot = fake
+
+    result = await runner.run(str(wf_path), pause_before="submit_invoice")
+
+    assert result["status"] == "passed"
+    assert [step["step_id"] for step in result["steps"]] == ["open_login", "submit_invoice"]
+    assert fake.questions[0]["step"]["id"] == "submit_invoice"
+    timeline = (Path(result["run_dir"]) / "timeline.jsonl").read_text(encoding="utf-8")
+    assert "copilot.question" in timeline
+    assert "copilot.answer" in timeline
 
 
 def test_audit_workflow_cli_outputs_rulebook_json(tmp_path):

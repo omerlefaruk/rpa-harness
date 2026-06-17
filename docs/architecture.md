@@ -20,16 +20,17 @@ harness/          ← Deterministic Python runner
   memory/         ← RPA Memory sessions, observations, summaries, search
   reporting/      ← HTML, JSON, failure reports
 tools/            ← CLI utilities (inspect, analyze, patch)
+projects/         ← Real workflow projects: workflow YAML, config, tests, README
 runs/             ← Run artifacts per execution
-workflows/        ← YAML workflow definitions
+workflows/        ← Shared YAML examples and capability fixtures
 tests/            ← pytest test suite
-config/           ← YAML config templates
+config/           ← Shared default config template
 ```
 
 ## Execution Flow
 
 ```
-User request → Codex plans → YAML workflow created
+User request → Codex plans → project folder created under projects/<project>
   → harness.cli validate → harness.cli run
   → deterministic step execution with verification
   → success checks per step

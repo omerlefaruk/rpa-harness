@@ -33,7 +33,7 @@ def test_workflow_templates_are_valid_and_rulebook_ready():
 
 
 def test_new_workflow_cli_writes_valid_template(tmp_path):
-    path = tmp_path / "generated.yaml"
+    path = tmp_path / "projects" / "generated_api" / "workflows" / "main.yaml"
 
     completed = subprocess.run(
         [

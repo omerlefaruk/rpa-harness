@@ -9,7 +9,7 @@ from pathlib import Path
 from openpyxl import Workbook
 
 
-MODULE_PATH = Path(__file__).parent / "rpa" / "ota_link_swarm_from_excel.py"
+MODULE_PATH = Path(__file__).resolve().parents[1] / "workflow.py"
 SPEC = importlib.util.spec_from_file_location("ota_link_swarm_from_excel", MODULE_PATH)
 ota_workflow = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader

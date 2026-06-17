@@ -91,7 +91,7 @@ Remaining implementation plan:
 | K. Reporting/CLI | `--validate-yaml` | `workflows/capabilities/*.yaml` | CLI validates workflow files | Browser/API read/API write validate | supported | CLI `VALID` output | None | None |
 | K. Reporting/CLI | `--run-yaml local_browser_form` | `workflows/capabilities/local_browser_form.yaml` | CLI can run real browser workflow | Passes locally | supported | CLI run passed all 12 steps | None | None |
 | K. Reporting/CLI | `--discover ./tests --run --report html,json` | Existing tests plus capability tests | CLI can discover/run tests and write reports without public-site dependency | Passes locally | supported | CLI run passes deterministic local browser example by default | External public-site examples require `--tags external` or `RPA_RUN_EXTERNAL_TESTS=1` | Keep public-site tests opt-in |
-| K. Reporting/CLI | `--run-workflows --discover-wf ./tests/rpa --report html,json` | `tests/rpa/example_verification.py` | Python workflow discovery/reporting | Passes locally | supported | CLI workflow run processed 2 records | Example still writes ignored report/data artifacts | Use temp-path fixtures for stricter CI proof |
+| K. Reporting/CLI | `--run-workflows --discover-wf projects/example_data_verification --report html,json` | `projects/example_data_verification/workflow.py` | Python workflow discovery/reporting | Passes locally | supported | CLI workflow run processed 2 records | Example still writes ignored report/data artifacts | Use temp-path fixtures for stricter CI proof |
 | K. Reporting/CLI | Reports include metadata | `tests/capabilities/test_reporting_evidence.py` | JSON reports include test and workflow metadata | Assertion passes | supported | JSON report in temp dir | None | None |
 | K. Reporting/CLI | Failure report includes repro_command | `tests/capabilities/test_reporting_evidence.py`, API failure tests | Failure reports are actionable | Assertion passes | supported | `failure_report.json` | None | Add command with `--headless --no-vision` when applicable |
 | K. Reporting/CLI | Reports do not leak secrets | `tests/capabilities/test_reporting_evidence.py` | Reporter redacts arbitrary secret-like logs | Assertion passes | supported | JSON report excludes fixture secret | None | Keep redaction before serialization |
@@ -178,7 +178,7 @@ python3 main.py --validate-yaml workflows/capabilities/local_api_write.yaml
 RPA_RUN_INTEGRATION=1 python3 -m pytest -q tests/capabilities/test_yaml_browser_runtime.py
 python3 main.py --discover ./tests --run --report html,json --headless --no-vision
 python3 main.py --discover ./tests --run --tags external --report html,json --headless --no-vision
-python3 main.py --run-workflows --discover-wf ./tests/rpa --report html,json
+python3 main.py --run-workflows --discover-wf projects/example_data_verification --report html,json
 ```
 
 Use `python3 -m pytest` if the `pytest` executable is not installed on `PATH`.

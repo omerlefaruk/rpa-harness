@@ -64,7 +64,7 @@ def list_builder_sessions(root_dir: str | Path = ".") -> list[dict[str, Any]]:
         return []
     sessions = []
     for session in sorted(base.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
-        if not session.is_dir():
+        if not session.is_dir() or session.name.startswith("_"):
             continue
         discovery = read_json(session / "discovery_session.json")
         sessions.append(

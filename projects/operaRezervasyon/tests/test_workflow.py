@@ -10,7 +10,7 @@ from openpyxl import Workbook
 
 from harness.config import HarnessConfig
 from harness.verification import validate_workflow
-from tests.rpa.opera_rezervasyon_from_excel import (
+from projects.operaRezervasyon.workflow import (
     OperaRezervasyonFromExcelWorkflow,
     login_reached_authenticated_state,
     missing_credential_names,
@@ -20,7 +20,7 @@ from tests.rpa.opera_rezervasyon_from_excel import (
 
 
 def test_opera_rezervasyon_yaml_is_valid_and_uses_input_references():
-    workflow_path = Path("workflows/operaRezervasyon/main.yaml")
+    workflow_path = Path("projects/operaRezervasyon/workflows/main.yaml")
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
 
     assert validate_workflow(workflow) == []
@@ -34,7 +34,7 @@ def test_opera_rezervasyon_yaml_is_valid_and_uses_input_references():
 
 
 def test_opera_rezervasyon_config_defaults_to_dry_run_validation():
-    config = HarnessConfig.from_yaml("config/operaRezervasyon.yaml")
+    config = HarnessConfig.from_yaml("projects/operaRezervasyon/config.yaml")
 
     assert config.variables["opera_live_preflight"] is False
     assert config.variables["opera_allow_login"] is False

@@ -137,7 +137,7 @@ When delegating, use the appropriate subagent:
 python main.py --discover ./tests --run --report html,json
 python main.py --run --tags browser --headless
 python main.py --agent "Login and verify" --headless
-python main.py --run-workflows --discover-wf ./tests/rpa
+python main.py --run-workflows --discover-wf projects/example_data_verification
 python main.py --serve --port 8080
 python main.py --rpa-memory-serve --rpa-memory-port 37777
 python main.py --config ./config/default.yaml --discover ./tests --run

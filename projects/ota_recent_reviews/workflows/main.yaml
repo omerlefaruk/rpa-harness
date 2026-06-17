@@ -1,0 +1,36 @@
+id: ota_recent_reviews
+name: OTA Recent Reviews
+version: "0.1.0"
+type: mixed
+description: Project descriptor for the Python RPAWorkflow in projects/ota_recent_reviews/workflow.py.
+owner: ops
+target_systems:
+  - ota-public-sites
+input_schema:
+  input_excel: string
+  sheet: string
+output_destination: reports/ota_recent_reviews_report.html
+system_of_record: public OTA review pages
+success_condition: The workflow writes recent review JSON, HTML, and workbook artifacts.
+safe_test_case: Run against a small fixture workbook.
+allowed_side_effects:
+  - write_report
+rerun_policy: Safe to rerun after checking output files.
+escalation_owner: ops
+inputs:
+  input_excel: data/ota_links.xlsx
+  sheet: Taksim Analiz
+steps:
+  - id: python_workflow_entrypoint
+    current_stage: execute_python_workflow
+    intent: Run the project Python RPAWorkflow.
+    preconditions:
+      - input workbook exists
+    postconditions:
+      - recent review report exists
+    proof: projects/ota_recent_reviews/tests/test_workflow.py
+    failure_path: Fix project tests before production execution.
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass

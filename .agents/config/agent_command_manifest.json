@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "commands": {
+    "autopilot_build": {
+      "command": [
+        "python",
+        "main.py",
+        "--autopilot-build",
+        "<task.md>",
+        "--autopilot-workflow",
+        "<workflow.yaml>"
+      ],
+      "output": "json",
+      "purpose": "Agent-facing validate, preflight, run, and report loop for a workflow task.",
+      "success_status": "passed",
+      "artifacts": [
+        "builder_session",
+        "run_dir",
+        "report",
+        "timeline.jsonl",
+        "report.html"
+      ]
+    },
+    "okf_validate": {
+      "command": ["python", "scripts/okf.py", "validate", "docs/okf"],
+      "output": "json",
+      "purpose": "Validate the local Open Knowledge Format bundle before finishing docs, schema, CLI, skill, hook, or agent policy changes.",
+      "success_status": "passed",
+      "artifacts": ["docs/okf/index.md", "docs/okf/log.md"]
+    },
+    "okf_generate_indexes": {
+      "command": ["python", "scripts/okf.py", "generate-indexes", "docs/okf"],
+      "output": "json",
+      "purpose": "Regenerate OKF directory indexes from concept frontmatter after editing docs/okf concepts.",
+      "success_status": "passed",
+      "artifacts": ["docs/okf/index.md"]
+    },
+    "copilot_build": {
+      "command": [
+        "python",
+        "main.py",
+        "--copilot-build",
+        "<task.md>",
+        "--builder-session-id",
+        "<session_id>"
+      ],
+      "output": "json",
+      "purpose": "Start a phase-by-phase copilot automation build and ask the intake question.",
+      "success_status": "waiting",
+      "artifacts": [
+        "builder_session",
+        "copilot_state.json",
+        "questions.jsonl",
+        "answers.jsonl"
+      ]
+    },
+    "copilot_session": {
+      "command": ["python", "main.py", "--copilot-session", "<session_id>"],
+      "output": "json",
+      "purpose": "Read copilot session state, questions, answers, artifacts, and linked run evidence."
+    },
+    "copilot_answer": {
+      "command": [
+        "python",
+        "main.py",
+        "--copilot-answer",
+        "<session_id>",
+        "--copilot-question-id",
+        "<question_id>",
+        "--copilot-response",
+        "<answer>"
+      ],
+      "output": "json",
+      "purpose": "Answer the active copilot question and continue or stop the session."
+    },
+    "copilot_advance": {
+      "command": ["python", "main.py", "--copilot-advance", "<session_id>"],
+      "output": "json",
+      "purpose": "Advance the copilot session through discovery, validation, preflight, safe run, and review."
+    },
+    "copilot_auto": {
+      "command": [
+        "python",
+        "main.py",
+        "--copilot-auto",
+        "<task.md>",
+        "--builder-session-id",
+        "<session_id>"
+      ],
+      "output": "json",
+      "purpose": "Agent-owned one-shot automation builder loop. Starts the session, auto-confirms intake from the prompt, runs safe phases, and stops only at a question or review gate.",
+      "success_status": "waiting",
+      "artifacts": [
+        "builder_session",
+        "copilot_state.json",
+        "questions.jsonl",
+        "answers.jsonl",
+        "run_dir",
+        "report"
+      ]
+    },
+    "copilot_try_url": {
+      "command": [
+        "python",
+        "main.py",
+        "--copilot-try-url",
+        "<url>",
+        "--copilot-try-workflow",
+        "<workflow.yaml>",
+        "--builder-session-id",
+        "<session_id>"
+      ],
+      "output": "json",
+      "purpose": "Fast URL iteration path. Creates a task, reuses discovery cache when safe, validates, preflights, runs, and writes one copilot report.",
+      "success_status": "waiting",
+      "artifacts": [
+        "builder_session",
+        "copilot_state.json",
+        "copilot_report.json",
+        "copilot_report.md",
+        "run_dir",
+        "report"
+      ]
+    },
+    "validate_yaml": {
+      "command": ["python", "main.py", "--validate-yaml", "<workflow.yaml>"],
+      "output": "text",
+      "purpose": "Validate workflow schema and success checks before execution."
+    },
+    "preflight_yaml": {
+      "command": ["python", "main.py", "--preflight-yaml", "<workflow.yaml>"],
+      "output": "json",
+      "purpose": "Run preflight checks without executing workflow actions."
+    },
+    "run_yaml": {
+      "command": ["python", "main.py", "--run-yaml", "<workflow.yaml>"],
+      "output": "text",
+      "purpose": "Execute a deterministic workflow and produce run artifacts."
+    },
+    "browser_selector_swarm": {
+      "command": ["python", "main.py", "--browser-selector-swarm", "<url>"],
+      "output": "json",
+      "purpose": "Discover and validate browser selectors from page evidence."
+    },
+    "repair_selector": {
+      "command": ["python", "main.py", "--repair-selector", "<run_dir>"],
+      "output": "json",
+      "purpose": "Create or apply selector repair from failure evidence."
+    },
+    "retry_failed_records": {
+      "command": ["python", "main.py", "--retry-run", "<run_id>", "--failed-records"],
+      "output": "json",
+      "purpose": "Retry only failed records marked safe to retry."
+    }
+  }
+}
