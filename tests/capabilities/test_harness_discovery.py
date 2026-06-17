@@ -6,6 +6,7 @@ import pytest
 
 from harness.config import HarnessConfig
 from harness.orchestrator import AutomationHarness
+from harness.rpa.workflow import RPAWorkflow, WorkflowResult, WorkflowStatus
 from harness.test_case import AutomationTestCase
 
 
@@ -287,3 +288,87 @@ async def test_screenshots_attach_to_test_result(tmp_path):
     assert result.passed
     assert result.screenshots == [str(screenshot)]
     assert result.logs == ["Step 1: attach screenshot evidence"]
+
+
+@pytest.mark.asyncio
+async def test_external_workflows_are_excluded_from_default_runs(tmp_path, monkeypatch):
+    monkeypatch.delenv("RPA_RUN_EXTERNAL_TESTS", raising=False)
+    events: list[str] = []
+
+    class LocalCapabilityWorkflow(RPAWorkflow):
+        name = "local_capability_workflow"
+        tags = ["rpa", "capability"]
+
+        def get_records(self):
+            yield {"id": "local"}
+
+        async def process_record(self, record):
+            events.append(self.name)
+            return {"status": "passed"}
+
+    class ExternalCapabilityWorkflow(RPAWorkflow):
+        name = "external_capability_workflow"
+        tags = ["rpa", "external", "public-site"]
+
+        def get_records(self):
+            yield {"id": "external"}
+
+        async def process_record(self, record):
+            events.append(self.name)
+            return {"status": "passed"}
+
+    harness = AutomationHarness(_config(tmp_path))
+    harness.add_workflow(LocalCapabilityWorkflow)
+    harness.add_workflow(ExternalCapabilityWorkflow)
+
+    default_results = await harness.run_workflows()
+    external_results = await harness.run_workflows(tags=["external"])
+
+    assert [result.name for result in default_results] == ["local_capability_workflow"]
+    assert [result.name for result in external_results] == ["external_capability_workflow"]
+    assert events == ["local_capability_workflow", "external_capability_workflow"]
+
+
+@pytest.mark.asyncio
+async def test_workflow_summary_counts_setup_failures(tmp_path):
+    class SetupFailureWorkflow(RPAWorkflow):
+        name = "setup_failure_workflow"
+        tags = ["rpa", "capability"]
+
+        async def setup(self):
+            raise RuntimeError("missing fixture")
+
+        def get_records(self):
+            return iter(())
+
+        async def process_record(self, record):
+            return {"status": "passed"}
+
+    harness = AutomationHarness(_config(tmp_path))
+    harness.add_workflow(SetupFailureWorkflow)
+
+    results = await harness.run_workflows()
+    summary = harness.summary()
+
+    assert not results[0].passed
+    assert results[0].error_message == "missing fixture"
+    assert summary["workflows"]["failed"] == 1
+    assert summary["workflows"]["failed_records"] == 0
+
+
+def test_summary_duration_includes_workflow_only_runs(tmp_path):
+    harness = AutomationHarness(_config(tmp_path))
+    harness.workflow_results = [
+        WorkflowResult(
+            name="duration_workflow",
+            status=WorkflowStatus.PASSED,
+            duration_ms=321.4,
+        )
+    ]
+
+    assert harness.summary()["total_duration_ms"] == 321.4
+
+    harness._start_time = 10.0
+    harness._end_time = 12.5
+
+    assert harness.summary()["total_duration_ms"] == 2500.0

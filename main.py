@@ -293,6 +293,16 @@ def _strip_env_quotes(value: str) -> str:
     return value
 
 
+def has_run_failures(summary: dict) -> bool:
+    tests = summary.get("tests") or {}
+    workflows = summary.get("workflows") or {}
+    return (
+        tests.get("failed", 0) > 0
+        or workflows.get("failed", 0) > 0
+        or workflows.get("failed_records", 0) > 0
+    )
+
+
 async def main():
     configure_console_encoding()
     args = parse_args()
@@ -857,14 +867,11 @@ async def main():
             w = summary["workflows"]
             print(
                 f"WORKFLOWS: {w['processed_records']} records processed, "
-                f"{w['failed_records']} mismatches"
+                f"{w['failed_records']} mismatches, "
+                f"{w.get('failed', 0)} failed workflow(s)"
             )
 
-        has_failures = (
-            (summary.get("tests") and summary["tests"]["failed"] > 0)
-            or (summary.get("workflows") and summary["workflows"]["failed_records"] > 0)
-        )
-        if has_failures:
+        if has_run_failures(summary):
             sys.exit(1)
 
     # Show discovery

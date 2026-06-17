@@ -209,6 +209,36 @@ def test_yaml_runner_workflow_inputs_override_default_config_variables():
     assert resolved["base_url"] == "https://workflow.example"
 
 
+def test_yaml_runner_resolves_pwd_when_env_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("PWD", raising=False)
+    monkeypatch.chdir(tmp_path)
+    runner = YamlWorkflowRunner()
+
+    assert runner._resolve_string("file://${PWD}/fixture.html") == (
+        f"{tmp_path.as_uri()}/fixture.html"
+    )
+    assert runner._resolve_string("file://$PWD/fixture.html") == (
+        f"{tmp_path.as_uri()}/fixture.html"
+    )
+    assert runner._resolve_string("${PWD}/fixture.html") == (
+        f"{tmp_path.as_posix()}/fixture.html"
+    )
+
+
+def test_yaml_runner_pwd_fallback_does_not_rewrite_longer_variable_names(tmp_path, monkeypatch):
+    monkeypatch.delenv("PWD", raising=False)
+    monkeypatch.delenv("PWD_SUFFIX", raising=False)
+    monkeypatch.chdir(tmp_path)
+    runner = YamlWorkflowRunner()
+
+    assert runner._resolve_string("$PWD_SUFFIX/${PWD_SUFFIX}/$PWD/file.txt") == (
+        f"$PWD_SUFFIX/${{PWD_SUFFIX}}/{tmp_path.as_posix()}/file.txt"
+    )
+    assert runner._resolve_string("file://$PWD_SUFFIX/fixture.html") == (
+        "file://$PWD_SUFFIX/fixture.html"
+    )
+
+
 @pytest.mark.asyncio
 async def test_yaml_runner_load():
     wf_path = Path(__file__).parent.parent / "workflows" / "examples" / "minimal_example.yaml"

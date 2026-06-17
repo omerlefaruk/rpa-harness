@@ -192,6 +192,15 @@ class AutomationHarness:
         to_run = self.workflow_classes
         if tags:
             to_run = [w for w in to_run if any(tag in getattr(w, "tags", []) for tag in tags)]
+        if not self._external_tests_enabled(tags):
+            external = [w for w in to_run if self._is_external_workflow(w)]
+            if external:
+                names = ", ".join(w.name for w in external)
+                self.logger.info(
+                    "Skipping external workflow(s) by default: "
+                    f"{names}. Use --tags external or RPA_RUN_EXTERNAL_TESTS=1 to run them."
+                )
+            to_run = [w for w in to_run if not self._is_external_workflow(w)]
         if workflow_names:
             to_run = [w for w in to_run if w.name in workflow_names]
 
@@ -258,6 +267,10 @@ class AutomationHarness:
         test_tags = {str(tag).strip() for tag in getattr(test_class, "tags", [])}
         return bool(test_tags & EXTERNAL_TEST_TAGS)
 
+    def _is_external_workflow(self, workflow_class: Type[RPAWorkflow]) -> bool:
+        workflow_tags = {str(tag).strip() for tag in getattr(workflow_class, "tags", [])}
+        return bool(workflow_tags & EXTERNAL_TEST_TAGS)
+
     def report(self, formats: List[str] = None,
                include_workflows: bool = True) -> Dict[str, str]:
         formats = formats or ["html", "json"]
@@ -316,11 +329,13 @@ class AutomationHarness:
     def summary(self) -> Dict[str, Any]:
         passed = sum(1 for r in self.results if r.passed)
         failed = sum(1 for r in self.results if not r.passed)
+        total_duration_ms = self._total_duration_ms()
 
         wf_summary = None
         if self.workflow_results:
             wf_summary = {
                 "total_workflows": len(self.workflow_results),
+                "failed": sum(1 for w in self.workflow_results if not w.passed),
                 "total_records": sum(w.total_records for w in self.workflow_results),
                 "processed_records": sum(w.processed_records for w in self.workflow_results),
                 "failed_records": sum(w.failed_records for w in self.workflow_results),
@@ -335,5 +350,14 @@ class AutomationHarness:
                 "pass_rate": round(passed / len(self.results) * 100, 2) if self.results else 0,
             },
             "workflows": wf_summary,
-            "total_duration_ms": round(sum(r.duration_ms for r in self.results), 2),
+            "total_duration_ms": total_duration_ms,
         }
+
+    def _total_duration_ms(self) -> float:
+        if self._start_time is not None and self._end_time is not None:
+            return round((self._end_time - self._start_time) * 1000, 2)
+        return round(
+            sum(r.duration_ms for r in self.results)
+            + sum(w.duration_ms for w in self.workflow_results),
+            2,
+        )
