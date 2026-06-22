@@ -175,8 +175,9 @@ def print_run_logs(run: str, tail: int | None = None, step: str | None = None):
     lines = path.read_text(encoding="utf-8").splitlines()
     if step:
         lines = [
-            line for line in lines
-            if _jsonl_step(line) == step
+            json.dumps(entry, ensure_ascii=False, default=str)
+            for entry in _read_jsonl(path)
+            if entry.get("step") == step
         ]
     if tail is not None:
         lines = lines[-max(tail, 0):]
@@ -185,14 +186,6 @@ def print_run_logs(run: str, tail: int | None = None, step: str | None = None):
             print(json.dumps(json.loads(line), ensure_ascii=False, default=str))
         except json.JSONDecodeError:
             print(line)
-
-
-def _jsonl_step(line: str) -> str | None:
-    try:
-        return json.loads(line).get("step")
-    except json.JSONDecodeError:
-        return None
-
 
 def run_report_path(run: str) -> Path:
     path = resolve_run_dir(run) / "report.html"

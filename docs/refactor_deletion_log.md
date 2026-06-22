@@ -1179,3 +1179,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_retry.py::test_agent_step_uses_shared_recovery_for_transient_errors tests\capabilities\test_recovery_selector_capabilities.py::test_rpa_agent_step_execution_uses_mocked_tools_and_retries -q` → 2 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Run log filtered JSONL parse slice
+
+Deleted:
+- private `_jsonl_step` JSON parse helper from run artifact reporting
+
+Combined:
+- `print_run_logs(..., step=...)` now reuses core `read_jsonl` parsing for filtered log output
+
+Source of truth:
+- `harness/core/artifacts.py` owns tolerant JSONL parsing; `harness/reporting/run_artifacts.py` renders run logs
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests\test_workflow_schema.py::test_run_artifact_cli_helpers tests\test_dashboard.py::test_read_jsonl_tail_skips_invalid_lines -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\reporting\run_artifacts.py harness\core\artifacts.py`
+- `ruff check harness\reporting\run_artifacts.py harness\core\artifacts.py --select F401,F841 --output-format=concise`
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
