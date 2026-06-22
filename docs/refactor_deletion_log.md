@@ -989,3 +989,21 @@ Checks:
 - inline Office handler instantiation smoke via `.venv\Scripts\python.exe -` → passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\office.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Schema unused-import slice
+
+Deleted:
+- unused `re` import from default workflow schema handling
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/rpa/schema.py` keeps only imports used by schema validation, migration, and graph helpers
+
+Checks:
+- `ruff check harness\rpa\schema.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\test_operator_layer.py tests\test_execution_plan.py tests\test_dsl.py -q` → 14 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\schema.py` → passed
+- `git diff --check` → passed
