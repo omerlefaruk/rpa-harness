@@ -187,3 +187,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_authoring_reporting.py tests/test_cli_summary.py tests/test_operator_layer.py::test_observability_indexes_runs_idempotently_and_redacts tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_copilot_session.py tests/capabilities/test_desktop_ai_controller.py -q` → 35 passed
+
+## 2026-06-22 — OKF artifact IO note
+
+Deleted:
+- no runtime code
+
+Combined:
+- durable runtime knowledge now names `harness.core.artifacts` as the shared artifact IO source
+
+Source of truth:
+- `docs/okf/runtime/workflow-runner.md` for durable runtime knowledge
+
+Checks:
+- `.venv\Scripts\python.exe scripts/okf.py validate docs/okf`
