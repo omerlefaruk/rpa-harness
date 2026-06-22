@@ -98,3 +98,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py -q`
+
+## 2026-06-22 — Selector repair artifact reader slice
+
+Deleted:
+- local JSON artifact reader from `harness/selectors/repair.py`
+
+Combined:
+- selector repair now reads repair/evidence artifacts through `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `read_json()` in `harness/reporting/run_artifacts.py`
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_production_selector_repair_requires_validated_candidate_and_approval tests/test_authoring_reporting.py::test_selector_repair_plan_contains_swarm_command -q` → 2 passed

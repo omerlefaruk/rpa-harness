@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from harness.reporting.run_artifacts import read_json
 from harness.security import redact_value
 
 
@@ -67,14 +68,14 @@ def production_selector_repair(run_dir: str | Path, *, approve: bool = False) ->
     if not run_path.exists():
         return {"status": "blocked", "reason": f"Run not found: {run_dir}"}
 
-    packet = _read_json(run_path / "repair_packet.json")
-    evidence = _read_json(run_path / "evidence_bundle.json")
+    packet = read_json(run_path / "repair_packet.json")
+    evidence = read_json(run_path / "evidence_bundle.json")
     selector_evidence = _read_selector_evidence(run_path, evidence)
     candidate = _validated_candidate(selector_evidence)
     workflow_path = (
         packet.get("workflow_path")
         or packet.get("workflow")
-        or _read_json(run_path / "run_manifest.json").get("workflow_path")
+        or read_json(run_path / "run_manifest.json").get("workflow_path")
     )
     step_id = packet.get("step_id") or evidence.get("step_id")
 
@@ -105,12 +106,12 @@ def production_selector_repair(run_dir: str | Path, *, approve: bool = False) ->
 def _read_selector_evidence(run_path: Path, evidence: dict[str, Any]) -> dict[str, Any]:
     artifact = (evidence.get("artifacts") or {}).get("selector_evidence")
     if artifact:
-        return _read_json(run_path / artifact)
+        return read_json(run_path / artifact)
     for candidate in (
         run_path / "selector_evidence.json",
         run_path / "artifacts" / "selector_repair_suggestion.json",
     ):
-        data = _read_json(candidate)
+        data = read_json(candidate)
         if data:
             return data.get("selector_evidence") or data
     return {}
@@ -142,16 +143,6 @@ def _patch_workflow_selector(workflow_path: Path, step_id: str, candidate: dict[
             "patched_workflow": str(workflow_path),
         }
     return {"status": "blocked", "reason": f"Step not found in workflow: {step_id}"}
-
-
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return data if isinstance(data, dict) else {}
 
 
 def _write_decision(run_path: Path, decision: dict[str, Any]) -> dict[str, Any]:
