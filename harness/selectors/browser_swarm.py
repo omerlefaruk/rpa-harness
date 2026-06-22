@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import html
 import json
 import shutil
@@ -358,10 +359,8 @@ async def scrape_page_map(
             last_error = exc
             if "Execution context was destroyed" not in str(exc) or attempt == attempts - 1:
                 raise
-            try:
+            with contextlib.suppress(Exception):
                 await page.wait_for_load_state("domcontentloaded", timeout=2000)
-            except Exception:
-                pass
             await page.wait_for_timeout(retry_delay_ms)
     raise last_error or RuntimeError("Failed to scrape page map")
 

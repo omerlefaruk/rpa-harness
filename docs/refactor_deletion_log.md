@@ -1500,3 +1500,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_excel_desktop_runtime.py -q` (6 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Browser swarm retry suppress slice
+
+Deleted:
+- manual `try/except Exception/pass` wrapper around best-effort navigation wait
+
+Combined:
+- browser swarm scrape retry now uses stdlib `contextlib.suppress(Exception)` for the same ignored wait failure behavior
+
+Source of truth:
+- `harness/selectors/browser_swarm.py` owns browser selector swarm page-map scraping and retry behavior
+
+Checks:
+- `ruff check harness\selectors\browser_swarm.py --select SIM105,F401,F841,F541,I001 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\browser_swarm.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_browser_selector_swarm.py -q` (25 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
