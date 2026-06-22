@@ -935,3 +935,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_api_runtime.py -q` → 6 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\drivers\base.py harness\drivers\api.py harness\drivers\playwright.py harness\drivers\windows_ui.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Vision unused-import slice
+
+Deleted:
+- unused `Path` import from the AI vision engine
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/ai/vision.py` keeps only imports used by vision analysis and selector generation
+
+Checks:
+- `ruff check harness\ai\vision.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\test_retry.py tests\test_config.py -q` → 23 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\ai\vision.py harness\ai\agent.py harness\drivers\playwright.py` → passed
+- `git diff --check` → passed

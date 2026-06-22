@@ -6,7 +6,6 @@ Supports OpenAI-compatible endpoints for flexible provider choice.
 
 import base64
 import json
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
