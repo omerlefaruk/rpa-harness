@@ -1,0 +1,17 @@
+{
+  "name": "@rpa-harness/agent",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "rpa-harness-agent": "./bin/rpa-harness-agent.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md"
+  ]
+}

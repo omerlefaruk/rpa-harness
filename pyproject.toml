@@ -26,6 +26,9 @@ dependencies = [
     "jsonpath-ng>=1.8.0",
 ]
 
+[project.scripts]
+rpa-harness = "harness.cli:run"
+
 [project.optional-dependencies]
 windows = [
     "pywinauto>=0.6.8",
@@ -55,6 +58,14 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["harness*", "subagents*"]
+
+[tool.setuptools.package-data]
+"harness.templates.workspace" = [
+    "README.md",
+    "workflows/*.yaml",
+    "config/*.yaml",
+    ".agents/config/*.json",
+]
 
 [tool.ruff]
 line-length = 100

@@ -8,11 +8,19 @@ timestamp: 2026-06-17T00:00:00Z
 
 # Commands
 
-The CLI lives in `main.py`. Operators and agents use it for workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, and OKF maintenance.
+The packaged CLI lives in `harness.cli` and remains available through the compatibility shim `main.py`. Operators and agents use it for workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, and OKF maintenance.
+
+
+# Product launcher
+
+`@rpa-harness/agent` is a thin npm launcher for consumer workspaces. It creates `.rpa-harness/venv`, installs the Python runtime, initializes workspace folders, and exposes a governed MCP stdio bridge backed by `.agents/config/agent_command_manifest.json`-style allowlisted commands.
 
 # Examples
 
 ```bash
+npx @rpa-harness/agent init
+npx @rpa-harness/agent validate workflows/example.yaml
+npx @rpa-harness/agent mcp
 python main.py --validate-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --preflight-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
