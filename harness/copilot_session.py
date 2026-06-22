@@ -11,9 +11,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 from harness.autopilot import _policy_violations, load_autopilot_policy
-from harness.builder import create_builder_session, safe_session_id
+from harness.builder import create_builder_session
 from harness.config import HarnessConfig
 from harness.core.artifacts import read_json, read_jsonl
+from harness.core.ids import safe_session_id
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
 from harness.security import redact_value, sanitize_url
 from harness.selectors.browser_swarm import run_browser_selector_swarm

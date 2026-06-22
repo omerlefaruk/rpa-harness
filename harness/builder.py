@@ -8,11 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from harness.core.artifacts import read_json
+from harness.core.ids import safe_session_id
 from harness.security import redact_text, redact_value
-
-
-def safe_session_id(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in value)
 
 
 def create_builder_session(

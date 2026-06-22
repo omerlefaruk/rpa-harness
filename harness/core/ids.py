@@ -11,3 +11,7 @@ WORKFLOW_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 def slug_id(value: str) -> str:
     slug = _SAFE_ID_RE.sub("_", value.strip()).strip("_").lower()
     return slug or "workflow"
+
+
+def safe_session_id(value: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in value)

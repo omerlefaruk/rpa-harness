@@ -362,3 +362,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_failure_report_html_and_evidence_bundle -q` → 1 passed
+
+## 2026-06-22 — Session ID sanitizer slice
+
+Deleted:
+- builder-owned `safe_session_id()` implementation used by both builder and copilot session code
+
+Combined:
+- builder and copilot session paths now share the core ID sanitizer
+
+Source of truth:
+- `harness/core/ids.py` for session-safe IDs
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_copilot_session.py::test_run_copilot_try_url_creates_task_and_report -q` → 4 passed
