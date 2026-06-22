@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from harness.reporting.dashboard import collect_run_reports
+from harness.reporting.run_artifacts import collect_run_reports
 from harness.reporting.evidence_bundle import bundle_run
 from harness.reporting.failure_html import render_failure_report_html
 from harness.rpa.ledger import ResumeLedger
@@ -184,7 +184,7 @@ steps:
     assert "data-testid" in workflow.read_text(encoding="utf-8")
 
 
-def test_dashboard_collects_run_failure_metadata(tmp_path):
+def test_run_artifacts_collects_failure_metadata(tmp_path):
     run_dir = tmp_path / "runs" / "run_1"
     run_dir.mkdir(parents=True)
     (run_dir / "evidence_bundle.json").write_text("{}", encoding="utf-8")

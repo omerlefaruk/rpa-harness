@@ -18,6 +18,7 @@ from harness.copilot_session import list_copilot_sessions, read_copilot_session
 from harness.observability import ObservabilityDB, index_runs
 from harness.reporting.run_artifacts import (
     collect_run_manifests,
+    collect_run_reports,
     merge_runs,
     read_jsonl_tail,
     read_run_detail,
@@ -326,44 +327,6 @@ async def _sse_timeline(path: Path, after_id: int | None = None):
             if finished:
                 return
         await asyncio.sleep(0.5)
-
-
-def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]:
-    if not run_path.exists():
-        return []
-    reports = sorted(
-        run_path.glob("*/failure_report.json"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )[:limit]
-    entries: list[dict[str, Any]] = []
-    for report in reports:
-        try:
-            data = json.loads(report.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        entries.append(
-            {
-                "run_id": data.get("run_id") or report.parent.name,
-                "workflow": data.get("workflow_name"),
-                "status": data.get("status"),
-                "failure_kind": data.get("failure_kind"),
-                "error_class": data.get("error_class"),
-                "current_stage": data.get("current_stage"),
-                "failed_step_id": data.get("failed_step_id"),
-                "human_review_required": data.get("human_review_required"),
-                "report": str(report),
-                "html_report": str(report.with_suffix(".html")) if report.with_suffix(".html").exists() else "",
-                "evidence_bundle": str(report.parent / "evidence_bundle.json")
-                if (report.parent / "evidence_bundle.json").exists()
-                else "",
-                "repair_packet": str(report.parent / "repair_packet.json")
-                if (report.parent / "repair_packet.json").exists()
-                else "",
-                "modified": datetime.fromtimestamp(report.stat().st_mtime).isoformat(),
-            }
-        )
-    return entries
 
 
 def tail_text(path: Path, max_chars: int = 8000) -> str:

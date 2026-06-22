@@ -40,3 +40,18 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 7 passed
+
+## 2026-06-22 — Failure report artifact reader slice
+
+Deleted:
+- failure-report artifact reader logic from `harness/reporting/dashboard.py`
+
+Combined:
+- dashboard failure report listing now calls `harness/reporting/run_artifacts.py`
+- reporting test imports the helper from the artifact module, not the dashboard adapter
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for run/failure artifact readers
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_authoring_reporting.py::test_run_artifacts_collects_failure_metadata -q` → 7 passed
