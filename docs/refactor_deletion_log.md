@@ -1160,3 +1160,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_retry.py::test_agent_step_uses_shared_recovery_for_transient_errors tests\capabilities\test_recovery_selector_capabilities.py::test_rpa_agent_step_execution_uses_mocked_tools_and_retries -q` → 2 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — AI agent no-op rethrow slice
+
+Deleted:
+- no-op `except Exception: raise` wrapper around vision verification
+
+Combined:
+- vision verification now lets exceptions propagate directly through the existing retry/recovery path
+
+Source of truth:
+- `harness/ai/agent.py` uses `smart_retry`/outer step handling for agent action failures, not local catch-and-rethrow blocks
+
+Checks:
+- `ruff check harness\ai\agent.py --select F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\ai\agent.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_retry.py::test_agent_step_uses_shared_recovery_for_transient_errors tests\capabilities\test_recovery_selector_capabilities.py::test_rpa_agent_step_execution_uses_mocked_tools_and_retries -q` → 2 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed

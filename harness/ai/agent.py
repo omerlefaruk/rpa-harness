@@ -171,17 +171,14 @@ class RPAAgent:
             output = await self.tools.execute(tool_name, tool_args)
 
             if step.action in ("click", "fill", "navigate") and self.vision:
-                try:
-                    screenshot = await self._take_screenshot()
-                    if screenshot:
-                        verified, reasoning = await self.vision.verify_state(
-                            screenshot, step.expected_result
-                        )
-                        if not verified:
-                            self.logger.warning(f"Verification: {reasoning}")
-                            raise RuntimeError(f"Agent verification failed: {reasoning}")
-                except Exception:
-                    raise
+                screenshot = await self._take_screenshot()
+                if screenshot:
+                    verified, reasoning = await self.vision.verify_state(
+                        screenshot, step.expected_result
+                    )
+                    if not verified:
+                        self.logger.warning(f"Verification: {reasoning}")
+                        raise RuntimeError(f"Agent verification failed: {reasoning}")
 
             return {
                 "tool_name": tool_name,
