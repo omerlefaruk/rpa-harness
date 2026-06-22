@@ -792,3 +792,20 @@ Checks:
 - `.venv\Scripts\python.exe tools\dump_uia_tree.py --help` → passed
 - `.venv\Scripts\python.exe -m compileall -q tools\dump_uia_tree.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Workflow line regex duplicate slice
+
+Deleted:
+- duplicate `workflow:` task-spec regex from copilot session handling
+
+Combined:
+- Copilot session workflow-path parsing now reuses the autopilot workflow-line regex
+
+Source of truth:
+- `harness/autopilot.py` for agent task-spec `workflow:` line matching
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_copilot_session.py::test_run_copilot_try_url_creates_task_and_report -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\autopilot.py harness\copilot_session.py` → passed
+- `git diff --check` → passed

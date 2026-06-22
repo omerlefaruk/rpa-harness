@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from harness.autopilot import _policy_violations, load_autopilot_policy
+from harness.autopilot import WORKFLOW_LINE_RE, _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session
 from harness.config import HarnessConfig
 from harness.core.artifacts import append_jsonl, read_json, read_jsonl, read_required_json, write_json
@@ -20,7 +20,6 @@ from harness.security import redact_value, sanitize_url
 from harness.selectors.browser_swarm import run_browser_selector_swarm
 from harness.verification import validate_workflow_report
 
-WORKFLOW_LINE_RE = re.compile(r"^\s*workflow(?:_path)?:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
 TARGET_URL_RE = re.compile(r"^\s*target_url:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
 INTENT_RE = re.compile(r"^\s*intent:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
 PHASES = ["intake", "policy", "discovery", "draft", "validate", "preflight", "safe_run", "review", "promoted"]
