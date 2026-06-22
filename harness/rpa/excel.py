@@ -106,10 +106,7 @@ class ExcelHandler:
     ) -> List[Any]:
         ws = self._get_sheet(sheet)
 
-        if isinstance(column, str):
-            col_idx = self._col_letter_to_index(column)
-        else:
-            col_idx = column
+        col_idx = self._col_letter_to_index(column) if isinstance(column, str) else column
 
         values = []
         start_row = header_row + 1 if skip_header and header_row else 1

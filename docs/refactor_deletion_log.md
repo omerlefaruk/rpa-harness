@@ -1293,3 +1293,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_verification.py tests\capabilities\test_yaml_schema_edges.py -q` (41 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Excel column index branch slice
+
+Deleted:
+- redundant `if/else` branch for Excel column index selection
+
+Combined:
+- string-column conversion and integer-column passthrough now use one expression
+
+Source of truth:
+- `harness/rpa/excel.py` owns Excel column addressing for RPA workflows
+
+Checks:
+- `ruff check harness\rpa\excel.py --select SIM108,F401,F841,E501 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\excel.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_rpa_workflow_capabilities.py tests\capabilities\test_yaml_excel_desktop_runtime.py -q` (18 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
