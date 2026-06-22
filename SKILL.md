@@ -3,7 +3,7 @@ name: rpa-harness
 description: >
   AI-powered RPA automation harness for Playwright browser automation,
   Windows UIAutomation (desktop), API integrations, Excel-driven workflows,
-  agentic AI loop, evidence artifacts, and web dashboard.
+  agentic AI loop, and evidence artifacts.
   Use when: automating web apps, desktop apps, writing test suites,
   running UI validations, creating RPA-style automation workflows,
   delegating to fast/powerful subagents, or inspecting run artifacts.
@@ -28,7 +28,7 @@ AutomationHarness (orchestrator)
 ├── runs setup() → run() → teardown() (tests)
 ├── runs setup() → get_records() → process_record() → teardown() (workflows)
 ├── runs plan() → observe → decide → act → verify (agent mode)
-└── generates HTML/JSON reports + web dashboard
+└── generates HTML/JSON reports and run artifacts
 
 Drivers
 ├── PlaywrightDriver   (browser: goto, click, fill, extract, screenshot, ai_action)
@@ -64,9 +64,6 @@ python main.py --discover ./tests --run --report html
 
 # Agent mode
 python main.py --agent "Login to example.com and verify dashboard" --headless
-
-# Serve dashboard
-python main.py --serve --port 8080
 
 ```
 
@@ -137,6 +134,5 @@ python main.py --discover ./tests --run --report html,json
 python main.py --run --tags browser --headless
 python main.py --agent "Login and verify" --headless
 python main.py --run-workflows --discover-wf projects/example_data_verification
-python main.py --serve --port 8080
 python main.py --config ./config/default.yaml --discover ./tests --run
 ```

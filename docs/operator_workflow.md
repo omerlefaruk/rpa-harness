@@ -10,7 +10,6 @@ python main.py --workflow-graph projects/current/workflows/main.yaml --workflow-
 python main.py --run-yaml projects/current/workflows/main.yaml --phase login
 python main.py --live-tail RUN_ID
 python main.py --observability-index --runs-dir runs
-python main.py --serve --port 8080
 ```
 
 Failure investigation:
@@ -20,6 +19,6 @@ Failure investigation:
 3. Open `evidence_bundle.json`.
 4. Open `repair_packet.json`.
 5. Check `records.jsonl` for safe retry status.
-6. Retry only records marked safe, using the CLI path, not the dashboard.
+6. Retry only records marked safe, using the CLI path.
 
-The dashboard is for observing, searching, and inspecting evidence. It does not run production retries or apply repairs.
+Run artifacts are the operator evidence surface; there is no separate dashboard truth system.

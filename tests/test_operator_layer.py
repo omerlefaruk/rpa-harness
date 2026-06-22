@@ -2,13 +2,7 @@ import json
 import sqlite3
 import subprocess
 import sys
-from pathlib import Path
-
-import pytest
-from fastapi.testclient import TestClient
-
 from harness.observability import ObservabilityDB, index_runs
-from harness.reporting.dashboard import create_dashboard
 from harness.rpa.schema import (
     generate_workflow_graph,
     load_workflow_yaml_compat,
@@ -221,49 +215,6 @@ def test_observability_indexes_runs_idempotently_and_redacts(tmp_path):
     with sqlite3.connect(db_path) as conn:
         assert conn.execute("select count(*) from timeline_events").fetchone()[0] == 1
 
-
-def test_dashboard_api_artifact_and_live_polling_are_safe(tmp_path):
-    run = tmp_path / "runs" / "run-1"
-    run.mkdir(parents=True)
-    workflow = tmp_path / "workflows" / "fixture.yaml"
-    workflow.parent.mkdir()
-    workflow.write_text(
-        """
-id: dashboard_graph
-name: Dashboard Graph
-version: "1.0"
-type: api
-steps:
-  - id: done
-    action:
-      type: no_op
-    success_check:
-      - type: always_pass
-""",
-        encoding="utf-8",
-    )
-    (run / "run_manifest.json").write_text(
-        json.dumps({"run_id": "run-1", "workflow": "wf", "status": "failed", "run_directory": str(run)}),
-        encoding="utf-8",
-    )
-    (run / "timeline.jsonl").write_text(
-        '{"event_id":1,"run_id":"run-1","event":"step.started","message":"ok"}\n'
-        '{"event_id":2,"run_id":"run-1","event":"step.failed","message":"token=sk-test-canary-12345"}\n',
-        encoding="utf-8",
-    )
-    (run / "report.html").write_text("<html>safe</html>", encoding="utf-8")
-    index_runs(tmp_path / "runs", tmp_path / "runs" / "observability.db")
-    client = TestClient(create_dashboard(root_dir=tmp_path))
-
-    assert client.get("/api/health").json()["status"] == "ok"
-    assert client.get("/api/runs").json()["runs"][0]["run_id"] == "run-1"
-    events = client.get("/api/runs/run-1/events?after_id=1").json()["events"]
-    assert [event["event_id"] for event in events] == [2]
-    assert CANARY not in json.dumps(events)
-    assert client.get("/api/artifacts", params={"run_id": "run-1", "path": "report.html"}).status_code == 200
-    assert client.get("/api/artifacts", params={"run_id": "run-1", "path": "../secret.txt"}).status_code == 403
-    graph = client.get("/api/workflows/workflows/fixture.yaml/graph").json()
-    assert graph["workflow"] == "Dashboard Graph"
 
 
 def test_operator_cli_migrates_graphs_and_indexes(tmp_path):

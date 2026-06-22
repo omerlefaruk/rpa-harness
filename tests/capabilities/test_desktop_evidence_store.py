@@ -1,9 +1,6 @@
 import json
 
-from fastapi.testclient import TestClient
-
 from harness.observability import ObservabilityDB, index_runs
-from harness.reporting.dashboard import create_dashboard
 
 CANARY = "sk-test-canary-12345"
 
@@ -102,22 +99,3 @@ def test_observability_indexes_desktop_evidence_artifacts(tmp_path):
         ("artifacts\\ocr_result.json", "artifacts/ocr_result.json")
     )
     assert CANARY.encode() not in db_path.read_bytes()
-
-
-def test_dashboard_exposes_desktop_evidence_read_only(tmp_path):
-    _write_desktop_failure_run(tmp_path)
-    index_runs(tmp_path / "runs", tmp_path / "runs" / "observability.db")
-    client = TestClient(create_dashboard(root_dir=tmp_path))
-
-    response = client.get("/api/desktop/evidence", params={"run_id": "run-1"})
-    payload = response.json()
-    evidence_id = payload["evidence"][0]["id"]
-    detail = client.get(f"/api/desktop/evidence/{evidence_id}")
-    missing = client.get("/api/desktop/evidence/999999")
-
-    assert response.status_code == 200
-    assert payload["evidence"][0]["desktop_backend"] == "win32"
-    assert CANARY not in json.dumps(payload)
-    assert detail.status_code == 200
-    assert detail.json()["id"] == evidence_id
-    assert missing.status_code == 404

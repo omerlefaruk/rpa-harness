@@ -24,7 +24,6 @@ python main.py --run-yaml workflows/examples/minimal_example.yaml
 python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
 python main.py --config projects/example_data_verification/config.yaml --run-workflows --discover-wf projects/example_data_verification
 python main.py --observability-index --runs-dir runs
-python main.py --serve --port 8080
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
 python main.py --report-open <RUN_ID>
@@ -69,7 +68,7 @@ python main.py --validate-dsl workflows/examples/download_invoice.rpa
 python main.py --compile-dsl workflows/examples/download_invoice.rpa --workflow-output .pytest_tmp/download_invoice.yaml
 python main.py --validate-yaml .pytest_tmp/download_invoice.yaml
 ```
-## Default schema and dashboard
+## Default schema and artifacts
 
 Real projects must live under `projects/<project>/`:
 
@@ -89,4 +88,4 @@ python main.py --migrate-workflow workflows/examples/minimal_example.yaml --work
 python main.py --workflow-graph workflows/examples/default_schema_example.yaml --workflow-graph-output workflow_graph.json
 ```
 
-The local dashboard API indexes run folders into `runs/observability.db` without replacing artifacts as the source of truth.
+Run artifacts under `runs/` are the source of truth for operator inspection.

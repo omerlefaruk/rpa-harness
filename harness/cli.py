@@ -5,7 +5,6 @@ RPA Harness CLI entry point.
 Usage:
     python main.py --discover ./tests --run --report html
     python main.py --agent "Login to example.com and verify dashboard" --headless
-    python main.py --serve --port 8080
     python main.py --run-workflows --discover-wf projects/example_data_verification
     python main.py --browser-selector-swarm https://example.com/login
 """
@@ -44,7 +43,6 @@ Examples:
   python main.py --discover ./tests --run --report html
   python main.py --run --tags browser --headless
   python main.py --agent "Login and verify dashboard" --headless
-  python main.py --serve --port 8080
   python main.py --browser-selector-swarm https://example.com/login
         """,
     )
@@ -85,8 +83,6 @@ Examples:
     parser.add_argument("--autopilot-policy", default=".agents/config/autopilot.yaml", help="Policy YAML for --autopilot-build")
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--serve", action="store_true", help="Start web dashboard")
-    parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
     parser.add_argument(
         "--browser-selector-swarm",
         help="Run browser selector swarm discovery for a URL",
@@ -634,12 +630,6 @@ async def main():
         print(json.dumps(ResumeLedger(args.resume_ledger_status).summary(), indent=2))
         return
 
-    # Serve modes
-    if args.serve:
-        from harness.reporting.dashboard import serve_dashboard
-        await serve_dashboard(port=args.port)
-        return
-
     if args.audit_workflow:
         import json
 
@@ -913,7 +903,6 @@ async def main():
             args.agent,
             args.run,
             args.run_workflows,
-            args.serve,
             args.preflight_yaml,
             args.runs_list,
             args.runs_show,
@@ -925,7 +914,7 @@ async def main():
         print(
             f"Discovered {len(harness.test_classes)} test(s), "
             f"{len(harness.workflow_classes)} workflow(s). "
-            "Use --run, --run-workflows, --agent, --serve, "
+            "Use --run, --run-workflows, --agent, "
             "or --browser-selector-swarm."
         )
 

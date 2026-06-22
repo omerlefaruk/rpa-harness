@@ -14,7 +14,7 @@ The YAML runner loads workflow definitions, resolves declared inputs and secrets
 
 Runs may write `timeline.jsonl`, `run_manifest.json`, `preflight.json`, `records.jsonl`, `evidence_bundle.json`, `repair_packet.json`, `report.json`, and `report.html`.
 
-Shared artifact path and JSON/JSONL reads live in `harness.core.artifacts`; reporting, dashboard, observability, and repair code consume those helpers instead of owning parallel readers.
+Shared artifact path and JSON/JSONL reads live in `harness.core.artifacts`; reporting, observability, and repair code consume those helpers instead of owning parallel readers.
 
 # Relationships
 

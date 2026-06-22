@@ -2,7 +2,7 @@
 RPA Harness — AI-powered UI automation framework.
 Optimized for Playwright (browser), Windows UIAutomation (desktop),
 API integrations, Excel-driven workflows, agentic AI loop,
-subagent dispatch, and web dashboard.
+and subagent dispatch.
 """
 
 __version__ = "0.1.0"
