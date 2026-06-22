@@ -899,3 +899,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_api_runtime.py -q` → 6 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\drivers\api.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Logger unused-import slice
+
+Deleted:
+- unused `time` import from the harness logger
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/logger.py` keeps only imports used by structured logging
+
+Checks:
+- `ruff check harness\logger.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\test_logger.py tests\test_retry.py -q` → 17 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\logger.py` → passed
+- `git diff --check` → passed
