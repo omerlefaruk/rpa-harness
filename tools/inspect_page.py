@@ -3,6 +3,8 @@
 import argparse, asyncio, json, sys
 from pathlib import Path
 
+from harness.core.artifacts import write_json
+
 
 async def main():
     parser = argparse.ArgumentParser(description="Inspect a web page for selectors")
@@ -67,7 +69,7 @@ async def main():
         }
 
         result_path = out_dir / "inspect_result.json"
-        result_path.write_text(json.dumps(result, indent=2, default=str))
+        write_json(result_path, result)
 
         print(json.dumps({"status": "ok", "url": url, "title": title,
                           "elements_found": len(interactive),

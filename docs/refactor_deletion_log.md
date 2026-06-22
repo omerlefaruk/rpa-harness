@@ -757,3 +757,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_repair_loop.py::test_patch_proposal_respects_risk -q` → 1 passed
 - `.venv\Scripts\python.exe -m compileall -q tools\propose_patch.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Page inspector JSON writer slice
+
+Deleted:
+- Page inspector direct `write_text(json.dumps(...))` writer for `inspect_result.json`
+
+Combined:
+- Page inspector result artifacts now use the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON artifact writes
+
+Checks:
+- `.venv\Scripts\python.exe tools\inspect_page.py --help` → passed
+- `.venv\Scripts\python.exe -m compileall -q tools\inspect_page.py` → passed
+- `git diff --check` → passed
