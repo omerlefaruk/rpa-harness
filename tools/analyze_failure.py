@@ -3,6 +3,8 @@
 import argparse, json, sys
 from pathlib import Path
 
+from harness.core.artifacts import read_required_json
+
 
 def classify_error(error_type: str, error_message: str) -> str:
     msg = (error_type + " " + error_message).lower()
@@ -22,7 +24,7 @@ def classify_error(error_type: str, error_message: str) -> str:
 
 
 def analyze(report_path: str) -> dict:
-    report = json.loads(Path(report_path).read_text())
+    report = read_required_json(Path(report_path))
 
     error_type = report.get("error_type", "")
     error_message = report.get("error_message", "")
