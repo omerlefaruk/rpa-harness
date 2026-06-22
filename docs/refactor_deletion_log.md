@@ -1100,3 +1100,23 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_playwright_driver.py tests\capabilities\test_yaml_browser_runtime.py -q` → 1 passed, 4 skipped
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Windows UI driver unused-import slice
+
+Deleted:
+- unused `subprocess` import from the Windows UI driver
+- unused `HarnessLogger` import from the Windows UI driver
+
+Combined:
+- nothing; dead imports removed without replacement
+
+Source of truth:
+- `harness/drivers/windows_ui.py` depends on the base driver for logger setup and imports only modules used by desktop automation code
+
+Checks:
+- `ruff check harness\drivers\windows_ui.py --select F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\drivers\windows_ui.py`
+- `.venv\Scripts\python.exe -m pytest tests\integration\test_windows_desktop_smoke.py tests\capabilities\test_desktop_clipboard_ocr.py tests\capabilities\test_desktop_ai_controller.py -q` → 11 passed, 2 skipped
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed

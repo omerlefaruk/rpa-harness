@@ -4,7 +4,6 @@ Supports app launch, element discovery, interaction, and screenshot capture.
 """
 
 import asyncio
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -13,7 +12,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from harness.config import HarnessConfig
 from harness.drivers.base import AbstractBaseDriver
-from harness.logger import HarnessLogger
 
 
 @dataclass
