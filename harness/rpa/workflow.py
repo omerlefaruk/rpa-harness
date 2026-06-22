@@ -15,7 +15,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
 from harness.core import ExecutionTrace
-from harness.core.artifacts import read_json
+from harness.core.artifacts import read_json, write_json
 from harness.core.time import utc_now_iso
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
@@ -603,10 +603,7 @@ class RPAWorkflow:
             "redaction": {"status": "passed"},
             "summary": summary,
         }
-        (self._run_dir / "run_manifest.json").write_text(
-            json.dumps(redact_value(manifest), indent=2, default=str),
-            encoding="utf-8",
-        )
+        write_json(self._run_dir / "run_manifest.json", manifest)
 
     def _write_live_report(self) -> None:
         if not self._run_dir:
@@ -615,10 +612,7 @@ class RPAWorkflow:
             "manifest": read_json(self._run_dir / "run_manifest.json"),
             "result": self.result.to_dict(),
         }
-        (self._run_dir / "report.json").write_text(
-            json.dumps(redact_value(report), indent=2, default=str),
-            encoding="utf-8",
-        )
+        write_json(self._run_dir / "report.json", report)
         def cell(value: Any) -> str:
             return html.escape(str(redact_value(value) if value is not None else ""))
 

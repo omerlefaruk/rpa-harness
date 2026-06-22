@@ -579,3 +579,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py::test_advance_copilot_session_reuses_discovery_cache tests/test_copilot_session.py::test_copilot_cli_outputs_json tests/test_copilot_session.py::test_copilot_auto_cli_reaches_review_with_json_only tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions -q` → 4 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\copilot_session.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Python workflow JSON writer slice
+
+Deleted:
+- Python workflow local redacted JSON writers for `run_manifest.json` and `report.json`
+
+Combined:
+- Python workflow manifest/report JSON now use the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions -q` → 3 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\workflow.py` → passed
+- `git diff --check` → passed
