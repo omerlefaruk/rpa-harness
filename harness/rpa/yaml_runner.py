@@ -749,9 +749,8 @@ class YamlWorkflowRunner:
         if op == "click":
             selector = await self._desktop_selector_for_action(driver, action.get("selector", {}))
             element = None if "coordinates" in selector else await driver.find_element(timeout=timeout, **selector)
-            if element is None:
-                if "coordinates" not in selector:
-                    raise RuntimeError(f"Desktop element not found: {selector}")
+            if element is None and "coordinates" not in selector:
+                raise RuntimeError(f"Desktop element not found: {selector}")
             await driver.click(timeout=timeout, **selector)
             return {
                 "element_exists": True,

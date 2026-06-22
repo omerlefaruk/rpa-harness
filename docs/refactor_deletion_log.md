@@ -1331,3 +1331,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_retry.py tests\capabilities\test_recovery_selector_capabilities.py -q` (24 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — YAML desktop click missing-element branch slice
+
+Deleted:
+- nested missing-element guard in desktop click handling
+
+Combined:
+- missing element and non-coordinate selector checks now use one condition before raising the same error
+
+Source of truth:
+- `harness/rpa/yaml_runner.py` owns YAML desktop click execution behavior
+
+Checks:
+- `ruff check harness\rpa\yaml_runner.py --select F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_excel_desktop_runtime.py tests\test_workflow_schema.py -q` (39 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
