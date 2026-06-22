@@ -18,7 +18,7 @@ import yaml
 
 from harness.config import HarnessConfig
 from harness.core import audit_workflow_rulebook
-from harness.core.artifacts import read_json, read_jsonl, write_json
+from harness.core.artifacts import append_jsonl, read_json, read_jsonl, write_json
 from harness.core.ids import INPUT_REF_RE
 from harness.core.time import utc_now_iso
 from harness.copilot import CopilotCheckpoint
@@ -1622,8 +1622,7 @@ class YamlWorkflowRunner:
             "event": event,
         }
         entry.update({key: value for key, value in fields.items() if value is not None})
-        with open(self.failure._run_dir / "timeline.jsonl", "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(redact_value(entry), default=str) + "\n")
+        append_jsonl(self.failure._run_dir / "timeline.jsonl", entry)
 
     def _record_step(
         self,
@@ -1655,8 +1654,7 @@ class YamlWorkflowRunner:
             "external_reference": result.get("external_reference"),
             "timestamp": utc_now_iso(),
         }
-        with open(self.failure._run_dir / "records.jsonl", "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(redact_value(entry), default=str) + "\n")
+        append_jsonl(self.failure._run_dir / "records.jsonl", entry)
 
     def _record_summary(self) -> dict:
         if not self.failure._run_dir:

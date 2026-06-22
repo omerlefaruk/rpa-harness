@@ -667,3 +667,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 2 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\workflow.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — YAML runner JSONL append slice
+
+Deleted:
+- YAML runner local JSONL append writers for `timeline.jsonl` and `records.jsonl`
+
+Combined:
+- YAML runner timeline and record events now use the core redacted JSONL append helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON/JSONL artifact reads and writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py` → passed
+- `git diff --check` → passed
