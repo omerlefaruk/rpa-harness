@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from harness.core import retry_policy_is_safe
-from harness.core.ids import WORKFLOW_ID_RE
+from harness.core.ids import INPUT_REF_RE, WORKFLOW_ID_RE
 from harness.security import SECRET_REF_RE, is_sensitive_key
 
 
@@ -93,7 +93,6 @@ class VerificationResult:
 
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 
 BROWSER_ACTIONS = {
     "browser.goto",

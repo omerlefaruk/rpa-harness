@@ -19,6 +19,7 @@ import yaml
 from harness.config import HarnessConfig
 from harness.core import audit_workflow_rulebook
 from harness.core.artifacts import read_json, read_jsonl
+from harness.core.ids import INPUT_REF_RE
 from harness.copilot import CopilotCheckpoint
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
@@ -44,7 +45,6 @@ from harness.verification import (
 )
 from harness.verification.checks import CheckRunner
 
-INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 VARIABLE_REF_RE = re.compile(r"\$\{variables\.([A-Za-z_][A-Za-z0-9_]*)\}")
 FILE_PWD_REF_RE = re.compile(r"file://\$PWD(?![A-Za-z0-9_])")
 PWD_REF_RE = re.compile(r"(?<![A-Za-z0-9_])\$PWD(?![A-Za-z0-9_])")

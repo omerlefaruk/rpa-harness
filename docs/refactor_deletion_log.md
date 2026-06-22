@@ -419,3 +419,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_validate_secret_reference_must_be_declared tests/test_workflow_schema.py::test_validate_rejects_secret_in_inputs tests/test_verification.py::test_validate_workflow_missing_fields tests/test_verification.py::test_validate_workflow_valid tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_security.py -q` → 10 passed
+
+## 2026-06-22 — Input reference regex slice
+
+Deleted:
+- duplicate `${inputs.NAME}` regex definitions from verification contract and YAML runner modules
+
+Combined:
+- validation and runtime interpolation now share the core input-reference pattern
+
+Source of truth:
+- `harness/core/ids.py` for workflow ID and input-reference identifier rules
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_workflow_inputs_override_default_config_variables tests/test_verification.py::test_validate_workflow_valid tests/capabilities/test_yaml_schema_edges.py::test_valid_browser_api_and_no_op_workflows_validate -q` → 3 passed
