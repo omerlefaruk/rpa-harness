@@ -78,7 +78,7 @@ def get_healing_ladder(original_selector: str) -> List[str]:
             f"[aria-label='{clean}']",
         ])
 
-    if sel.startswith("[") or sel.startswith("."):
+    if sel.startswith(("[", ".")):
         clean = sel.lstrip("#.[]")
         parts = clean.split("=")
         if len(parts) > 1:
@@ -107,7 +107,7 @@ def score_selector(selector: str) -> int:
 
     if any(key in normalized for key in ("data-testid", "data-test", "data-qa")):
         return 5
-    if normalized.startswith("[aria-label=") or normalized.startswith("[name="):
+    if normalized.startswith(("[aria-label=", "[name=")):
         return 4
     if normalized.startswith("[role="):
         return 4
@@ -121,7 +121,7 @@ def score_selector(selector: str) -> int:
         return 3
     if re.match(r"^\.[A-Za-z0-9_-]+$", normalized):
         return 2
-    if normalized.startswith("xpath=") or normalized.startswith("//"):
+    if normalized.startswith(("xpath=", "//")):
         return 1
     if normalized:
         return 2

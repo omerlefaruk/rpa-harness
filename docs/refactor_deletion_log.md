@@ -1388,3 +1388,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_rpa_workflow_capabilities.py tests\capabilities\test_yaml_excel_desktop_runtime.py -q` (18 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Selector startswith tuple slice
+
+Deleted:
+- duplicate selector prefix `startswith()` calls joined by `or`
+
+Combined:
+- selector prefix checks now use tuple-based `startswith()` in the selector strategy module
+
+Source of truth:
+- `harness/selectors/strategies.py` owns selector scoring and fallback ladder prefix handling
+
+Checks:
+- `ruff check harness\selectors\strategies.py --select PIE810,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\strategies.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_selector_strategy.py tests\capabilities\test_recovery_selector_capabilities.py -q` (13 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
