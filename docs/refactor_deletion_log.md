@@ -684,3 +684,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Copilot checkpoint JSONL append slice
+
+Deleted:
+- Copilot checkpoint local JSONL append writer
+- now-unused JSON and redaction imports from the live checkpoint module
+
+Combined:
+- Copilot checkpoint question and answer events now use the core redacted JSONL append helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON/JSONL artifact reads and writes
+
+Checks:
+- inline `CopilotCheckpoint.ask` JSONL smoke via `.venv\Scripts\python.exe -` → passed
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_copilot_pause_asks_and_continues -q` → 1 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\copilot.py` → passed
+- `git diff --check` → passed

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from harness.core.artifacts import append_jsonl
 from harness.core.time import utc_now_iso
-from harness.security import redact_text, redact_value, sanitize_url
+from harness.security import redact_text, sanitize_url
 
 
 class CopilotCheckpoint:
@@ -51,7 +51,8 @@ class CopilotCheckpoint:
             "artifacts": artifacts,
             "created_at": utc_now_iso(),
         }
-        self._append_jsonl("questions.jsonl", record)
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        append_jsonl(self.run_dir / "questions.jsonl", record)
 
         print(f"\nCopilot question [{question_id}]")
         print(prompt)
@@ -67,7 +68,7 @@ class CopilotCheckpoint:
             "answered_at": utc_now_iso(),
             "artifacts": artifacts,
         }
-        self._append_jsonl("answers.jsonl", result)
+        append_jsonl(self.run_dir / "answers.jsonl", result)
         return result
 
     async def _capture_artifacts(
@@ -98,8 +99,3 @@ class CopilotCheckpoint:
         except Exception as exc:
             artifacts["dom_snapshot_error"] = redact_text(str(exc), secret_values)
         return artifacts
-
-    def _append_jsonl(self, name: str, payload: dict[str, Any]) -> None:
-        self.run_dir.mkdir(parents=True, exist_ok=True)
-        with open(self.run_dir / name, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(redact_value(payload), default=str) + "\n")
