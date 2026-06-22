@@ -14,6 +14,7 @@ from harness.autopilot import _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session, safe_session_id
 from harness.config import HarnessConfig
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
+from harness.reporting.run_artifacts import read_jsonl
 from harness.security import redact_value, sanitize_url
 from harness.selectors.browser_swarm import run_browser_selector_swarm
 from harness.verification import validate_workflow_report
@@ -78,8 +79,8 @@ def start_copilot_session(
 def read_copilot_session(session_id: str, *, root_dir: str | Path = ".") -> dict[str, Any]:
     session_dir = _session_dir(session_id, root_dir)
     state = _read_state(session_dir)
-    state["questions"] = _read_jsonl(session_dir / "questions.jsonl")
-    state["answers"] = _read_jsonl(session_dir / "answers.jsonl")
+    state["questions"] = read_jsonl(session_dir / "questions.jsonl")
+    state["answers"] = read_jsonl(session_dir / "answers.jsonl")
     return _public_state(state)
 
 
@@ -662,20 +663,6 @@ def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(redact_value(payload), default=str) + "\n")
-
-
-def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    rows = []
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        try:
-            parsed = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            rows.append(parsed)
-    return rows
 
 
 def _public_state(state: dict[str, Any]) -> dict[str, Any]:

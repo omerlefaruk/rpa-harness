@@ -128,3 +128,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_operator_layer.py::test_observability_indexes_runs_idempotently_and_redacts tests/capabilities/test_desktop_evidence_store.py::test_observability_indexes_desktop_evidence_artifacts tests/test_dashboard.py tests/test_cli_summary.py -q` → 12 passed
+
+## 2026-06-22 — Copilot JSONL reader slice
+
+Deleted:
+- local JSONL reader from `harness/copilot_session.py`
+
+Combined:
+- copilot session question/answer reads now use `read_jsonl()` from `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for JSONL artifact/session reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions -q` → 12 passed
