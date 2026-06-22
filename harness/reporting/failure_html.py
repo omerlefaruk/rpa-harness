@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import html
-import json
 from pathlib import Path
 from typing import Any
+
+from harness.core.artifacts import read_required_json
 
 
 def render_failure_report_html(report_path: str | Path, output_path: str | Path | None = None) -> Path:
     source = Path(report_path)
-    report = json.loads(source.read_text(encoding="utf-8"))
+    report = read_required_json(source)
     destination = Path(output_path) if output_path else source.with_suffix(".html")
     destination.write_text(_html(report, source.parent), encoding="utf-8")
     return destination

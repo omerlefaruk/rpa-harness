@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -11,6 +10,7 @@ import yaml
 
 from harness.builder import create_builder_session
 from harness.config import HarnessConfig
+from harness.core.artifacts import read_required_json
 from harness.rpa.execution_plan import ExecutionPlan, build_execution_plan
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
 from harness.security import redact_value
@@ -36,7 +36,7 @@ def load_command_manifest(path: str | Path = DEFAULT_COMMAND_MANIFEST_PATH) -> d
     manifest_path = Path(path)
     if not manifest_path.exists():
         return {"schema_version": 1, "commands": {}}
-    return json.loads(manifest_path.read_text(encoding="utf-8"))
+    return read_required_json(manifest_path)
 
 
 async def run_autopilot_build(

@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from harness.autopilot import _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session
 from harness.config import HarnessConfig
-from harness.core.artifacts import read_json, read_jsonl
+from harness.core.artifacts import read_json, read_jsonl, read_required_json
 from harness.core.ids import safe_session_id
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
 from harness.security import redact_value, sanitize_url
@@ -546,7 +546,7 @@ def _read_state(session_dir: Path) -> dict[str, Any]:
     path = session_dir / "copilot_state.json"
     if not path.exists():
         raise FileNotFoundError(f"Copilot state not found: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    return read_required_json(path)
 
 
 def _discovery_cache_path(session_dir: Path, target_url: str, intent: str | None) -> Path:

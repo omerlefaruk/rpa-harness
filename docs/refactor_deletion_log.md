@@ -390,3 +390,18 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts -q` → 1 passed
+
+## 2026-06-22 — Required JSON reader slice
+
+Deleted:
+- direct required `json.loads(...read_text...)` JSON reads from autopilot command manifest, copilot state, and failure HTML rendering
+- now-unused JSON imports in `harness/autopilot.py` and `harness/reporting/failure_html.py`
+
+Combined:
+- required JSON file reads now share `read_required_json()` from core while preserving fail-fast behavior for missing or invalid files
+
+Source of truth:
+- `harness/core/artifacts.py` for optional and required JSON artifact/file reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_autopilot.py::test_autopilot_policy_and_command_manifest_are_agent_readable tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_authoring_reporting.py::test_failure_report_html_and_evidence_bundle -q` → 3 passed

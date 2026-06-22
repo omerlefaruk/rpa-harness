@@ -25,6 +25,10 @@ def read_json(path: Path, default: Any = None) -> Any:
     return payload
 
 
+def read_required_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
