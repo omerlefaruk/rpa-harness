@@ -467,10 +467,7 @@ def _validate_action_fields(step_id: str, action_type: str, action: dict) -> Lis
         _require_selector(action, step_id, action_type, errors)
         if action_type == "browser.get_text" and not action.get("output"):
             errors.append(f"schema: Step '{step_id}' {action_type} requires action.output")
-    elif action_type == "browser.fill":
-        _require_selector(action, step_id, action_type, errors)
-        _require(action, "value", step_id, action_type, errors)
-    elif action_type == "browser.select_option":
+    elif action_type in {"browser.fill", "browser.select_option"}:
         _require_selector(action, step_id, action_type, errors)
         _require(action, "value", step_id, action_type, errors)
     elif action_type == "browser.press":

@@ -1274,3 +1274,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_rpa_workflow_capabilities.py -q` → 12 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Verification contract duplicate browser value branch slice
+
+Deleted:
+- duplicate `browser.select_option` validation branch body
+
+Combined:
+- `browser.fill` and `browser.select_option` now share the same selector/value validation branch
+
+Source of truth:
+- `harness/verification/contract.py` owns action validation for workflow verification contracts
+
+Checks:
+- `ruff check harness\verification\contract.py --select SIM114,F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\verification\contract.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_verification.py tests\capabilities\test_yaml_schema_edges.py -q` (41 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
