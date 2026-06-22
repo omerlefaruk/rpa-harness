@@ -1,0 +1,13 @@
+*** Settings ***
+Name    Download Invoice
+Tag     invoices
+
+*** Variables ***
+${portal_url}    https://vendor.example.com/login
+${download_path}    downloads/latest-invoice.pdf
+
+*** Tasks ***
+Download Invoice
+    Open Browser    ${portal_url}
+    Verify Url Contains    /login
+    Verify File Exists    ${download_path}

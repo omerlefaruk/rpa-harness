@@ -153,9 +153,11 @@ Examples:
     parser.add_argument("--until-step", help="Stop after this YAML step id")
     parser.add_argument("--only-record", help="Run only YAML steps for this record_id")
     parser.add_argument("--validate-yaml", help="Validate a YAML workflow file")
+    parser.add_argument("--validate-dsl", help="Validate a tiny .rpa DSL workflow file")
+    parser.add_argument("--compile-dsl", help="Compile a tiny .rpa DSL workflow file to YAML")
     parser.add_argument("--audit-workflow", help="Audit a YAML workflow against the RPA rulebook")
     parser.add_argument("--migrate-workflow", help="Migrate a legacy flat workflow to the default schema")
-    parser.add_argument("--workflow-output", help="Output path for --migrate-workflow")
+    parser.add_argument("--workflow-output", help="Output path for --migrate-workflow or --compile-dsl")
     parser.add_argument("--migration-report", help="Markdown report path for --migrate-workflow")
     parser.add_argument("--workflow-graph", help="Generate workflow graph JSON from a workflow YAML file")
     parser.add_argument("--workflow-graph-output", help="Output path for --workflow-graph")
@@ -726,6 +728,35 @@ async def main():
 
     if args.live_tail:
         live_tail(args.live_tail, runs_dir=args.runs_dir)
+        return
+
+    if args.validate_dsl or args.compile_dsl:
+        import yaml
+
+        from harness.dsl import compile_dsl_to_workflow, parse_dsl
+        from harness.rpa.schema import validate_workflow_schema
+
+        source = Path(args.validate_dsl or args.compile_dsl)
+        workflow = compile_dsl_to_workflow(parse_dsl(source.read_text(encoding="utf-8")))
+        validation = validate_workflow_schema(workflow)
+        errors = validation["errors"]
+        if errors:
+            print(f"INVALID DSL: {'; '.join(errors)}")
+            sys.exit(1)
+        if args.compile_dsl:
+            if not args.workflow_output:
+                print("--compile-dsl requires --workflow-output")
+                sys.exit(2)
+            output = Path(args.workflow_output)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(yaml.safe_dump(workflow, sort_keys=False), encoding="utf-8")
+            print(f"DSL workflow written: {output}")
+        else:
+            print(
+                f"VALID DSL: {workflow.get('id', 'unknown')} "
+                f"({validation['total_steps']} steps) "
+                f"{validation['steps_with_success_checks']} checked"
+            )
         return
 
     if args.validate_yaml:

@@ -51,6 +51,16 @@ A run directory may contain:
 - Desktop selectors should prefer automation IDs, name/control type, class/control type, tree paths, image anchors, then coordinates as last resort.
 - Memory should store evidence, not guesses.
 
+
+## Tiny DSL compile flow
+
+Use `.rpa` files as a small, readable authoring layer. They compile to the existing schema v2 YAML format; YAML validation, preflight, execution, evidence, and reports still use the normal harness paths.
+
+```bash
+python main.py --validate-dsl workflows/examples/download_invoice.rpa
+python main.py --compile-dsl workflows/examples/download_invoice.rpa --workflow-output .pytest_tmp/download_invoice.yaml
+python main.py --validate-yaml .pytest_tmp/download_invoice.yaml
+```
 ## Default schema and dashboard
 
 Real projects must live under `projects/<project>/`:
