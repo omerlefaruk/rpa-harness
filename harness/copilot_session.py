@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from harness.autopilot import _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session
 from harness.config import HarnessConfig
-from harness.core.artifacts import read_json, read_jsonl, read_required_json
+from harness.core.artifacts import read_json, read_jsonl, read_required_json, write_json
 from harness.core.ids import safe_session_id
 from harness.core.time import utc_now_iso
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
@@ -568,14 +568,9 @@ def _write_discovery_cache(path: Path, result: dict[str, Any], summary: dict[str
     if summary.get("status") != "passed":
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(
-            redact_value({"schema_version": 1, "created_at": utc_now_iso(), "summary": summary, "result": result}),
-            indent=2,
-            default=str,
-        ),
-        encoding="utf-8",
-        newline="\n",
+    write_json(
+        path,
+        {"schema_version": 1, "created_at": utc_now_iso(), "summary": summary, "result": result},
     )
 
 

@@ -562,3 +562,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_production_selector_repair_requires_validated_candidate_and_approval tests/test_authoring_reporting.py::test_selector_repair_plan_contains_swarm_command -q` → 2 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\selectors\repair.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Copilot discovery cache writer slice
+
+Deleted:
+- copilot discovery cache's local redacted JSON writer
+
+Combined:
+- copilot discovery cache JSON now uses the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py::test_advance_copilot_session_reuses_discovery_cache tests/test_copilot_session.py::test_copilot_cli_outputs_json tests/test_copilot_session.py::test_copilot_auto_cli_reaches_review_with_json_only tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions -q` → 4 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\copilot_session.py` → passed
+- `git diff --check` → passed
