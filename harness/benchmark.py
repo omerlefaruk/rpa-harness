@@ -162,3 +162,59 @@ def summarize_results(results: list[BenchmarkResult]) -> dict[str, Any]:
         "side_effect_count": sum(1 for result in results if result.side_effects),
         "loop_count": sum(1 for result in results if result.loop_detected),
     }
+
+
+def _as_int_or_none(value: Any) -> int | None:
+    return int(value) if isinstance(value, int) else None
+
+
+def _required_artifacts_exist(run_dir: Path, required_artifacts: list[str]) -> tuple[bool, list[str]]:
+    missing = [name for name in required_artifacts if not (run_dir / name).is_file()]
+    return not missing, missing
+
+
+def score_attempt(
+    run_id: str,
+    task: BenchmarkTask,
+    trial: int,
+    wall_seconds: float,
+    attempt: dict[str, Any],
+) -> BenchmarkResult:
+    metrics = attempt.get("metrics") if isinstance(attempt.get("metrics"), dict) else {}
+    run_dir_value = attempt.get("run_dir")
+    run_dir = Path(run_dir_value) if isinstance(run_dir_value, str) and run_dir_value else Path()
+    evidence_complete, missing = _required_artifacts_exist(
+        run_dir, task.expected.required_artifacts
+    )
+    workflow_validates = bool(attempt.get("workflow_validates"))
+    run_succeeds = bool(attempt.get("run_succeeds"))
+    side_effects = bool(attempt.get("side_effects"))
+    loop_detected = bool(attempt.get("loop_detected"))
+
+    if workflow_validates and run_succeeds and evidence_complete and not side_effects:
+        accuracy_score = 1.0
+    elif workflow_validates and not side_effects:
+        accuracy_score = 0.5
+    else:
+        accuracy_score = 0.0
+
+    notes = str(attempt.get("notes") or "")
+    if missing:
+        notes = f"{notes}; missing artifacts: {', '.join(missing)}".strip("; ")
+
+    return BenchmarkResult(
+        run_id=run_id,
+        task_id=task.id,
+        trial=trial,
+        success=accuracy_score == 1.0 and not loop_detected,
+        accuracy_score=accuracy_score if evidence_complete else 0.0,
+        wall_seconds=round(wall_seconds, 4),
+        tool_calls=_as_int_or_none(metrics.get("tool_calls")),
+        input_tokens=_as_int_or_none(metrics.get("input_tokens")),
+        output_tokens=_as_int_or_none(metrics.get("output_tokens")),
+        retries=int(attempt.get("retries")) if isinstance(attempt.get("retries"), int) else 0,
+        evidence_complete=evidence_complete,
+        side_effects=side_effects,
+        loop_detected=loop_detected,
+        notes=notes,
+    )
