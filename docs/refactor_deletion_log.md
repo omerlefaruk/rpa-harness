@@ -261,3 +261,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
+
+## 2026-06-22 — Resume ledger reader slice
+
+Deleted:
+- local JSONL parsing loop in `ResumeLedger.latest_by_record()`
+
+Combined:
+- resume ledger reads now use the core JSONL artifact helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSONL reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_resume_ledger_records_latest_status tests/capabilities/test_rpa_workflow_capabilities.py -q` → 13 passed

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from harness.core.artifacts import read_jsonl
 from harness.security import redact_value
 
 
@@ -46,15 +47,7 @@ class ResumeLedger:
 
     def latest_by_record(self, workflow: str | None = None) -> dict[str, dict[str, Any]]:
         latest: dict[str, dict[str, Any]] = {}
-        if not self.path.exists():
-            return latest
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+        for entry in read_jsonl(self.path):
             if workflow and entry.get("workflow") != workflow:
                 continue
             record_id = str(entry.get("record_id") or "")
