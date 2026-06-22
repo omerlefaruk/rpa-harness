@@ -305,11 +305,11 @@ class RPAWorkflow:
 
             self.step_done(processing_step)
 
-            if self.result.total_records == 0:
-                self.result.status = WorkflowStatus.PASSED
-            elif self.result.failed_records == 0:
-                self.result.status = WorkflowStatus.PASSED
-            elif self.allow_mismatches and self.result.processed_records > 0:
+            if (
+                self.result.total_records == 0
+                or self.result.failed_records == 0
+                or (self.allow_mismatches and self.result.processed_records > 0)
+            ):
                 self.result.status = WorkflowStatus.PASSED
             else:
                 self.result.status = WorkflowStatus.FAILED

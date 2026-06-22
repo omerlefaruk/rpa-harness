@@ -1255,3 +1255,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_recovery_selector_capabilities.py tests\test_browser_selector_swarm.py -q` → 33 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — RPA workflow passed-status branch slice
+
+Deleted:
+- duplicate `WorkflowStatus.PASSED` branch bodies after record processing
+
+Combined:
+- zero-record, no-failure, and allowed-mismatch passed cases now share one condition
+
+Source of truth:
+- `harness/rpa/workflow.py` owns Python RPAWorkflow terminal status calculation
+
+Checks:
+- `ruff check harness\rpa\workflow.py --select SIM114,F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\workflow.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_rpa_workflow_capabilities.py -q` → 12 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
