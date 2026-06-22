@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from harness.autopilot import _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session
 from harness.config import HarnessConfig
-from harness.core.artifacts import read_json, read_jsonl, read_required_json, write_json
+from harness.core.artifacts import append_jsonl, read_json, read_jsonl, read_required_json, write_json
 from harness.core.ids import safe_session_id
 from harness.core.time import utc_now_iso
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
@@ -73,7 +73,7 @@ def start_copilot_session(
         ),
     }
     _write_state(session_dir, state)
-    _append_jsonl(session_dir / "questions.jsonl", state["next_question"])
+    append_jsonl(session_dir / "questions.jsonl", state["next_question"])
     return session_dir
 
 
@@ -128,7 +128,7 @@ def answer_copilot_question(
         "answer": answer,
         "answered_at": utc_now_iso(),
     }
-    _append_jsonl(session_dir / "answers.jsonl", answer_record)
+    append_jsonl(session_dir / "answers.jsonl", answer_record)
 
     if str(answer).strip().lower() in {"stop", "abort", "quit", "no"}:
         state.update({"status": "blocked", "next_question": None, "updated_at": utc_now_iso()})
@@ -631,7 +631,7 @@ def _set_question(
     state["status"] = "waiting"
     state["next_question"] = _question(question_id, question, choices=choices, details=details)
     _write_state(session_dir, state)
-    _append_jsonl(session_dir / "questions.jsonl", state["next_question"])
+    append_jsonl(session_dir / "questions.jsonl", state["next_question"])
 
 
 def _question(
@@ -650,12 +650,6 @@ def _question(
         "details": redact_value(details or {}),
         "created_at": utc_now_iso(),
     }
-
-
-def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(redact_value(payload), default=str) + "\n")
 
 
 def _public_state(state: dict[str, Any]) -> dict[str, Any]:

@@ -703,3 +703,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_copilot_pause_asks_and_continues -q` → 1 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\copilot.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Copilot session JSONL append slice
+
+Deleted:
+- Copilot session local JSONL append helper
+
+Combined:
+- Copilot session question and answer events now use the core redacted JSONL append helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON/JSONL artifact reads and writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions -q` → 12 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\copilot_session.py` → passed
+- `git diff --check` → passed
+- `rg -n "_append_jsonl|handle\.write\(json\.dumps\(redact_value\(|f\.write\(json\.dumps\(redact_value\(" harness -S` → only core helper remains
