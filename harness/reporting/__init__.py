@@ -2,12 +2,12 @@
 Test reporters: HTML (with embedded screenshots) and JSON (machine-readable).
 """
 
-import json
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from harness.core.artifacts import write_json
 from harness.security import redact_text, redact_value
 
 
@@ -39,8 +39,7 @@ class JSONReporter:
 
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         path = self.output_dir / f"report_{timestamp}.json"
-        with open(path, "w") as f:
-            json.dump(report, f, indent=2, default=str)
+        write_json(path, report)
 
         return str(path)
 

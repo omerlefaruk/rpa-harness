@@ -493,3 +493,19 @@ Checks:
 - `.venv\Scripts\python.exe -m compileall -q harness\builder.py harness\logger.py harness\rpa\ledger.py harness\reporting\failure_report.py` → passed
 - `git diff --check` → passed
 - `rg -n "datetime\.now\(timezone\.utc\)\.isoformat\(\)" harness --glob '!harness/core/time.py' -S` → no matches
+
+## 2026-06-22 — JSON reporter writer slice
+
+Deleted:
+- JSONReporter's local redacted JSON file writer
+
+Combined:
+- test/report JSON output now uses the core redacted JSON artifact writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_reporting_evidence.py::test_json_report_includes_test_and_workflow_metadata tests/capabilities/test_reporting_evidence.py::test_json_report_redacts_secret_like_log_values -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\reporting\__init__.py` → passed
+- `git diff --check` → passed
