@@ -320,3 +320,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state -q` → 3 passed
+
+## 2026-06-22 — Workflow ID slug helper slice
+
+Deleted:
+- duplicate workflow ID slug helpers from `harness/dsl.py` and `harness/rpa/schema.py`
+
+Combined:
+- DSL compilation and legacy schema migration now share `slug_id()` from core
+
+Source of truth:
+- `harness/core/ids.py` for workflow-safe identifier slugs
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dsl.py tests/test_operator_layer.py::test_migrate_legacy_workflow_preserves_success_checks_and_redacts -q` → 6 passed

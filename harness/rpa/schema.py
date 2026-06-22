@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from harness.core.ids import slug_id
 from harness.security import redact_value
 from harness.verification.contract import CheckType, SUPPORTED_ACTIONS
 
@@ -230,7 +231,7 @@ def normalize_default_schema_to_runner(workflow: dict[str, Any]) -> dict[str, An
                     step[key] = raw_step[key]
             steps.append(step)
     return {
-        "id": workflow.get("id") or _slug(workflow.get("name") or "workflow"),
+        "id": workflow.get("id") or slug_id(workflow.get("name") or "workflow"),
         "name": workflow.get("name") or workflow.get("id") or "workflow",
         "version": str(workflow.get("version") or "2"),
         "type": _workflow_type(workflow),
@@ -272,7 +273,7 @@ def migrate_legacy_workflow(
 
     migrated = {
         "schema_version": 2,
-        "id": workflow.get("id") or _slug(workflow.get("name") or source.stem),
+        "id": workflow.get("id") or slug_id(workflow.get("name") or source.stem),
         "name": workflow.get("name") or workflow.get("id") or source.stem,
         "description": workflow.get("description", ""),
         "metadata": {"reliability_level": _reliability_from_type(workflow.get("type"))},
@@ -449,11 +450,6 @@ def _walk_values(value: Any):
         for child in value:
             yield child
             yield from _walk_values(child)
-
-
-def _slug(value: str) -> str:
-    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", value.strip()).strip("_").lower()
-    return slug or "workflow"
 
 
 def _migration_report_md(report: dict[str, Any]) -> str:

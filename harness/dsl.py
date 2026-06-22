@@ -6,12 +6,13 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from harness.core.ids import slug_id
+
 
 _SECTION_RE = re.compile(r"^\*\*\*\s+(.+?)\s+\*\*\*$")
 _CELL_RE = re.compile(r"\s{2,}")
 _VAR_RE = re.compile(r"^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$")
 _VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-_SAFE_ID_RE = re.compile(r"[^A-Za-z0-9_-]+")
 _ALLOWED_SECTIONS = {"settings", "variables", "tasks"}
 _ACTION_KEYWORDS = {"Open Browser"}
 _VERIFY_KEYWORDS = {"Verify Url Contains", "Verify File Exists"}
@@ -95,11 +96,11 @@ def parse_dsl(source: str) -> DslDocument:
 def compile_dsl_to_workflow(document: DslDocument) -> dict[str, Any]:
     phases = []
     for task in document.tasks:
-        phases.append({"id": _slug(task.name), "name": task.name, "steps": _compile_task(document, task)})
+        phases.append({"id": slug_id(task.name), "name": task.name, "steps": _compile_task(document, task)})
 
     return {
         "schema_version": 2,
-        "id": _slug(document.name),
+        "id": slug_id(document.name),
         "name": document.name,
         "description": "Compiled from tiny .rpa DSL.",
         "metadata": {
@@ -163,7 +164,7 @@ def _compile_action_step(
 
 def _compile_verify_step(document: DslDocument, step: DslStep, number: int) -> dict[str, Any]:
     return {
-        "id": f"step_{number}_{_slug(step.keyword)}",
+        "id": f"step_{number}_{slug_id(step.keyword)}",
         "name": step.keyword,
         "action": {"type": "no_op"},
         "success_checks": [_compile_check(document, step)],
@@ -195,8 +196,3 @@ def _resolve(value: str, variables: dict[str, str]) -> str:
 def _require_args(step: DslStep, count: int) -> None:
     if len(step.args) != count:
         raise ValueError(f"{step.keyword} expects {count} argument(s)")
-
-
-def _slug(value: str) -> str:
-    slug = _SAFE_ID_RE.sub("_", value.strip()).strip("_").lower()
-    return slug or "workflow"
