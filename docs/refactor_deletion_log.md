@@ -613,3 +613,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Selector swarm report writer slice
+
+Deleted:
+- selector swarm local JSON writer for `selector_swarm_report.json`
+
+Combined:
+- selector swarm report JSON now uses the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_browser_selector_swarm.py tests/test_copilot_session.py::test_advance_copilot_session_runs_browser_discovery tests/test_copilot_session.py::test_run_copilot_try_url_creates_task_and_report -q` → 27 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\browser_swarm.py` → passed
+- `git diff --check` → passed

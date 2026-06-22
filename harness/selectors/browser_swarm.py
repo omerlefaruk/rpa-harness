@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from harness.core.artifacts import write_json
 from harness.security import redact_text, sanitize_url
 from harness.selectors.strategies import is_dynamic_selector
 
@@ -609,7 +610,7 @@ async def run_browser_selector_swarm(
         html_path = run_dir / "selector_swarm_report.html"
         report["artifacts"]["report"] = str(report_path)
         report["artifacts"]["html_report"] = str(html_path)
-        report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+        write_json(report_path, report)
         html_path.write_text(_render_html_report(report), encoding="utf-8")
         await browser.close()
         return report
