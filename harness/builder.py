@@ -43,7 +43,7 @@ def create_builder_session(
             "session_id": safe_id,
             "task_file": str(task),
             "status": "created",
-            "created_at": now_iso(),
+            "created_at": utc_now_iso(),
             "artifacts": ["task_spec.md", "assumptions.md", "questions.json"],
         },
     )
@@ -111,7 +111,7 @@ def capture_desktop_session(
         "schema_version": 1,
         "target": app,
         "status": "blocked",
-        "created_at": now_iso(),
+        "created_at": utc_now_iso(),
         "note": redact_text(note),
         "problem": (
             "No interactive desktop recorder is running in this process. "
@@ -158,7 +158,7 @@ def validate_discovery_fixtures(root_dir: str | Path = ".") -> dict[str, Any]:
             "tools": [str(path) for path in desktop_tools if path.exists()],
             "reason": "Desktop discovery requires a real target window; fixture validation only proves tooling exists.",
         },
-        "validated_at": now_iso(),
+        "validated_at": utc_now_iso(),
     }
     return redact_value(result)
 
@@ -167,7 +167,3 @@ def read_text(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8", errors="replace")
-
-
-def now_iso() -> str:
-    return utc_now_iso()

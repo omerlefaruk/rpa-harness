@@ -809,3 +809,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_copilot_session.py::test_run_copilot_try_url_creates_task_and_report -q` → 2 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\autopilot.py harness\copilot_session.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Builder timestamp wrapper slice
+
+Deleted:
+- `builder.now_iso()` wrapper around `utc_now_iso()`
+
+Combined:
+- Builder metadata timestamps now call the core UTC timestamp helper directly
+
+Source of truth:
+- `harness/core/time.py` for UTC ISO timestamps
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\builder.py` → passed
+- `git diff --check` → passed
+- `rg -n "\bnow_iso\(" harness tests tools -S` → clean
