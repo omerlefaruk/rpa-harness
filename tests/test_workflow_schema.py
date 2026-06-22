@@ -602,7 +602,7 @@ steps:
 def test_run_artifact_cli_helpers(tmp_path, monkeypatch, capsys):
     from harness.builder import capture_desktop_session, validate_discovery_fixtures
     from harness.reporting.run_artifacts import print_run_logs, run_report_path
-    from main import _start_builder_session
+    from harness.cli import _start_builder_session
 
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "runs" / "run-1"

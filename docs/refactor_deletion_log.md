@@ -201,3 +201,19 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe scripts/okf.py validate docs/okf`
+
+## 2026-06-22 — CLI shim cleanup slice
+
+Deleted:
+- internal helper re-exports from `main.py`
+- test imports that treated the compatibility shim as the helper source
+
+Combined:
+- tests now import CLI helpers directly from `harness/cli.py`
+
+Source of truth:
+- `harness/cli.py` for CLI helpers
+- `main.py` only delegates to `harness.cli.run()`
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_cli_summary.py tests/test_config.py tests/test_telegram_notifications.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_cli_entrypoint.py -q` → 22 passed

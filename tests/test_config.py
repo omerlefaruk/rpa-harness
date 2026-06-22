@@ -2,7 +2,7 @@
 import os
 
 from harness.config import HarnessConfig, ModelConfig
-from main import load_local_env
+from harness.cli import load_local_env
 
 
 def test_config_defaults():

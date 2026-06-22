@@ -2,7 +2,7 @@
 
 import json
 
-from main import has_run_failures
+from harness.cli import has_run_failures
 from harness.reporting.run_artifacts import print_runs_list
 
 

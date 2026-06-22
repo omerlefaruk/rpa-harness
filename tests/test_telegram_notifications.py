@@ -8,7 +8,7 @@ from harness.notifications.telegram import (
     TelegramNotificationConfig,
     TelegramNotificationError,
 )
-from main import _telegram_channel_or_skip
+from harness.cli import _telegram_channel_or_skip
 
 
 class _FakeResponse:
