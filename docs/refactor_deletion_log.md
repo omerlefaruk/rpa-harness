@@ -1557,3 +1557,30 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_rulebook_audit.py tests\test_workflow_schema.py -q` (39 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+## 2026-06-22 — Dashboard runtime surfaces deletion slice
+
+Deleted:
+- React frontend package and source files
+- FastAPI dashboard adapter and dashboard-only tests/docs
+- `--serve`/`--port` CLI/dashboard entry points
+- dashboard-only dependencies (`fastapi`, `uvicorn`, `jinja2`) and lockfile-only transitive packages
+
+Combined:
+- operator inspection now stays on existing CLI commands and run artifacts
+- desktop evidence and run-artifact tests no longer depend on the dashboard adapter
+- npm wrapper exposes only existing CLI/MCP artifact commands
+
+Source of truth:
+- `timeline.jsonl`, `run_manifest.json`, `report.html`, `evidence_bundle.json`, and `repair_packet.json`
+- CLI artifact commands in `harness/cli.py`
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_cli_summary.py tests/test_operator_layer.py tests/capabilities/test_desktop_evidence_store.py -q` → 11 passed
+- `.venv\Scripts\python.exe -m compileall -q harness`
+- `ruff check harness\cli.py harness\__init__.py harness\reporting tests\capabilities\test_desktop_evidence_store.py tests\test_operator_layer.py --select F401,F841,F541 --output-format=concise`
+- `node --test packages\rpa-harness-agent\test\*.test.js` → 8 passed
+- `.venv\Scripts\python.exe scripts\okf.py validate docs\okf`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+- stale dashboard entrypoint `rg` scan → clean
+- `git diff --check`
