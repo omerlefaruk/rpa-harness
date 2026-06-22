@@ -447,3 +447,18 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_verification.py::test_success_check_redacted tests/test_verification.py::test_check_runner_redacted tests/test_bot_notifications.py::test_bot_notifier_routes_failure_and_redacts_context tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/capabilities/test_yaml_api_runtime.py::test_api_response_context_sanitizes_url_headers_and_body -q` → 5 passed
+
+## 2026-06-22 — Redacted JSON writer slice
+
+Deleted:
+- builder-owned redacted JSON writer implementation
+- desktop AI direct redacted JSON write implementation
+
+Combined:
+- builder and desktop AI now write redacted JSON through the core artifact writer
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON artifact reads and writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_desktop_ai_controller.py -q` → 7 passed

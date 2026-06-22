@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from harness.core.artifacts import read_json
+from harness.core.artifacts import read_json, write_json
 from harness.core.ids import safe_session_id
 from harness.security import redact_text, redact_value
 
@@ -161,10 +160,6 @@ def validate_discovery_fixtures(root_dir: str | Path = ".") -> dict[str, Any]:
         "validated_at": now_iso(),
     }
     return redact_value(result)
-
-
-def write_json(path: Path, payload: Any) -> None:
-    path.write_text(json.dumps(redact_value(payload), indent=2, default=str), encoding="utf-8", newline="\n")
 
 
 def read_text(path: Path) -> str:

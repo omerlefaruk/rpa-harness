@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness.core.artifacts import read_json
+from harness.core.artifacts import read_json, write_json
 from harness.security import is_sensitive_key, redact_value
 from harness.verification.contract import DESKTOP_ACTIONS, validate_workflow_step
 
@@ -236,7 +236,7 @@ class DesktopAIController:
     def _write_json(self, name: str, payload: dict[str, Any]) -> str:
         self.session_dir.mkdir(parents=True, exist_ok=True)
         path = self.session_dir / name
-        path.write_text(json.dumps(redact_value(payload), indent=2, default=str), encoding="utf-8")
+        write_json(path, payload)
         return str(path)
 
     def _write_text(self, name: str, text: str) -> str:
