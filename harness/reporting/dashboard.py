@@ -15,14 +15,13 @@ from fastapi.staticfiles import StaticFiles
 
 from harness.builder import list_builder_sessions, read_builder_session
 from harness.copilot_session import list_copilot_sessions, read_copilot_session
+from harness.core.artifacts import run_dir_for_id
 from harness.observability import ObservabilityDB, index_runs
 from harness.reporting.run_artifacts import (
     collect_run_manifests,
     collect_run_reports,
     merge_runs,
-    read_jsonl_tail,
     read_run_detail,
-    run_dir_for_id,
 )
 from harness.security import redact_value
 

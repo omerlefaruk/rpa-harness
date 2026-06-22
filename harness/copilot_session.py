@@ -13,8 +13,8 @@ from urllib.parse import urlparse
 from harness.autopilot import _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session, safe_session_id
 from harness.config import HarnessConfig
+from harness.core.artifacts import read_jsonl
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
-from harness.reporting.run_artifacts import read_jsonl
 from harness.security import redact_value, sanitize_url
 from harness.selectors.browser_swarm import run_browser_selector_swarm
 from harness.verification import validate_workflow_report

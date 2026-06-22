@@ -10,12 +10,26 @@ from pathlib import Path
 from typing import Any
 
 from harness.config import HarnessConfig
+from harness.core.artifacts import read_json, read_jsonl, read_jsonl_tail, run_dir_for_id
 
-
-
-def run_dir_for_id(runs_dir: Path, run_id: str) -> Path:
-    safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in run_id)
-    return runs_dir / safe_id
+__all__ = [
+    "collect_run_manifests",
+    "collect_run_reports",
+    "latest_records",
+    "live_tail",
+    "merge_runs",
+    "print_run_logs",
+    "print_run_manifest",
+    "print_runs_list",
+    "read_json",
+    "read_jsonl",
+    "read_jsonl_tail",
+    "read_run_detail",
+    "resolve_run_dir",
+    "retry_run",
+    "run_dir_for_id",
+    "run_report_path",
+]
 
 
 def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]:
@@ -116,36 +130,6 @@ def read_run_detail(run_path: Path, run_id: str) -> dict[str, Any]:
         "failure_report": read_json(run_dir / "failure_report.json"),
         "repair_packet": read_json(run_dir / "repair_packet.json"),
     }
-
-
-def read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    entries: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.strip():
-            continue
-        try:
-            parsed = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            entries.append(parsed)
-    return entries
-
-
-def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
-    return read_jsonl(path)[-limit:]
 
 
 def print_runs_list(runs_dir: str = "runs", limit: int = 20):

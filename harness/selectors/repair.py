@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from harness.reporting.run_artifacts import read_json
+from harness.core.artifacts import read_json
 from harness.security import redact_value
 
 

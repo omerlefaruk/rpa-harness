@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness.reporting.run_artifacts import read_json
+from harness.core.artifacts import read_json
 from harness.security import is_sensitive_key, redact_value
 from harness.verification.contract import DESKTOP_ACTIONS, validate_workflow_step
 

@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from harness.reporting.run_artifacts import read_json, read_jsonl
+from harness.core.artifacts import read_json, read_jsonl
 from harness.security import redact_value
 
 

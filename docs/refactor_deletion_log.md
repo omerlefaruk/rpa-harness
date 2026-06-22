@@ -170,3 +170,20 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/capabilities/test_desktop_ai_controller.py tests/capabilities/test_desktop_evidence_store.py -q` → 7 passed
+
+## 2026-06-22 — Core artifact IO boundary slice
+
+Deleted:
+- reverse dependency from runtime/core consumers to `harness/reporting/run_artifacts.py` for artifact IO
+- duplicated artifact IO ownership inside the reporting facade
+
+Combined:
+- shared artifact IO helpers moved to `harness/core/artifacts.py`
+- reporting, dashboard, observability, selector repair, copilot, YAML runner, and desktop AI consume the core helper
+
+Source of truth:
+- `harness/core/artifacts.py` for artifact path/JSON/JSONL reads
+- `harness/reporting/run_artifacts.py` remains the reporting/CLI facade
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_authoring_reporting.py tests/test_cli_summary.py tests/test_operator_layer.py::test_observability_indexes_runs_idempotently_and_redacts tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_copilot_session.py tests/capabilities/test_desktop_ai_controller.py -q` → 35 passed
