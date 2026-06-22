@@ -70,3 +70,17 @@ Source of truth:
 Checks:
 - `git status --short` shows only real untracked docs/project work after ignore update
 - `git diff --check`
+
+## 2026-06-22 — Run-list manifest reader slice
+
+Deleted:
+- direct manifest parsing loop from `print_runs_list()`
+
+Combined:
+- CLI run list now reuses `collect_run_manifests()` from `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `collect_run_manifests()` for run manifest summary rows
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_cli_summary.py tests/test_dashboard.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 11 passed

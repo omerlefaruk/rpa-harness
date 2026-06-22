@@ -80,6 +80,7 @@ def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any
                 "summary": data.get("summary") or {},
                 "report": str(manifest.parent / "report.html"),
                 "report_path": str(manifest.parent / "report.html"),
+                "run_directory": data.get("run_directory") or str(manifest.parent),
                 "manifest": str(manifest),
                 "records": str(manifest.parent / "records.jsonl")
                 if (manifest.parent / "records.jsonl").exists()
@@ -144,16 +145,7 @@ def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
 
 
 def print_runs_list(runs_dir: str = "runs", limit: int = 20):
-    root = Path(runs_dir)
-    rows = []
-    for manifest in sorted(root.glob("*/run_manifest.json"), reverse=True):
-        try:
-            data = json.loads(manifest.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        rows.append(data)
-        if len(rows) >= limit:
-            break
+    rows = collect_run_manifests(Path(runs_dir), limit=limit)
     if not rows:
         print("No runs found.")
         return
@@ -162,7 +154,7 @@ def print_runs_list(runs_dir: str = "runs", limit: int = 20):
         print(
             f"{row.get('run_id')}  {row.get('status')}  {row.get('workflow')}  "
             f"steps {summary.get('passed_steps', 0)}/{summary.get('total_steps', 0)}  "
-            f"report {row.get('run_directory')}/report.html"
+            f"report {row.get('report_path')}"
         )
 
 
