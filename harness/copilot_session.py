@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from harness.autopilot import _policy_violations, load_autopilot_policy
 from harness.builder import create_builder_session, safe_session_id
 from harness.config import HarnessConfig
-from harness.core.artifacts import read_jsonl
+from harness.core.artifacts import read_json, read_jsonl
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
 from harness.security import redact_value, sanitize_url
 from harness.selectors.browser_swarm import run_browser_selector_swarm
@@ -555,11 +555,8 @@ def _discovery_cache_path(session_dir: Path, target_url: str, intent: str | None
 
 
 def _read_discovery_cache(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    payload = read_json(path)
+    if not payload:
         return None
     if payload.get("summary", {}).get("status") != "passed":
         return None

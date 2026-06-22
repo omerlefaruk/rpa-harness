@@ -275,3 +275,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_resume_ledger_records_latest_status tests/capabilities/test_rpa_workflow_capabilities.py -q` → 13 passed
+
+## 2026-06-22 — Copilot discovery cache reader slice
+
+Deleted:
+- local JSON decode/error handling in `_read_discovery_cache()`
+
+Combined:
+- copilot discovery cache reads now use the core JSON artifact helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON artifact reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py -q` → 11 passed
