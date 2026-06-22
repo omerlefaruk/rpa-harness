@@ -4,7 +4,6 @@ Implements: plan → observe → decide → act → verify → reflect
 """
 
 import json
-import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -204,7 +203,7 @@ class RPAAgent:
 
         try:
             execution = await execute_with_recovery()
-        except Exception as e:
+        except Exception as initial_error:
             if step.fallback_action:
                 self.logger.info(f"Trying fallback: {step.fallback_action}")
                 await self.notifier.frustration(
@@ -218,8 +217,7 @@ class RPAAgent:
                 try:
                     execution = await execute_with_recovery(step.fallback_action, {})
                 except Exception as fallback_error:
-                    e = fallback_error
-                    result["error"] = str(e)
+                    result["error"] = str(fallback_error)
                     result["retries"] = max(0, attempts - 1)
                     self.history.add(StepHistoryEntry(
                         step_name=step.description,
@@ -227,15 +225,15 @@ class RPAAgent:
                         tool_used=result.get("tool_name"),
                         tool_args=result.get("tool_args", {}),
                         success=False,
-                        error=str(e),
+                        error=str(fallback_error),
                     ))
-                    self.logger.error(f"Step {step.id} exhausted retries: {e}")
+                    self.logger.error(f"Step {step.id} exhausted retries: {fallback_error}")
                     await self.notifier.failure(
                         "An agent step exhausted retries and the fallback did not recover it.",
                         context={
                             "step": step.description,
                             "tool": result.get("tool_name"),
-                            "error": str(e),
+                            "error": str(fallback_error),
                             "retries": result["retries"],
                         },
                     )
@@ -243,7 +241,7 @@ class RPAAgent:
                     result["success"] = True
                     result["output"] = execution["output"]
             else:
-                result["error"] = str(e)
+                result["error"] = str(initial_error)
                 result["retries"] = max(0, attempts - 1)
                 self.history.add(StepHistoryEntry(
                     step_name=step.description,
@@ -251,15 +249,15 @@ class RPAAgent:
                     tool_used=result.get("tool_name"),
                     tool_args=result.get("tool_args", {}),
                     success=False,
-                    error=str(e),
+                    error=str(initial_error),
                 ))
-                self.logger.error(f"Step {step.id} exhausted retries: {e}")
+                self.logger.error(f"Step {step.id} exhausted retries: {initial_error}")
                 await self.notifier.failure(
                     "An agent step exhausted retries.",
                     context={
                         "step": step.description,
                         "tool": result.get("tool_name"),
-                        "error": str(e),
+                        "error": str(initial_error),
                         "retries": result["retries"],
                     },
                 )

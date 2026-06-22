@@ -1140,3 +1140,23 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_repair_loop.py::test_patch_proposal_respects_risk -q` → 1 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — AI agent exception-cleanup slice
+
+Deleted:
+- unused `traceback` import from the AI agent
+- unused exception rebinding in fallback failure handling
+
+Combined:
+- direct fallback/no-fallback exception names now feed the same error reporting paths
+
+Source of truth:
+- `harness/ai/agent.py` records retry/fallback errors from the active exception object without a generic temporary alias
+
+Checks:
+- `ruff check harness\ai\agent.py --select F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\ai\agent.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_retry.py::test_agent_step_uses_shared_recovery_for_transient_errors tests\capabilities\test_recovery_selector_capabilities.py::test_rpa_agent_step_execution_uses_mocked_tools_and_retries -q` → 2 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
