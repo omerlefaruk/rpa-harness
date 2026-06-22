@@ -1350,3 +1350,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_excel_desktop_runtime.py tests\test_workflow_schema.py -q` (39 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Orchestrator direct agent return slice
+
+Deleted:
+- unnecessary `result` temporary before returning agent execution output
+
+Combined:
+- agent execution and return are now one direct await-return path
+
+Source of truth:
+- `harness/orchestrator.py` owns the high-level harness-to-agent execution adapter
+
+Checks:
+- `ruff check harness\orchestrator.py --select RET504,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\orchestrator.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_harness_discovery.py tests\capabilities\test_reporting_evidence.py -q` (18 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`

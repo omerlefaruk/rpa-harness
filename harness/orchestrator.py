@@ -216,8 +216,7 @@ class AutomationHarness:
             api_driver=api_driver,
         )
 
-        result = await agent.execute(task, context)
-        return result
+        return await agent.execute(task, context)
 
     async def _run_single(self, test_class: Type[AutomationTestCase]) -> TestResult:
         instance = test_class(config=self.config)
