@@ -7,12 +7,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from harness.core.artifacts import read_required_json
+
 
 def propose(report_path: str, workflow_path: str) -> dict:
     from tools.analyze_failure import analyze
     diagnosis = analyze(report_path)
 
-    report = json.loads(Path(report_path).read_text())
+    report = read_required_json(Path(report_path))
     workflow = {}
     if Path(workflow_path).exists():
         from harness.rpa.yaml_runner import load_workflow_yaml

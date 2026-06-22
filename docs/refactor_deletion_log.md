@@ -739,3 +739,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_repair_loop.py::test_failure_analysis_classification tests/test_repair_loop.py::test_repair_loop_end_to_end -q` → 2 passed
 - `.venv\Scripts\python.exe -m compileall -q tools\analyze_failure.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Patch proposer JSON read slice
+
+Deleted:
+- Patch proposer direct `json.loads(Path(...).read_text())` report read
+
+Combined:
+- Patch proposer report loading now uses the core required JSON reader
+
+Source of truth:
+- `harness/core/artifacts.py` for required JSON artifact reads
+
+Checks:
+- `.venv\Scripts\python.exe tools\propose_patch.py --help` → passed
+- `.venv\Scripts\python.exe -m pytest tests/test_repair_loop.py::test_patch_proposal_respects_risk -q` → 1 passed
+- `.venv\Scripts\python.exe -m compileall -q tools\propose_patch.py` → passed
+- `git diff --check` → passed
