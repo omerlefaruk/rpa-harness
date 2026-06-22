@@ -3,7 +3,6 @@ HTTP REST API driver for RPA API integrations.
 Uses httpx async client with retry, auth, and JSON handling.
 """
 
-import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -11,9 +10,10 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 
 from harness.config import HarnessConfig
+from harness.core.artifacts import write_json
 from harness.drivers.base import AbstractBaseDriver
 from harness.logger import HarnessLogger
-from harness.security import redact_value, sanitize_url
+from harness.security import sanitize_url
 
 
 class APIDriver(AbstractBaseDriver):
@@ -58,7 +58,7 @@ class APIDriver(AbstractBaseDriver):
                 content = self._last_response.json()
             except Exception:
                 content = self._last_response.text
-        path.write_text(json.dumps(redact_value(content), indent=2, default=str))
+        write_json(path, content)
 
         self._screenshots.append(str(path))
         self.logger.info(f"Response saved: {path}")

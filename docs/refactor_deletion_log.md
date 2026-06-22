@@ -526,3 +526,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/capabilities/test_reporting_evidence.py::test_failure_report_includes_repro_command_and_evidence_paths tests/capabilities/test_reporting_evidence.py::test_failure_report_writes_redacted_evidence_bundle tests/capabilities/test_reporting_evidence.py::test_failure_report_includes_rulebook_failure_fields tests/test_repair_loop.py -q` → 9 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\reporting\failure_report.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — API response JSON writer slice
+
+Deleted:
+- API driver's local redacted JSON response artifact writer
+
+Combined:
+- API response artifacts now use the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- inline APIDriver screenshot check with a fake JSON response → passed
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_yaml_api_runtime.py::test_authorization_secret_is_used_but_not_leaked_in_result tests/capabilities/test_yaml_api_runtime.py::test_api_failure_report_has_sanitized_redacted_response_preview tests/capabilities/test_yaml_api_runtime.py::test_api_response_context_sanitizes_url_headers_and_body -q` → 3 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\drivers\api.py` → passed
+- `.venv\Scripts\python.exe -m pytest tests/test_line_endings.py::test_repository_text_files_use_lf_line_endings -q` → 1 passed
+- `git diff --check` → passed
