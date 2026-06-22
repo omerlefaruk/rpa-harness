@@ -1519,3 +1519,41 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_browser_selector_swarm.py -q` (25 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Product init template skip comparison slice
+
+Deleted:
+- duplicate template skip name comparison joined by `or`
+
+Combined:
+- workspace template skip names now use one set-membership check
+
+Source of truth:
+- `harness/product_init.py` owns product workspace template copying
+
+Checks:
+- `ruff check harness\product_init.py --select PLR1714,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\product_init.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_product_init.py -q` (1 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
+
+
+## 2026-06-22 — Rulebook unused suggestions argument slice
+
+Deleted:
+- unused `warnings` argument from rulebook suggestion generation
+
+Combined:
+- rulebook audit now passes only the data `suggest_rulebook_fixes()` reads
+
+Source of truth:
+- `harness/core/rulebook.py` owns rulebook audit suggestions
+
+Checks:
+- `ruff check harness\core\rulebook.py --select ARG001,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\core\rulebook.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_rulebook_audit.py tests\test_workflow_schema.py -q` (39 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
