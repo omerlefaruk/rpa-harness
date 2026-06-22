@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from harness.core.ids import slug_id
+from harness.core.ids import WORKFLOW_ID_RE, slug_id
 from harness.security import redact_value
 from harness.verification.contract import CheckType, SUPPORTED_ACTIONS
 
@@ -32,7 +32,6 @@ SECRET_CANARIES = (
     "sk-test-canary-12345",
     "Bearer rpa-canary-token",
 )
-SAFE_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
@@ -91,7 +90,7 @@ def validate_workflow_schema(workflow: dict[str, Any]) -> dict[str, Any]:
             errors.append("schema: phase must be a mapping")
             continue
         phase_id = str(phase.get("id") or "")
-        if not SAFE_ID_RE.match(phase_id):
+        if not WORKFLOW_ID_RE.match(phase_id):
             errors.append(f"schema: invalid phase id '{phase_id}'")
         if phase_id in phase_ids:
             errors.append(f"schema: duplicate phase id '{phase_id}'")
@@ -144,7 +143,7 @@ def _validate_schema_step(
     if not isinstance(step, dict):
         return [f"schema: phase '{phase_id}' step must be a mapping"]
     step_id = str(step.get("id") or "")
-    if not SAFE_ID_RE.match(step_id):
+    if not WORKFLOW_ID_RE.match(step_id):
         errors.append(f"schema: invalid step id '{step_id}'")
     if step_id in step_ids:
         errors.append(f"schema: duplicate step id '{step_id}'")

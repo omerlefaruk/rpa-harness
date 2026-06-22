@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from harness.core import retry_policy_is_safe
+from harness.core.ids import WORKFLOW_ID_RE
 from harness.security import is_sensitive_key
 
 
@@ -92,7 +93,6 @@ class VerificationResult:
 
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-SAFE_ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
 INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 
@@ -161,8 +161,8 @@ def validate_workflow_step(step: dict) -> List[str]:
 
     if "id" not in step:
         errors.append("schema: step missing required field: id")
-    elif not isinstance(step_id, str) or not SAFE_ID_RE.match(step_id):
-        errors.append(f"schema: step id '{step_id}' must match {SAFE_ID_RE.pattern}")
+    elif not isinstance(step_id, str) or not WORKFLOW_ID_RE.match(step_id):
+        errors.append(f"schema: step id '{step_id}' must match {WORKFLOW_ID_RE.pattern}")
 
     if not isinstance(action, dict):
         errors.append(f"schema: Step '{step_id}' action must be an object")
@@ -261,9 +261,9 @@ def validate_workflow(workflow: dict) -> List[str]:
 
     workflow_id = workflow.get("id")
     if workflow_id is not None and (
-        not isinstance(workflow_id, str) or not SAFE_ID_RE.match(workflow_id)
+        not isinstance(workflow_id, str) or not WORKFLOW_ID_RE.match(workflow_id)
     ):
-        errors.append(f"schema: workflow id '{workflow_id}' must match {SAFE_ID_RE.pattern}")
+        errors.append(f"schema: workflow id '{workflow_id}' must match {WORKFLOW_ID_RE.pattern}")
 
     workflow_type = workflow.get("type")
     if workflow_type not in {"browser", "api", "desktop", "excel", "mixed"}:

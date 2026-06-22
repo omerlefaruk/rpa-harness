@@ -334,3 +334,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dsl.py tests/test_operator_layer.py::test_migrate_legacy_workflow_preserves_success_checks_and_redacts -q` → 6 passed
+
+## 2026-06-22 — Workflow ID validator slice
+
+Deleted:
+- duplicate workflow-safe ID regex definitions from schema and verification contract modules
+
+Combined:
+- schema validation and verification contract validation now share `WORKFLOW_ID_RE` from core
+
+Source of truth:
+- `harness/core/ids.py` for workflow-safe ID creation and validation rules
+
+Checks:
+- pending
