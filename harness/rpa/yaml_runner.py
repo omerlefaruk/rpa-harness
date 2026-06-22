@@ -18,7 +18,7 @@ import yaml
 
 from harness.config import HarnessConfig
 from harness.core import audit_workflow_rulebook
-from harness.core.artifacts import read_json, read_jsonl
+from harness.core.artifacts import read_json, read_jsonl, write_json
 from harness.core.ids import INPUT_REF_RE
 from harness.core.time import utc_now_iso
 from harness.copilot import CopilotCheckpoint
@@ -1716,10 +1716,7 @@ class YamlWorkflowRunner:
             "redaction": {"status": "passed"},
             "summary": summary,
         }
-        (self.failure._run_dir / "run_manifest.json").write_text(
-            json.dumps(redact_value(manifest), indent=2, default=str),
-            encoding="utf-8",
-        )
+        write_json(self.failure._run_dir / "run_manifest.json", manifest)
 
     def _write_preflight(self, preflight: dict, workflow: dict, started_at: str) -> None:
         if not self.failure._run_dir:
@@ -1748,10 +1745,7 @@ class YamlWorkflowRunner:
             "started_at": started_at,
             "finished_at": utc_now_iso(),
         }
-        (self.failure._run_dir / "preflight.json").write_text(
-            json.dumps(redact_value(payload), indent=2, default=str),
-            encoding="utf-8",
-        )
+        write_json(self.failure._run_dir / "preflight.json", payload)
 
     def _write_redacted_workflow(self, workflow: dict) -> None:
         if self.failure._run_dir:
@@ -1779,10 +1773,7 @@ class YamlWorkflowRunner:
             "failure_report": self._relative_to_run(result.get("failure_report")),
             "reason": result.get("reason"),
         }
-        (run_dir / "report.json").write_text(
-            json.dumps(redact_value(report), indent=2, default=str),
-            encoding="utf-8",
-        )
+        write_json(run_dir / "report.json", report)
         (run_dir / "report.html").write_text(
             self._run_report_html(workflow, report),
             encoding="utf-8",

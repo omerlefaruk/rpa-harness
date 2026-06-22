@@ -596,3 +596,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions -q` → 3 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\workflow.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — YAML runner JSON writer slice
+
+Deleted:
+- YAML runner local redacted JSON writers for `run_manifest.json`, `preflight.json`, and `report.json`
+
+Combined:
+- YAML runner structured run JSON artifacts now use the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py` → passed
+- `git diff --check` → passed
