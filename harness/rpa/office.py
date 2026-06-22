@@ -3,7 +3,6 @@ Office automation integrations: Outlook (win32com), Word (python-docx), PDF (pyp
 Platform-specific dependencies loaded lazily.
 """
 
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from harness.logger import HarnessLogger

@@ -971,3 +971,21 @@ Checks:
 - inline `JobQueue` enqueue/process/history smoke via `.venv\Scripts\python.exe -` → passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\queue.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Office unused-import slice
+
+Deleted:
+- unused `Path` import from Office integrations
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/rpa/office.py` keeps only imports used by Outlook, Word, and PDF handlers
+
+Checks:
+- `ruff check harness\rpa\office.py --select F401,F841 --output-format=concise` → passed
+- inline Office handler instantiation smoke via `.venv\Scripts\python.exe -` → passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\office.py` → passed
+- `git diff --check` → passed
