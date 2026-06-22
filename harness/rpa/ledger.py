@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from harness.core.artifacts import read_jsonl
+from harness.core.time import utc_now_iso
 from harness.security import redact_value
 
 
@@ -30,7 +30,7 @@ class ResumeLedger:
     ) -> dict[str, Any]:
         entry = redact_value(
             {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": utc_now_iso(),
                 "workflow": workflow,
                 "record_id": record_id,
                 "status": status,

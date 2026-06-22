@@ -4,10 +4,11 @@ Failure report generation — produces structured failure_report.json + evidence
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from harness.core.time import utc_now_iso
 from harness.resilience.errors import RULEBOOK_FAILURE_CLASSES, legacy_category_to_error_class
 from harness.security import redact_value
 
@@ -145,7 +146,7 @@ class FailureReport:
             "suspected_causes": [],
             "recommended_patch": None,
             "repro_command": repro_command,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "duration_ms": duration_ms,
         }
 
@@ -338,7 +339,7 @@ class FailureReport:
             return
         log_path = self._run_dir / "logs.jsonl"
         entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "level": level,
             "step": step,
             "message": message,

@@ -476,3 +476,20 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_copilot_session.py::test_answer_copilot_question_records_answer_and_advances tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts -q` → 4 passed
+
+## 2026-06-22 — Remaining UTC timestamp writer slice
+
+Deleted:
+- direct UTC ISO timestamp calls from builder metadata, JSONL logging, resume ledger entries, and failure report entries
+
+Combined:
+- remaining timestamp writers now use the core UTC helper
+
+Source of truth:
+- `harness/core/time.py` for UTC ISO timestamps
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_logger.py tests/test_authoring_reporting.py::test_resume_ledger_records_latest_status tests/capabilities/test_reporting_evidence.py::test_failure_report_writes_redacted_evidence_bundle tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions -q` → 4 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\builder.py harness\logger.py harness\rpa\ledger.py harness\reporting\failure_report.py` → passed
+- `git diff --check` → passed
+- `rg -n "datetime\.now\(timezone\.utc\)\.isoformat\(\)" harness --glob '!harness/core/time.py' -S` → no matches

@@ -8,6 +8,7 @@ from typing import Any
 
 from harness.core.artifacts import read_json, write_json
 from harness.core.ids import safe_session_id
+from harness.core.time import utc_now_iso
 from harness.security import redact_text, redact_value
 
 
@@ -169,4 +170,4 @@ def read_text(path: Path) -> str:
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return utc_now_iso()

@@ -8,9 +8,10 @@ import logging
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from harness.core.time import utc_now_iso
 
 
 class SafeStreamHandler(logging.StreamHandler):
@@ -132,7 +133,7 @@ class JsonlFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": utc_now_iso(),
             "level": record.levelname,
             "correlation_id": self.correlation_id,
             "logger": record.name,
