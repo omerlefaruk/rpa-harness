@@ -1080,3 +1080,23 @@ Checks:
 - `.venv\Scripts\python.exe tools\benchmark_real_life_rpa.py --help`
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q`
+
+
+## 2026-06-22 — Playwright driver unused-import slice
+
+Deleted:
+- unused `asyncio` import from the Playwright driver
+- unused `HarnessLogger` import from the Playwright driver
+
+Combined:
+- nothing; dead imports removed without replacement
+
+Source of truth:
+- `harness/drivers/playwright.py` depends on the base driver for logger setup and imports only modules used by browser automation code
+
+Checks:
+- `ruff check harness\drivers\playwright.py --select F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\drivers\playwright.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_playwright_driver.py tests\capabilities\test_yaml_browser_runtime.py -q` → 1 passed, 4 skipped
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed

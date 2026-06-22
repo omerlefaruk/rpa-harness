@@ -4,14 +4,12 @@ Supports full async Playwright API with auto-healing, vision fallback,
 network interception, iframes, file operations, and multi-tab.
 """
 
-import asyncio
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from harness.config import HarnessConfig
 from harness.drivers.base import AbstractBaseDriver
-from harness.logger import HarnessLogger
 from harness.security import redacted_preview
 
 
