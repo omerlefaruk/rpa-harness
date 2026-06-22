@@ -1,7 +1,6 @@
 """
 Failure report generation — produces structured failure_report.json + evidence.
 """
-import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +9,6 @@ from typing import Any, Dict, List, Optional
 from harness.core.artifacts import append_jsonl, write_json
 from harness.core.time import utc_now_iso
 from harness.resilience.errors import RULEBOOK_FAILURE_CLASSES, legacy_category_to_error_class
-from harness.security import redact_value
 
 
 FAILURE_KINDS = {

@@ -863,3 +863,21 @@ Checks:
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py` → passed
 - `git diff --check` → passed
 - `rg -n "_selected_steps\(" harness tests tools -S` → clean
+
+
+## 2026-06-22 — Failure report unused-import slice
+
+Deleted:
+- unused `os` and `redact_value` imports from failure reporting
+
+Combined:
+- nothing; dead imports removed without replacement
+
+Source of truth:
+- `harness/reporting/failure_report.py` keeps only imports used by failure artifact generation
+
+Checks:
+- `ruff check harness\reporting\failure_report.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\test_repair_loop.py tests\capabilities\test_reporting_evidence.py -q` → 11 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\reporting\failure_report.py` → passed
+- `git diff --check` → passed
