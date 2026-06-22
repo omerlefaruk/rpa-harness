@@ -12,14 +12,17 @@ def run_dir_for_id(runs_dir: Path, run_id: str) -> Path:
     return runs_dir / safe_id
 
 
-def read_json(path: Path) -> dict[str, Any]:
+def read_json(path: Path, default: Any = None) -> Any:
+    fallback = {} if default is None else default
     if not path.exists():
-        return {}
+        return fallback
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
+        return fallback
+    if default is None and not isinstance(payload, dict):
         return {}
-    return payload if isinstance(payload, dict) else {}
+    return payload
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:

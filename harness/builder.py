@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from harness.core.artifacts import read_json
 from harness.security import redact_text, redact_value
 
 
@@ -167,15 +168,6 @@ def validate_discovery_fixtures(root_dir: str | Path = ".") -> dict[str, Any]:
 
 def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(redact_value(payload), indent=2, default=str), encoding="utf-8", newline="\n")
-
-
-def read_json(path: Path, default: Any = None) -> Any:
-    if not path.exists():
-        return {} if default is None else default
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {} if default is None else default
 
 
 def read_text(path: Path) -> str:

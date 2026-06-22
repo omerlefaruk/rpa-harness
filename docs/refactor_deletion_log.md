@@ -305,3 +305,18 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_cli_summary.py -q` → 11 passed
+
+## 2026-06-22 — Builder JSON reader slice
+
+Deleted:
+- local JSON reader from `harness/builder.py`
+
+Combined:
+- builder JSON reads now use `harness/core/artifacts.py`
+- core `read_json()` keeps dict-default behavior and supports explicit defaults for existing list-valued builder files
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON artifact/file reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state -q` → 3 passed
