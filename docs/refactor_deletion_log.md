@@ -1426,3 +1426,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_workflow_schema.py tests\test_operator_layer.py -q` (40 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — YAML API target URL prefix slice
+
+Deleted:
+- duplicate API target URL `startswith()` call joined by `or`
+
+Combined:
+- HTTP/HTTPS absolute API target detection now uses tuple-based `startswith()`
+
+Source of truth:
+- `harness/rpa/yaml_runner.py` owns YAML API target URL resolution
+
+Checks:
+- `ruff check harness\rpa\yaml_runner.py --select PIE810,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_browser_runtime.py tests\capabilities\test_recovery_selector_capabilities.py tests\test_workflow_schema.py -q` (41 passed, 4 skipped)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`

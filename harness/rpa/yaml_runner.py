@@ -1395,7 +1395,7 @@ class YamlWorkflowRunner:
             return self._resolve_string(str(action["url"]))
 
         path = self._resolve_string(str(action.get("path", "")))
-        if path.startswith("http://") or path.startswith("https://"):
+        if path.startswith(("http://", "https://")):
             return path
 
         base_url = self._resolve_string(
