@@ -84,3 +84,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_cli_summary.py tests/test_dashboard.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 11 passed
+
+## 2026-06-22 — Dashboard helper import cleanup
+
+Deleted:
+- test import path that treated the dashboard adapter as the artifact-helper source
+
+Combined:
+- dashboard tests now import `read_jsonl_tail()` from `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for JSONL artifact tailing
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py -q`

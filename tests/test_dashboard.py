@@ -8,7 +8,8 @@ from fastapi.testclient import TestClient
 from harness.builder import create_builder_session
 from harness.copilot_session import start_copilot_session
 from harness.reporting import dashboard
-from harness.reporting.dashboard import create_dashboard, read_jsonl_tail, serve_dashboard
+from harness.reporting.dashboard import create_dashboard, serve_dashboard
+from harness.reporting.run_artifacts import read_jsonl_tail
 
 
 @pytest.mark.asyncio
