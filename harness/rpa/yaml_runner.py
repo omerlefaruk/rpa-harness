@@ -29,6 +29,7 @@ from harness.rpa.execution_plan import build_execution_plan
 from harness.selectors.repair import selector_repair_plan
 from harness.security import (
     SecretValue,
+    REDACTED,
     SECRET_REF_RE,
     redact_mapping,
     redact_text,
@@ -795,7 +796,7 @@ class YamlWorkflowRunner:
             factory().paste_text(text)
             return {
                 "clipboard_paste": True,
-                "field_value": "[REDACTED]" if action.get("secret") else text,
+                "field_value": REDACTED if action.get("secret") else text,
                 "selector_visible": True if selector else None,
                 "secret_redacted": bool(action.get("secret")),
             }
@@ -1089,8 +1090,8 @@ class YamlWorkflowRunner:
             return VerificationResult(
                 passed=has_value,
                 check_type=check.type,
-                expected="[REDACTED]" if check.redacted else "non-empty",
-                actual="[REDACTED]"
+                expected=REDACTED if check.redacted else "non-empty",
+                actual=REDACTED
                 if check.redacted
                 else redacted_preview(value, self._secret_values(), 100),
                 message="Field has value" if has_value else "Field has no value",

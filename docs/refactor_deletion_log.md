@@ -433,3 +433,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_workflow_inputs_override_default_config_variables tests/test_verification.py::test_validate_workflow_valid tests/capabilities/test_yaml_schema_edges.py::test_valid_browser_api_and_no_op_workflows_validate -q` → 3 passed
+
+## 2026-06-22 — Redaction sentinel slice
+
+Deleted:
+- duplicated `[REDACTED]` sentinel literals from verification, notification, and YAML runtime consumers
+
+Combined:
+- consumers now use the shared `REDACTED` value from security
+
+Source of truth:
+- `harness/security.py` for redaction sentinel and redaction primitives
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_verification.py::test_success_check_redacted tests/test_verification.py::test_check_runner_redacted tests/test_bot_notifications.py::test_bot_notifier_routes_failure_and_redacts_context tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/capabilities/test_yaml_api_runtime.py::test_api_response_context_sanitizes_url_headers_and_body -q` → 5 passed

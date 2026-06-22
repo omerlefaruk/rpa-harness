@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from harness.core import retry_policy_is_safe
 from harness.core.ids import INPUT_REF_RE, WORKFLOW_ID_RE
-from harness.security import SECRET_REF_RE, is_sensitive_key
+from harness.security import REDACTED, SECRET_REF_RE, is_sensitive_key
 
 
 class CheckType(str, Enum):
@@ -85,8 +85,8 @@ class VerificationResult:
         return {
             "passed": self.passed,
             "check_type": self.check_type.value,
-            "expected": "[REDACTED]" if self.evidence.get("redacted") else self.expected,
-            "actual": "[REDACTED]" if self.evidence.get("redacted") else self.actual,
+            "expected": REDACTED if self.evidence.get("redacted") else self.expected,
+            "actual": REDACTED if self.evidence.get("redacted") else self.actual,
             "message": self.message,
             "evidence": self.evidence,
         }

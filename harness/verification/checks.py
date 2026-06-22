@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from harness.security import REDACTED
 from harness.verification.contract import CheckType, SuccessCheck, VerificationResult
 
 
@@ -200,7 +201,7 @@ class CheckRunner:
             evidence["redacted"] = True
             return VerificationResult(
                 passed=has, check_type=check.type,
-                expected="[REDACTED]", actual="[REDACTED]",
+                expected=REDACTED, actual=REDACTED,
                 message="Field has value (value redacted)", evidence=evidence,
             )
         return VerificationResult(

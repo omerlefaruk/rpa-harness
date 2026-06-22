@@ -7,7 +7,7 @@ from typing import Any
 
 from harness.logger import HarnessLogger
 from harness.notifications.telegram import TelegramBotChannel, TelegramNotificationConfig
-from harness.security import is_sensitive_key, redact_mapping, redacted_preview
+from harness.security import REDACTED, is_sensitive_key, redact_mapping, redacted_preview
 
 SAFE_CONTEXT_KEYS = {
     "action",
@@ -152,7 +152,7 @@ class BotNotifier:
 
     def _safe_context_value(self, key: str, value: Any, secret_values: list[str]) -> str:
         if is_sensitive_key(key):
-            return "[REDACTED]"
+            return REDACTED
         if key not in SAFE_CONTEXT_KEYS:
             return "[redacted]"
         return redacted_preview(value, secret_values=secret_values, max_chars=300)
