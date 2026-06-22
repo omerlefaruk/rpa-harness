@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from harness.config import HarnessConfig
-from harness.core.artifacts import read_json, read_jsonl, read_jsonl_tail, run_dir_for_id
+from harness.core.artifacts import (
+    read_json as _read_json,
+    read_jsonl as _read_jsonl,
+    read_jsonl_tail as _read_jsonl_tail,
+    run_dir_for_id as _run_dir_for_id,
+)
 
 __all__ = [
     "collect_run_manifests",
@@ -21,13 +26,9 @@ __all__ = [
     "print_run_logs",
     "print_run_manifest",
     "print_runs_list",
-    "read_json",
-    "read_jsonl",
-    "read_jsonl_tail",
     "read_run_detail",
     "resolve_run_dir",
     "retry_run",
-    "run_dir_for_id",
     "run_report_path",
 ]
 
@@ -42,7 +43,7 @@ def collect_run_reports(run_path: Path, limit: int = 20) -> list[dict[str, Any]]
     )[:limit]
     entries: list[dict[str, Any]] = []
     for report in reports:
-        data = read_json(report)
+        data = _read_json(report)
         if not data:
             continue
         entries.append(
@@ -79,7 +80,7 @@ def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any
     )[:limit]
     runs = []
     for manifest in manifests:
-        data = read_json(manifest)
+        data = _read_json(manifest)
         if not data:
             continue
         runs.append(
@@ -117,17 +118,17 @@ def merge_runs(primary: list[dict[str, Any]], secondary: list[dict[str, Any]]) -
 
 
 def read_run_detail(run_path: Path, run_id: str) -> dict[str, Any]:
-    run_dir = run_dir_for_id(run_path, run_id)
+    run_dir = _run_dir_for_id(run_path, run_id)
     manifest = run_dir / "run_manifest.json"
     if not manifest.exists():
         return {}
     return {
-        "manifest": read_json(manifest),
-        "timeline": read_jsonl_tail(run_dir / "timeline.jsonl", limit=200),
-        "records": read_jsonl_tail(run_dir / "records.jsonl", limit=200),
+        "manifest": _read_json(manifest),
+        "timeline": _read_jsonl_tail(run_dir / "timeline.jsonl", limit=200),
+        "records": _read_jsonl_tail(run_dir / "records.jsonl", limit=200),
         "report_html": str(run_dir / "report.html") if (run_dir / "report.html").exists() else "",
-        "failure_report": read_json(run_dir / "failure_report.json"),
-        "repair_packet": read_json(run_dir / "repair_packet.json"),
+        "failure_report": _read_json(run_dir / "failure_report.json"),
+        "repair_packet": _read_json(run_dir / "repair_packet.json"),
     }
 
 
@@ -163,7 +164,7 @@ def print_run_manifest(run: str):
     if not manifest.exists():
         print(f"Run manifest not found: {run}", file=sys.stderr)
         sys.exit(1)
-    print(json.dumps(read_json(manifest), indent=2, default=str))
+    print(json.dumps(_read_json(manifest), indent=2, default=str))
 
 
 def print_run_logs(run: str, tail: int | None = None, step: str | None = None):
@@ -234,7 +235,7 @@ async def retry_run(
     manifest_path = run_dir / "run_manifest.json"
     if not manifest_path.exists():
         return {"status": "blocked", "reason": "run_manifest.json not found", "run_dir": str(run_dir)}
-    manifest = read_json(manifest_path)
+    manifest = _read_json(manifest_path)
     workflow_path = manifest.get("workflow_path")
     if not workflow_path:
         return {"status": "blocked", "reason": "manifest does not include workflow_path", "run_dir": str(run_dir)}
@@ -260,7 +261,7 @@ async def retry_run(
 
 def latest_records(path: Path) -> dict[str, dict]:
     latest: dict[str, dict] = {}
-    for record in read_jsonl(path):
+    for record in _read_jsonl(path):
         record_id = str(record.get("record_id") or "")
         if record_id:
             latest[record_id] = record

@@ -9,7 +9,7 @@ from harness.builder import create_builder_session
 from harness.copilot_session import start_copilot_session
 from harness.reporting import dashboard
 from harness.reporting.dashboard import create_dashboard, serve_dashboard
-from harness.reporting.run_artifacts import read_jsonl_tail
+from harness.core.artifacts import read_jsonl_tail
 
 
 @pytest.mark.asyncio

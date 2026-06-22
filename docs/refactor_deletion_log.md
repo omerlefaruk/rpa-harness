@@ -289,3 +289,19 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py -q` → 11 passed
+
+## 2026-06-22 — Reporting facade export cleanup slice
+
+Deleted:
+- reporting facade re-exports for core artifact IO helpers from `harness/reporting/run_artifacts.py`
+- test import that treated reporting as the source for `read_jsonl_tail()`
+
+Combined:
+- callers that need core artifact IO now import it from `harness/core/artifacts.py`
+
+Source of truth:
+- `harness/core/artifacts.py` for artifact IO helpers
+- `harness/reporting/run_artifacts.py` only exposes reporting/CLI run helpers
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_cli_summary.py -q` → 11 passed
