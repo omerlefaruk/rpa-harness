@@ -142,3 +142,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions -q` → 12 passed
+
+## 2026-06-22 — YAML runner report reader slice
+
+Deleted:
+- local JSON and JSONL report artifact readers from `harness/rpa/yaml_runner.py`
+
+Combined:
+- YAML runner report generation now uses `read_json()` and `read_jsonl()` from `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for report artifact reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed

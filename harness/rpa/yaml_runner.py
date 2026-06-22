@@ -22,6 +22,7 @@ from harness.copilot import CopilotCheckpoint
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
 from harness.reporting.failure_report import FailureReport
+from harness.reporting.run_artifacts import read_json, read_jsonl
 from harness.resilience.errors import classify_failure
 from harness.rpa.execution_plan import build_execution_plan
 from harness.selectors.repair import selector_repair_plan
@@ -1773,10 +1774,10 @@ class YamlWorkflowRunner:
         if not self.failure._run_dir:
             return
         run_dir = self.failure._run_dir
-        manifest = self._read_json(run_dir / "run_manifest.json")
-        preflight = self._read_json(run_dir / "preflight.json")
-        timeline = self._read_jsonl(run_dir / "timeline.jsonl")
-        records = self._read_jsonl(run_dir / "records.jsonl")
+        manifest = read_json(run_dir / "run_manifest.json")
+        preflight = read_json(run_dir / "preflight.json")
+        timeline = read_jsonl(run_dir / "timeline.jsonl")
+        records = read_jsonl(run_dir / "records.jsonl")
         report = {
             "schema_version": 1,
             "manifest": manifest,
@@ -1976,24 +1977,6 @@ class YamlWorkflowRunner:
     @staticmethod
     def _esc(value: Any) -> str:
         return html.escape("" if value is None else str(value))
-
-    @staticmethod
-    def _read_json(path: Path) -> dict:
-        if not path.exists():
-            return {}
-        return json.loads(path.read_text(encoding="utf-8"))
-
-    @staticmethod
-    def _read_jsonl(path: Path) -> List[dict]:
-        if not path.exists():
-            return []
-        rows = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            try:
-                rows.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        return rows
 
     def _relative_to_run(self, path: Any) -> Any:
         if not path or not self.failure._run_dir:
