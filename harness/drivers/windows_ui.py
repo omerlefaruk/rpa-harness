@@ -4,6 +4,7 @@ Supports app launch, element discovery, interaction, and screenshot capture.
 """
 
 import asyncio
+import contextlib
 import sys
 import time
 from dataclasses import dataclass
@@ -296,10 +297,8 @@ class WindowsUIDriver(AbstractBaseDriver):
     async def close_app(self):
         self.logger.info("Closing application")
         if self._app:
-            try:
+            with contextlib.suppress(Exception):
                 await asyncio.to_thread(self._app.kill)
-            except Exception:
-                pass
         self._connected = False
 
     async def close(self):

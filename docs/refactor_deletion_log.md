@@ -1481,3 +1481,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
 - direct byte check: CRLF=0, CR=0
+
+
+## 2026-06-22 — Windows UI close suppress slice
+
+Deleted:
+- manual `try/except Exception/pass` wrapper around best-effort app kill
+
+Combined:
+- Windows app close now uses stdlib `contextlib.suppress(Exception)` for the same best-effort cleanup behavior
+
+Source of truth:
+- `harness/drivers/windows_ui.py` owns Windows UI app lifecycle cleanup
+
+Checks:
+- `ruff check harness\drivers\windows_ui.py --select SIM105,F401,F841,F541,I001 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\drivers\windows_ui.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_excel_desktop_runtime.py -q` (6 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
