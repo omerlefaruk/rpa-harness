@@ -1007,3 +1007,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_operator_layer.py tests\test_execution_plan.py tests\test_dsl.py -q` → 14 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\rpa\schema.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Selector strategy unused-import slice
+
+Deleted:
+- unused `Tuple` import from selector strategies
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/selectors/strategies.py` keeps only imports used by selector scoring and healing ladders
+
+Checks:
+- `ruff check harness\selectors\strategies.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\test_selector_strategy.py tests\capabilities\test_recovery_selector_capabilities.py::test_selector_priority_identifies_stable_and_dynamic_selectors tests\capabilities\test_recovery_selector_capabilities.py::test_dynamic_selectors_score_worse_than_stable_selectors -q` → 7 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\strategies.py` → passed
+- `git diff --check` → passed

@@ -4,7 +4,7 @@ Adapted from CasareRPA selector-strategies skill patterns.
 """
 
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 
 SELECTOR_PRIORITY = [
