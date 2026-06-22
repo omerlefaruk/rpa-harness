@@ -845,3 +845,21 @@ Checks:
 - `.venv\Scripts\python.exe -m compileall -q harness\reporting\dashboard.py` → passed
 - `git diff --check` → passed
 - `rg -n "tail_text\(" harness tests tools -S` → clean
+
+
+## 2026-06-22 — YAML runner dead selected-steps slice
+
+Deleted:
+- unused private `_selected_steps()` helper from the YAML runner
+
+Combined:
+- nothing; dead runtime selection helper removed without replacement
+
+Source of truth:
+- YAML runner execution now uses the execution plan steps directly
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\yaml_runner.py` → passed
+- `git diff --check` → passed
+- `rg -n "_selected_steps\(" harness tests tools -S` → clean

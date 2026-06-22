@@ -1482,19 +1482,6 @@ class YamlWorkflowRunner:
                 unsupported.append(action_type)
         return unsupported
 
-    def _selected_steps(
-        self,
-        workflow: dict,
-        phase: Optional[str],
-        only_record: Optional[str] = None,
-    ) -> List[dict]:
-        steps = list(workflow.get("steps", []) or [])
-        if phase:
-            steps = [step for step in steps if self._step_phase(step) == phase]
-        if only_record:
-            steps = [step for step in steps if str(step.get("record_id") or "") == str(only_record)]
-        return steps
-
     def _selection_error(
         self,
         workflow: dict,
