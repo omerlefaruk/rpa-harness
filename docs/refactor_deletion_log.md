@@ -156,3 +156,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed
+
+## 2026-06-22 — Desktop AI JSON reader slice
+
+Deleted:
+- local dict JSON reader from `harness/desktop/ai_controller.py`
+
+Combined:
+- desktop AI proposal reads now use `read_json()` from `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for dict JSON reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_desktop_ai_controller.py tests/capabilities/test_desktop_evidence_store.py -q` → 7 passed

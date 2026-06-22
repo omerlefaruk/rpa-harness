@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from harness.reporting.run_artifacts import read_json
 from harness.security import is_sensitive_key, redact_value
 from harness.verification.contract import DESKTOP_ACTIONS, validate_workflow_step
 
@@ -41,7 +42,7 @@ class DesktopAIController:
             return self.repair()
         if mode == "execute-approved":
             default_proposal = self.session_dir / "approved_desktop_proposal.json"
-            proposal = self._read_json(Path(proposal_path) if proposal_path else default_proposal)
+            proposal = read_json(Path(proposal_path) if proposal_path else default_proposal)
             decision = self.validate_proposal(
                 proposal,
                 require_approval=True,
@@ -231,13 +232,6 @@ class DesktopAIController:
             except json.JSONDecodeError:
                 return redact_value(text)
         return redact_value(text)
-
-    def _read_json(self, path: Path) -> dict[str, Any]:
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
-        return data if isinstance(data, dict) else {}
 
     def _write_json(self, name: str, payload: dict[str, Any]) -> str:
         self.session_dir.mkdir(parents=True, exist_ok=True)
