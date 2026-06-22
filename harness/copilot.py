@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from harness.core.time import utc_now_iso
 from harness.security import redact_text, redact_value, sanitize_url
 
 
@@ -48,7 +49,7 @@ class CopilotCheckpoint:
             "choices": choices,
             "default": choices[0],
             "artifacts": artifacts,
-            "created_at": self._now(),
+            "created_at": utc_now_iso(),
         }
         self._append_jsonl("questions.jsonl", record)
 
@@ -63,7 +64,7 @@ class CopilotCheckpoint:
             "question_id": question_id,
             "action": action,
             "answer": answer,
-            "answered_at": self._now(),
+            "answered_at": utc_now_iso(),
             "artifacts": artifacts,
         }
         self._append_jsonl("answers.jsonl", result)
@@ -102,7 +103,3 @@ class CopilotCheckpoint:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         with open(self.run_dir / name, "a", encoding="utf-8") as handle:
             handle.write(json.dumps(redact_value(payload), default=str) + "\n")
-
-    @staticmethod
-    def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()

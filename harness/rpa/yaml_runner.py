@@ -10,7 +10,7 @@ import os
 import re
 import time
 import html
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -20,6 +20,7 @@ from harness.config import HarnessConfig
 from harness.core import audit_workflow_rulebook
 from harness.core.artifacts import read_json, read_jsonl
 from harness.core.ids import INPUT_REF_RE
+from harness.core.time import utc_now_iso
 from harness.copilot import CopilotCheckpoint
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
@@ -95,7 +96,7 @@ class YamlWorkflowRunner:
         workflow_id = workflow["id"]
         workflow_name = workflow.get("name", workflow_id)
         self.failure.start_run(workflow_id)
-        started_at = self._now()
+        started_at = utc_now_iso()
         self._inputs = self._resolve_inputs(workflow.get("inputs", {}))
         self._secret_env_names = self._resolve_secret_env_names(workflow.get("credentials", {}))
 
@@ -116,7 +117,7 @@ class YamlWorkflowRunner:
             "run_id": self.failure._current_run_id,
             "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
         }
-        self._write_manifest(workflow, status, started_at=started_at, finished_at=self._now(), result=result)
+        self._write_manifest(workflow, status, started_at=started_at, finished_at=utc_now_iso(), result=result)
         self._write_run_report(workflow, result)
         return result
 
@@ -140,7 +141,7 @@ class YamlWorkflowRunner:
         self._network_entries = []
         self._pending_logs = []
         self.failure.start_run(workflow_id)
-        run_started_at = self._now()
+        run_started_at = utc_now_iso()
         self._write_manifest(workflow, "running", started_at=run_started_at)
         self._write_redacted_workflow(workflow)
         self._timeline(workflow, "run.started", status="running")
@@ -177,7 +178,7 @@ class YamlWorkflowRunner:
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
             self._timeline(workflow, "run.finished", status="failed", failure_kind="missing_secret")
-            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
             self._write_run_report(workflow, result)
             await self.notifier.question(
                 "I cannot start this YAML workflow because required secrets are missing.",
@@ -206,7 +207,7 @@ class YamlWorkflowRunner:
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
             self._timeline(workflow, "run.finished", status="failed", failure_kind="workflow_validation_error")
-            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
             self._write_run_report(workflow, result)
             return result
         self._timeline(workflow, "preflight.passed", status="passed")
@@ -231,7 +232,7 @@ class YamlWorkflowRunner:
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
             self._timeline(workflow, "run.finished", status="failed", failure_kind="workflow_validation_error", message=selection_error)
-            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
             self._write_run_report(workflow, result)
             return result
 
@@ -248,7 +249,7 @@ class YamlWorkflowRunner:
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
             self._timeline(workflow, "run.finished", status="failed", failure_kind="workflow_validation_error")
-            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
             self._write_run_report(workflow, result)
             await self.notifier.question(
                 "This YAML workflow has actions I do not know how to run yet.",
@@ -300,7 +301,7 @@ class YamlWorkflowRunner:
                             workflow, step, steps, rulebook_audit, run_started_at, "pause_before"
                         )
                         self._timeline(workflow, "run.paused", status="blocked", phase=step_phase, step_id=step["id"])
-                        self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=self._now(), result=result)
+                        self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
                         self._write_run_report(workflow, result)
                         return result
 
@@ -326,7 +327,7 @@ class YamlWorkflowRunner:
                             "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
                         }
                         self._timeline(workflow, "run.finished", status="passed", message=f"Stopped at --until-step {until_step}")
-                        self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=self._now(), result=result)
+                        self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
                         self._write_run_report(workflow, result)
                         return result
                     if pause_after_phase and pause_after_phase == step_phase:
@@ -348,7 +349,7 @@ class YamlWorkflowRunner:
                                 workflow, step, steps, rulebook_audit, run_started_at, "pause_after_phase"
                             )
                             self._timeline(workflow, "run.paused", status="blocked", phase=step_phase, step_id=step["id"])
-                            self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=self._now(), result=result)
+                            self._write_manifest(workflow, "blocked", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
                             self._write_run_report(workflow, result)
                             return result
                     continue
@@ -416,7 +417,7 @@ class YamlWorkflowRunner:
                     "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
                 }
                 self._timeline(workflow, "run.finished", status="failed", failure_kind=step_result.get("failure_kind"))
-                self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=self._now(), result=result)
+                self._write_manifest(workflow, "failed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
                 self._write_run_report(workflow, result)
                 return result
 
@@ -434,7 +435,7 @@ class YamlWorkflowRunner:
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
             self._timeline(workflow, "run.finished", status="passed")
-            self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=self._now(), result=result)
+            self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=utc_now_iso(), result=result)
             self._write_run_report(workflow, result)
             return result
         finally:
@@ -1553,7 +1554,7 @@ class YamlWorkflowRunner:
             "side_effect": step.get("side_effect"),
             "safe_retry": self._safe_retry(step, step.get("action", {}).get("type", "no_op")),
             "steps": steps,
-            "duration_ms": (self._parse_time(self._now()) - self._parse_time(started_at)) * 1000,
+            "duration_ms": (self._parse_time(utc_now_iso()) - self._parse_time(started_at)) * 1000,
             "rulebook_audit": rulebook_audit,
             "run_id": self.failure._current_run_id,
             "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
@@ -1606,9 +1607,6 @@ class YamlWorkflowRunner:
         )
         return result
 
-    @staticmethod
-    def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
 
     @staticmethod
     def _parse_time(value: str) -> float:
@@ -1618,7 +1616,7 @@ class YamlWorkflowRunner:
         if not self.failure._run_dir:
             return
         entry = {
-            "timestamp": self._now(),
+            "timestamp": utc_now_iso(),
             "run_id": self.failure._current_run_id,
             "workflow": workflow.get("id"),
             "event": event,
@@ -1655,7 +1653,7 @@ class YamlWorkflowRunner:
                 step, step.get("action", {}).get("type", "no_op")
             ),
             "external_reference": result.get("external_reference"),
-            "timestamp": self._now(),
+            "timestamp": utc_now_iso(),
         }
         with open(self.failure._run_dir / "records.jsonl", "a", encoding="utf-8") as handle:
             handle.write(json.dumps(redact_value(entry), default=str) + "\n")
@@ -1748,7 +1746,7 @@ class YamlWorkflowRunner:
             ],
             "warnings": preflight.get("warnings", []),
             "started_at": started_at,
-            "finished_at": self._now(),
+            "finished_at": utc_now_iso(),
         }
         (self.failure._run_dir / "preflight.json").write_text(
             json.dumps(redact_value(payload), indent=2, default=str),

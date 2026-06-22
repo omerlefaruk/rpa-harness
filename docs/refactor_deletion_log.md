@@ -462,3 +462,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_desktop_ai_controller.py -q` → 7 passed
+
+## 2026-06-22 — UTC timestamp helper slice
+
+Deleted:
+- duplicate UTC ISO `_now()` implementations from copilot, copilot sessions, Python workflow, and YAML runner code
+
+Combined:
+- runtime and copilot timestamp reads now use one core helper
+
+Source of truth:
+- `harness/core/time.py` for UTC ISO timestamps
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_copilot_session.py::test_answer_copilot_question_records_answer_and_advances tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts -q` → 4 passed

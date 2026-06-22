@@ -8,7 +8,7 @@ import html
 import json
 import traceback
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
@@ -16,6 +16,7 @@ from typing import Any, Dict, Iterator, List, Optional
 from harness.config import HarnessConfig
 from harness.core import ExecutionTrace
 from harness.core.artifacts import read_json
+from harness.core.time import utc_now_iso
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
 from harness.rpa.ledger import ResumeLedger
@@ -539,9 +540,6 @@ class RPAWorkflow:
         self._timeline("run.started", status="running")
         self._write_manifest("running")
 
-    @staticmethod
-    def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
 
     def _timeline(self, event: str, **fields: Any) -> None:
         if not self._run_dir or not self._run_id:
@@ -549,7 +547,7 @@ class RPAWorkflow:
         self._timeline_event_id += 1
         entry = {
             "event_id": self._timeline_event_id,
-            "timestamp": self._now(),
+            "timestamp": utc_now_iso(),
             "run_id": self._run_id,
             "workflow": self.name,
             "event": event,
@@ -571,8 +569,8 @@ class RPAWorkflow:
             "failure_kind": "record_failed" if entry.get("status") == "failed" else None,
             "retry_count": max(int(entry.get("attempts") or 1) - 1, 0),
             "safe_retry": False,
-            "timestamp": self._now(),
-            "finished_at": self._now(),
+            "timestamp": utc_now_iso(),
+            "finished_at": utc_now_iso(),
         }
         with (self._run_dir / "records.jsonl").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(redact_value(record), default=str) + "\n")

@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from hashlib import sha256
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -15,6 +14,7 @@ from harness.builder import create_builder_session
 from harness.config import HarnessConfig
 from harness.core.artifacts import read_json, read_jsonl, read_required_json
 from harness.core.ids import safe_session_id
+from harness.core.time import utc_now_iso
 from harness.rpa.yaml_runner import YamlWorkflowRunner, load_workflow_yaml
 from harness.security import redact_value, sanitize_url
 from harness.selectors.browser_swarm import run_browser_selector_swarm
@@ -60,8 +60,8 @@ def start_copilot_session(
         "run": {},
         "artifacts": {},
         "approvals": {},
-        "created_at": _now(),
-        "updated_at": _now(),
+        "created_at": utc_now_iso(),
+        "updated_at": utc_now_iso(),
         "next_question": _question(
             "intake.confirm_scope",
             "Confirm the automation scope, target, inputs, risky actions, and success criteria before discovery.",
@@ -126,12 +126,12 @@ def answer_copilot_question(
     answer_record = {
         "question_id": question_id,
         "answer": answer,
-        "answered_at": _now(),
+        "answered_at": utc_now_iso(),
     }
     _append_jsonl(session_dir / "answers.jsonl", answer_record)
 
     if str(answer).strip().lower() in {"stop", "abort", "quit", "no"}:
-        state.update({"status": "blocked", "next_question": None, "updated_at": _now()})
+        state.update({"status": "blocked", "next_question": None, "updated_at": utc_now_iso()})
         _write_state(session_dir, state)
         return read_copilot_session(session_id, root_dir=root_dir)
 
@@ -142,7 +142,7 @@ def answer_copilot_question(
     elif question_id == "policy.review":
         approvals[question_id] = {
             "answer": answer,
-            "approved_at": _now(),
+            "approved_at": utc_now_iso(),
             "details": question.get("details") or {},
             "target_url": state.get("target_url"),
             "workflow_hash": _file_hash(state.get("workflow_path")),
@@ -153,7 +153,7 @@ def answer_copilot_question(
         state.update({"phase": "promoted", "status": "completed", "next_question": None})
     else:
         state.update({"status": "ready", "next_question": None})
-    state["updated_at"] = _now()
+    state["updated_at"] = utc_now_iso()
     _write_state(session_dir, state)
     return read_copilot_session(session_id, root_dir=root_dir)
 
@@ -497,7 +497,7 @@ def _write_copilot_report(session_dir: Path, state: dict[str, Any]) -> dict[str,
         "run": state.get("run") or {},
         "artifacts": state.get("artifacts") or {},
         "next_question": state.get("next_question"),
-        "updated_at": _now(),
+        "updated_at": utc_now_iso(),
     })
     json_path = session_dir / "copilot_report.json"
     md_path = session_dir / "copilot_report.md"
@@ -570,7 +570,7 @@ def _write_discovery_cache(path: Path, result: dict[str, Any], summary: dict[str
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
-            redact_value({"schema_version": 1, "created_at": _now(), "summary": summary, "result": result}),
+            redact_value({"schema_version": 1, "created_at": utc_now_iso(), "summary": summary, "result": result}),
             indent=2,
             default=str,
         ),
@@ -608,7 +608,7 @@ def _short_hash(value: str) -> str:
 
 
 def _write_state(session_dir: Path, state: dict[str, Any]) -> None:
-    state["updated_at"] = _now()
+    state["updated_at"] = utc_now_iso()
     (session_dir / "copilot_state.json").write_text(
         json.dumps(_public_state(state), indent=2, default=str),
         encoding="utf-8",
@@ -653,7 +653,7 @@ def _question(
         "choices": choices,
         "default": choices[0],
         "details": redact_value(details or {}),
-        "created_at": _now(),
+        "created_at": utc_now_iso(),
     }
 
 
@@ -699,7 +699,3 @@ def _line_value(pattern: re.Pattern[str], text: str, *, sanitize: bool = False) 
         return None
     value = match.group(1).strip().strip('"')
     return sanitize_url(value) if sanitize else value
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
