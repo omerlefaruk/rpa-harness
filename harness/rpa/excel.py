@@ -244,19 +244,19 @@ class ExcelHandler:
 
         if data_type == "auto":
             return value
-        elif data_type == "str":
+        if data_type == "str":
             return str(value)
-        elif data_type == "int":
+        if data_type == "int":
             try:
                 return int(value)
             except (ValueError, TypeError):
                 return value
-        elif data_type == "float":
+        if data_type == "float":
             try:
                 return float(value)
             except (ValueError, TypeError):
                 return value
-        elif data_type == "bool":
+        if data_type == "bool":
             if isinstance(value, bool):
                 return value
             if isinstance(value, str):

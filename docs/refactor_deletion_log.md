@@ -1369,3 +1369,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_harness_discovery.py tests\capabilities\test_reporting_evidence.py -q` (18 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Excel type conversion return-chain slice
+
+Deleted:
+- unnecessary `elif` branches after already-returning type conversion checks
+
+Combined:
+- Excel type conversion now uses independent early-return checks
+
+Source of truth:
+- `harness/rpa/excel.py` owns Excel cell/column type conversion
+
+Checks:
+- `ruff check harness\rpa\excel.py --select RET505,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\excel.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_rpa_workflow_capabilities.py tests\capabilities\test_yaml_excel_desktop_runtime.py -q` (18 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
