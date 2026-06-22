@@ -36,3 +36,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# Local agent/tool state
+.atl/
+.superpowers/

@@ -55,3 +55,18 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_authoring_reporting.py::test_run_artifacts_collects_failure_metadata -q` → 7 passed
+
+## 2026-06-22 — Local tool-state hygiene slice
+
+Deleted:
+- no runtime code; removed future status noise from local tool caches
+
+Combined:
+- `.atl/` and `.superpowers/` treated as local generated state in `.gitignore`
+
+Source of truth:
+- tracked repo files and committed refactor log; local tool state stays outside Git
+
+Checks:
+- `git status --short` shows only real untracked docs/project work after ignore update
+- `git diff --check`
