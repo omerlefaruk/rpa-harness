@@ -209,7 +209,7 @@ def create_dashboard(
         run_dir = run_dir_for_id(root_path / "runs", run_id)
         if not run_dir.exists():
             raise HTTPException(status_code=404, detail="run not found")
-        target = _safe_artifact_path(run_dir, path)
+        target = _safe_child_path(run_dir, path)
         if not target:
             raise HTTPException(status_code=403, detail="artifact path is not allowed")
         if not target.exists() or not target.is_file():
@@ -230,7 +230,7 @@ def create_dashboard(
         from harness.rpa.schema import generate_workflow_graph
         import yaml
 
-        path = _safe_workspace_path(root_path, workflow_path)
+        path = _safe_child_path(root_path, workflow_path)
         if not path or not path.exists():
             raise HTTPException(status_code=404, detail="workflow not found")
         workflow = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -276,17 +276,7 @@ def _query_or_empty(root_path: Path, fn) -> list[dict[str, Any]]:
         db.close()
 
 
-def _safe_artifact_path(run_dir: Path, path: str) -> Path | None:
-    root = run_dir.resolve()
-    target = (root / path).resolve()
-    try:
-        target.relative_to(root)
-    except ValueError:
-        return None
-    return target
-
-
-def _safe_workspace_path(root_path: Path, path: str) -> Path | None:
+def _safe_child_path(root_path: Path, path: str) -> Path | None:
     root = root_path.resolve()
     target = (root / path).resolve()
     try:

@@ -233,3 +233,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_cli_summary.py -q` → 5 passed
+
+## 2026-06-22 — Dashboard safe-path helper slice
+
+Deleted:
+- duplicate safe child path implementations for run artifacts and workspace files in `harness/reporting/dashboard.py`
+
+Combined:
+- artifact and workflow graph endpoints now share one `_safe_child_path()` helper
+
+Source of truth:
+- `_safe_child_path()` in `harness/reporting/dashboard.py` for dashboard-local path containment checks
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py -q` → 6 passed
