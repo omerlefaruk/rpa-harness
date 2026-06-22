@@ -15,18 +15,7 @@ def propose(report_path: str, workflow_path: str) -> dict:
     diagnosis = analyze(report_path)
 
     report = read_required_json(Path(report_path))
-    workflow = {}
-    if Path(workflow_path).exists():
-        from harness.rpa.yaml_runner import load_workflow_yaml
-
-        workflow = load_workflow_yaml(workflow_path)
-
     failed_step_id = report.get("failed_step_id", "")
-    failed_step = None
-    for step in workflow.get("steps", []):
-        if step.get("id") == failed_step_id:
-            failed_step = step
-            break
 
     patch = {
         "patch_id": f"patch_{Path(report_path).stem}",

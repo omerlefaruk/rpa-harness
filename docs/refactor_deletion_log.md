@@ -1120,3 +1120,23 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\integration\test_windows_desktop_smoke.py tests\capabilities\test_desktop_clipboard_ocr.py tests\capabilities\test_desktop_ai_controller.py -q` → 11 passed, 2 skipped
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Patch proposal unused workflow-parse slice
+
+Deleted:
+- unused workflow YAML load from patch proposal generation
+- unused failed-step lookup loop from patch proposal generation
+
+Combined:
+- nothing; patch proposal already uses the failure report and workflow path directly
+
+Source of truth:
+- `tools/propose_patch.py` derives patch summaries from failure analysis plus `failed_step_id`, not from reparsing workflow steps
+
+Checks:
+- `ruff check tools\propose_patch.py --select F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q tools\propose_patch.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_repair_loop.py::test_patch_proposal_respects_risk -q` → 1 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
