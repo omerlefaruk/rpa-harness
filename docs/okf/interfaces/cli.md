@@ -13,14 +13,14 @@ The packaged CLI lives in `harness.cli` and remains available through the compat
 
 # Product launcher
 
-`@rpa-harness/agent` is a thin npm launcher for consumer workspaces. It creates `.rpa-harness/venv`, installs the Python runtime, initializes workspace folders, and exposes a governed MCP stdio bridge backed by `.agents/config/agent_command_manifest.json`-style allowlisted commands.
+`roi-harness` is a thin npm launcher for consumer workspaces. It creates `.rpa-harness/venv`, installs the Python runtime, initializes workspace folders, and exposes a governed MCP stdio bridge backed by `.agents/config/agent_command_manifest.json`-style allowlisted commands.
 
 # Examples
 
 ```bash
-npx @rpa-harness/agent init
-npx @rpa-harness/agent validate workflows/example.yaml
-npx @rpa-harness/agent mcp
+npx roi-harness init
+npx roi-harness validate workflows/example.yaml
+npx roi-harness mcp
 python main.py --validate-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --preflight-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --run-yaml projects/example_data_verification/workflows/main.yaml

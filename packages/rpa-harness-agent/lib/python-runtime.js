@@ -3,6 +3,9 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 
+export const DEFAULT_PYTHON_SOURCE =
+  "https://github.com/omerlefaruk/rpa-harness/archive/refs/heads/main.zip";
+
 export function runtimePaths(cwd = process.cwd()) {
   const root = path.join(cwd, ".rpa-harness");
   const isWindows = process.platform === "win32";
@@ -15,8 +18,8 @@ export function runtimePaths(cwd = process.cwd()) {
   };
 }
 
-export function buildPythonInstallArgs(packageSource = process.env.RPA_HARNESS_PYTHON_SOURCE || "rpa-harness") {
-  return packageSource === "rpa-harness"
+export function buildPythonInstallArgs(packageSource = process.env.RPA_HARNESS_PYTHON_SOURCE || DEFAULT_PYTHON_SOURCE) {
+  return packageSource === DEFAULT_PYTHON_SOURCE
     ? ["-m", "pip", "install", "--upgrade", packageSource]
     : ["-m", "pip", "install", "-e", packageSource];
 }
