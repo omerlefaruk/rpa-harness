@@ -112,3 +112,19 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_production_selector_repair_requires_validated_candidate_and_approval tests/test_authoring_reporting.py::test_selector_repair_plan_contains_swarm_command -q` → 2 passed
+
+## 2026-06-22 — Observability artifact reader slice
+
+Deleted:
+- local JSON and JSONL artifact readers from `harness/observability.py`
+- duplicate JSONL tail parsing loop in `read_jsonl_tail()`
+
+Combined:
+- observability indexing now uses `read_json()` and `read_jsonl()` from `harness/reporting/run_artifacts.py`
+- JSONL tailing now delegates to the full JSONL reader
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for JSON/JSONL run artifact reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_operator_layer.py::test_observability_indexes_runs_idempotently_and_redacts tests/capabilities/test_desktop_evidence_store.py::test_observability_indexes_desktop_evidence_artifacts tests/test_dashboard.py tests/test_cli_summary.py -q` → 12 passed

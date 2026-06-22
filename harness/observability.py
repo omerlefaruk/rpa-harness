@@ -11,6 +11,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from harness.reporting.run_artifacts import read_json, read_jsonl
 from harness.security import redact_value
 
 
@@ -220,7 +221,7 @@ class ObservabilityDB:
 
     def replace_run(self, run_dir: Path) -> dict[str, Any]:
         manifest_path = run_dir / "run_manifest.json"
-        manifest = _read_json(manifest_path)
+        manifest = read_json(manifest_path)
         if not manifest:
             return {"status": "skipped", "reason": "run_manifest.json missing or corrupt", "run_dir": str(run_dir)}
         run_id = str(manifest.get("run_id") or run_dir.name)
@@ -374,7 +375,7 @@ class ObservabilityDB:
 
     def _index_timeline(self, run_id: str, workflow: str | None, run_dir: Path) -> None:
         phase_status: dict[str, dict[str, Any]] = {}
-        for seq, event in enumerate(_read_jsonl(run_dir / "timeline.jsonl"), 1):
+        for seq, event in enumerate(read_jsonl(run_dir / "timeline.jsonl"), 1):
             event = redact_value(event)
             event_id = int(event.get("event_id") or seq)
             phase = event.get("phase") or event.get("phase_id")
@@ -443,7 +444,7 @@ class ObservabilityDB:
             )
 
     def _index_records(self, run_id: str, workflow: str | None, run_dir: Path) -> None:
-        for record in _read_jsonl(run_dir / "records.jsonl"):
+        for record in read_jsonl(run_dir / "records.jsonl"):
             record = redact_value(record)
             self.conn.execute(
                 """
@@ -471,8 +472,8 @@ class ObservabilityDB:
             )
 
     def _index_failure_artifacts(self, run_id: str, workflow: str | None, run_dir: Path) -> None:
-        evidence = redact_value(_read_json(run_dir / "evidence_bundle.json"))
-        repair = redact_value(_read_json(run_dir / "repair_packet.json"))
+        evidence = redact_value(read_json(run_dir / "evidence_bundle.json"))
+        repair = redact_value(read_json(run_dir / "repair_packet.json"))
         artifacts = evidence.get("artifacts") or {}
         desktop = evidence.get("desktop") if isinstance(evidence.get("desktop"), dict) else {}
         if evidence:
@@ -567,30 +568,6 @@ def rebuild_runs(runs_dir: str | Path = "runs", db_path: str | Path | None = Non
     if db_path.exists():
         db_path.unlink()
     return index_runs(runs_dir, db_path)
-
-
-def _read_json(path: Path) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-        return value if isinstance(value, dict) else {}
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-
-def _read_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows = []
-    if not path.exists():
-        return rows
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.strip():
-            continue
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            rows.append(value)
-    return rows
 
 
 def _join(run_dir: Path, value: Any) -> str | None:

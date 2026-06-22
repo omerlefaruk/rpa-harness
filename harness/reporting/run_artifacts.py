@@ -128,11 +128,11 @@ def read_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     entries: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[-limit:]:
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if not line.strip():
             continue
         try:
@@ -142,6 +142,10 @@ def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
         if isinstance(parsed, dict):
             entries.append(parsed)
     return entries
+
+
+def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
+    return read_jsonl(path)[-limit:]
 
 
 def print_runs_list(runs_dir: str = "runs", limit: int = 20):
