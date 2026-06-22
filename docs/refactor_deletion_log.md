@@ -376,3 +376,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py::test_dashboard_exposes_runs_and_builder_sessions tests/test_dashboard.py::test_dashboard_exposes_copilot_sessions tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_copilot_session.py::test_run_copilot_try_url_creates_task_and_report -q` → 4 passed
+
+## 2026-06-22 — Python workflow live report reader slice
+
+Deleted:
+- direct `json.loads(...read_text...)` manifest read in `Workflow._write_live_report()`
+
+Combined:
+- Python workflow live report generation now reads `run_manifest.json` through the core JSON artifact helper
+
+Source of truth:
+- `harness/core/artifacts.py` for run manifest JSON reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts -q` → 1 passed

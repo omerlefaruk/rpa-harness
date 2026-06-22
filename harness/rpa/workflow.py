@@ -15,6 +15,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
 from harness.core import ExecutionTrace
+from harness.core.artifacts import read_json
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
 from harness.rpa.ledger import ResumeLedger
@@ -613,7 +614,7 @@ class RPAWorkflow:
         if not self._run_dir:
             return
         report = {
-            "manifest": json.loads((self._run_dir / "run_manifest.json").read_text(encoding="utf-8")),
+            "manifest": read_json(self._run_dir / "run_manifest.json"),
             "result": self.result.to_dict(),
         }
         (self._run_dir / "report.json").write_text(
