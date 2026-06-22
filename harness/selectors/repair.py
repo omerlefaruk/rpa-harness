@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from harness.core.artifacts import read_json
+from harness.core.artifacts import read_json, write_json
 from harness.security import redact_value
 
 
@@ -147,8 +146,5 @@ def _patch_workflow_selector(workflow_path: Path, step_id: str, candidate: dict[
 
 def _write_decision(run_path: Path, decision: dict[str, Any]) -> dict[str, Any]:
     safe = redact_value(decision)
-    (run_path / "selector_repair_decision.json").write_text(
-        json.dumps(safe, indent=2, default=str),
-        encoding="utf-8",
-    )
+    write_json(run_path / "selector_repair_decision.json", decision)
     return safe

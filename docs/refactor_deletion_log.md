@@ -545,3 +545,20 @@ Checks:
 - `.venv\Scripts\python.exe -m compileall -q harness\drivers\api.py` → passed
 - `.venv\Scripts\python.exe -m pytest tests/test_line_endings.py::test_repository_text_files_use_lf_line_endings -q` → 1 passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Selector repair decision writer slice
+
+Deleted:
+- selector repair's local redacted JSON decision writer
+
+Combined:
+- `selector_repair_decision.json` now uses the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_production_selector_repair_requires_validated_candidate_and_approval tests/test_authoring_reporting.py::test_selector_repair_plan_contains_swarm_command -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\repair.py` → passed
+- `git diff --check` → passed
