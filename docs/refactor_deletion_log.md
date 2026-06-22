@@ -247,3 +247,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py -q` → 6 passed
+
+## 2026-06-22 — YAML runner record summary reader slice
+
+Deleted:
+- local JSONL parsing loop in `YamlWorkflowRunner._record_summary()`
+
+Combined:
+- YAML runner record summary now reads records through the core JSONL artifact helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSONL artifact reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/capabilities/test_rpa_workflow_capabilities.py -q` → 14 passed

@@ -1662,17 +1662,8 @@ class YamlWorkflowRunner:
     def _record_summary(self) -> dict:
         if not self.failure._run_dir:
             return {}
-        path = self.failure._run_dir / "records.jsonl"
-        if not path.exists():
-            return {}
         latest: dict[str, dict] = {}
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+        for entry in read_jsonl(self.failure._run_dir / "records.jsonl"):
             record_id = str(entry.get("record_id") or "")
             if record_id:
                 latest[record_id] = entry
