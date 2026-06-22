@@ -217,3 +217,19 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_cli_summary.py tests/test_config.py tests/test_telegram_notifications.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_cli_entrypoint.py -q` → 22 passed
+
+## 2026-06-22 — Run artifact facade cleanup slice
+
+Deleted:
+- direct `json.loads(...read_text...)` manifest parsing in `harness/reporting/run_artifacts.py`
+- local JSONL record parsing loop in `latest_records()`
+
+Combined:
+- run list, manifest print, retry manifest read, and latest-record reads now reuse core artifact readers
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON and JSONL artifact reads
+- `harness/reporting/run_artifacts.py` remains the CLI/reporting facade
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_run_artifact_cli_helpers tests/test_cli_summary.py -q` → 5 passed

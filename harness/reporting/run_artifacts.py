@@ -79,9 +79,8 @@ def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any
     )[:limit]
     runs = []
     for manifest in manifests:
-        try:
-            data = json.loads(manifest.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        data = read_json(manifest)
+        if not data:
             continue
         runs.append(
             {
@@ -164,7 +163,7 @@ def print_run_manifest(run: str):
     if not manifest.exists():
         print(f"Run manifest not found: {run}", file=sys.stderr)
         sys.exit(1)
-    print(json.dumps(json.loads(manifest.read_text(encoding="utf-8")), indent=2, default=str))
+    print(json.dumps(read_json(manifest), indent=2, default=str))
 
 
 def print_run_logs(run: str, tail: int | None = None, step: str | None = None):
@@ -235,7 +234,7 @@ async def retry_run(
     manifest_path = run_dir / "run_manifest.json"
     if not manifest_path.exists():
         return {"status": "blocked", "reason": "run_manifest.json not found", "run_dir": str(run_dir)}
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = read_json(manifest_path)
     workflow_path = manifest.get("workflow_path")
     if not workflow_path:
         return {"status": "blocked", "reason": "manifest does not include workflow_path", "run_dir": str(run_dir)}
@@ -261,15 +260,7 @@ async def retry_run(
 
 def latest_records(path: Path) -> dict[str, dict]:
     latest: dict[str, dict] = {}
-    if not path.exists():
-        return latest
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for record in read_jsonl(path):
         record_id = str(record.get("record_id") or "")
         if record_id:
             latest[record_id] = record
