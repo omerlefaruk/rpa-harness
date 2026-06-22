@@ -12,7 +12,7 @@ input_schema:
 output_destination: reports/rezervasyon_puan_reviews/reviews_last_30_days.xlsx
 system_of_record: public OTA review pages
 success_condition: The workflow writes JSON, HTML, and Excel artifacts with one row per parsed recent review.
-safe_test_case: Run project unit tests against a generated fixture workbook.
+safe_test_case: Audit this YAML descriptor, then run it against a generated fixture workbook.
 allowed_side_effects:
   - write_report
 rerun_policy: Safe to rerun; output files are overwritten.
@@ -21,9 +21,9 @@ inputs:
   input_excel: C:/Users/Rau/Desktop/Archive/TM-57-Rezervasyon_Puan/data/Branches.xlsx
   sheet: Taksim Analiz
 steps:
-  - id: python_workflow_entrypoint
-    current_stage: execute_python_workflow
-    intent: Run the project Python RPAWorkflow.
+  - id: yaml_descriptor_entrypoint
+    current_stage: audit_yaml_descriptor
+    intent: Run the project YAML workflow.
     preconditions:
       - source workbook exists
       - source sheet exists
@@ -31,8 +31,8 @@ steps:
       - Excel report exists
       - JSON report exists
       - HTML report exists
-    proof: projects/rezervasyon_puan_reviews/tests/test_workflow.py
-    failure_path: Fix project tests before production execution.
+    proof: python main.py --audit-workflow projects/rezervasyon_puan_reviews/workflows/main.yaml
+    failure_path: Fix the YAML descriptor before production execution.
     action:
       type: no_op
     success_check:

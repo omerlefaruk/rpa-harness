@@ -2,7 +2,7 @@ id: ota_link_swarm
 name: OTA Link Swarm
 version: "0.1.0"
 type: mixed
-description: Project descriptor for the Python RPAWorkflow in projects/ota_link_swarm/workflow.py.
+description: YAML workflow descriptor for projects/ota_link_swarm/workflows/main.yaml.
 owner: ops
 target_systems:
   - ota-public-sites
@@ -21,15 +21,15 @@ inputs:
   input_excel: data/ota_links.xlsx
   sheet: Taksim Analiz
 steps:
-  - id: python_workflow_entrypoint
-    current_stage: execute_python_workflow
-    intent: Run the project Python RPAWorkflow.
+  - id: yaml_descriptor_entrypoint
+    current_stage: audit_yaml_descriptor
+    intent: Run the project YAML workflow.
     preconditions:
       - input workbook exists
     postconditions:
       - selector evidence report exists
-    proof: projects/ota_link_swarm/tests/test_workflow.py
-    failure_path: Fix project tests before production execution.
+    proof: python main.py --audit-workflow projects/ota_link_swarm/workflows/main.yaml
+    failure_path: Fix the YAML descriptor before production execution.
     action:
       type: no_op
     success_check:

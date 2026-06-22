@@ -7,7 +7,7 @@ Default mode is `full`: Expedia runs through a dedicated Chrome CDP profile; the
 Run:
 
 ```powershell
-.\.venv\Scripts\python.exe main.py --config projects/rezervasyon_puan_reviews/config.yaml --run-workflows --discover-wf projects/rezervasyon_puan_reviews --workflow-name rezervasyon_puan_reviews
+.\.venv\Scripts\python.exe main.py --run-yaml projects/rezervasyon_puan_reviews/workflows/main.yaml
 ```
 
 Modes:

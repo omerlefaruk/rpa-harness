@@ -22,7 +22,7 @@ python main.py --validate-yaml workflows/examples/default_schema_example.yaml
 python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
 python main.py --run-yaml workflows/examples/minimal_example.yaml
 python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
-python main.py --config projects/example_data_verification/config.yaml --run-workflows --discover-wf projects/example_data_verification
+python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --observability-index --runs-dir runs
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
@@ -76,7 +76,6 @@ Real projects must live under `projects/<project>/`:
 projects/<project>/
   workflows/main.yaml
   config.yaml
-  tests/test_workflow.py
   README.md
 ```
 

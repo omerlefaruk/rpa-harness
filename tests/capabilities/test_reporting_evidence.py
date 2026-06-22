@@ -1,63 +1,37 @@
 """Capability characterization for reports and failure evidence."""
 
 import json
-from datetime import datetime
 from pathlib import Path
 
-import pytest
-
-from harness.config import HarnessConfig
-from harness.orchestrator import AutomationHarness
 from harness.reporting import JSONReporter
 from harness.reporting.failure_report import FailureReport
-from harness.rpa.workflow import WorkflowResult, WorkflowStatus
-from harness.test_case import TestResult as HarnessTestResult
-from harness.test_case import TestStatus as HarnessTestStatus
 
 
-def _config(tmp_path: Path) -> HarnessConfig:
-    return HarnessConfig(
-        headless=True,
-        enable_vision=False,
-        report_dir=str(tmp_path / "reports"),
-        screenshot_dir=str(tmp_path / "screenshots"),
+def test_json_report_includes_metadata_for_yaml_result(tmp_path):
+    report_path = JSONReporter(str(tmp_path / "reports")).generate(
+        [
+            {
+                "name": "metadata_workflow",
+                "status": "passed",
+                "duration_ms": 12,
+                "metadata": {
+                    "type": "yaml_workflow",
+                    "workflow_id": "metadata_workflow",
+                    "run_dir": str(tmp_path / "runs" / "metadata_workflow"),
+                },
+            }
+        ],
+        suite_name="yaml-runtime",
+        metadata={"harness_version": "0.1.0", "runtime": "yaml"},
     )
 
-
-def test_json_report_includes_test_and_workflow_metadata(tmp_path):
-    harness = AutomationHarness(_config(tmp_path))
-    harness._start_time = 1.0
-    harness._end_time = 2.0
-    harness.results = [
-        HarnessTestResult(
-            name="metadata_test",
-            status=HarnessTestStatus.PASSED,
-            start_time=datetime.now(),
-            end_time=datetime.now(),
-            metadata={"type": "automation_test", "tags": ["capability"]},
-        )
-    ]
-    harness.workflow_results = [
-        WorkflowResult(
-            name="metadata_workflow",
-            status=WorkflowStatus.PASSED,
-            total_records=2,
-            processed_records=1,
-            failed_records=1,
-            output_files=[str(tmp_path / "mismatches.xlsx")],
-        )
-    ]
-
-    paths = harness.report(formats=["json"])
-    report = json.loads(Path(paths["json"]).read_text())
-    workflow_entry = next(test for test in report["tests"] if test["name"] == "metadata_workflow")
+    report = json.loads(Path(report_path).read_text())
+    workflow_entry = report["tests"][0]
 
     assert report["metadata"]["harness_version"] == "0.1.0"
-    assert report["metadata"]["config"]["enable_vision"] is False
-    assert workflow_entry["metadata"]["type"] == "rpa_workflow"
-    assert workflow_entry["metadata"]["total_records"] == 2
-    assert workflow_entry["metadata"]["failed_records"] == 1
-    assert workflow_entry["metadata"]["output_files"] == [str(tmp_path / "mismatches.xlsx")]
+    assert report["metadata"]["runtime"] == "yaml"
+    assert workflow_entry["metadata"]["type"] == "yaml_workflow"
+    assert workflow_entry["metadata"]["workflow_id"] == "metadata_workflow"
 
 
 def test_failure_report_includes_repro_command_and_evidence_paths(tmp_path):
@@ -207,11 +181,11 @@ def test_failure_report_includes_rulebook_failure_fields(tmp_path):
 def test_json_report_redacts_secret_like_log_values(tmp_path):
     report_path = JSONReporter(str(tmp_path / "reports")).generate(
         [
-            HarnessTestResult(
-                name="secret_log",
-                status=HarnessTestStatus.PASSED,
-                logs=["Authorization: Bearer fixture-secret-value"],
-            )
+            {
+                "name": "secret_log",
+                "status": "passed",
+                "logs": ["Authorization: Bearer fixture-secret-value"],
+            }
         ],
         suite_name="secret-redaction",
     )

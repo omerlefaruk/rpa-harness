@@ -8,7 +8,7 @@ timestamp: 2026-06-17T00:00:00Z
 
 # Commands
 
-The packaged CLI lives in `harness.cli` and remains available through the compatibility shim `main.py`. Operators and agents use it for workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, and OKF maintenance.
+The packaged CLI lives in `harness.cli` and remains available through the compatibility shim `main.py`. Operators and agents use it for YAML workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, and OKF maintenance. The old Python class discovery/run flags are not part of the CLI surface.
 
 
 # Product launcher

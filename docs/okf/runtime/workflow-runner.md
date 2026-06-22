@@ -8,7 +8,7 @@ timestamp: 2026-06-17T00:00:00Z
 
 # Behavior
 
-The YAML runner loads workflow definitions, resolves declared inputs and secrets at the execution edge, runs preflight checks, executes steps, evaluates success checks, and writes redacted run artifacts.
+The YAML runner is the only workflow runtime. It loads workflow definitions, resolves declared inputs and secrets at the execution edge, runs preflight checks, executes steps, evaluates success checks, and writes redacted run artifacts.
 
 # Evidence
 
