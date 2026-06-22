@@ -5,7 +5,6 @@ record-level retry, and on_success callback.
 """
 
 import html
-import json
 import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -15,7 +14,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from harness.config import HarnessConfig
 from harness.core import ExecutionTrace
-from harness.core.artifacts import read_json, write_json
+from harness.core.artifacts import append_jsonl, read_json, write_json
 from harness.core.time import utc_now_iso
 from harness.logger import HarnessLogger
 from harness.notifications import BotNotifier
@@ -553,8 +552,7 @@ class RPAWorkflow:
             "event": event,
         }
         entry.update({key: value for key, value in fields.items() if value is not None})
-        with (self._run_dir / "timeline.jsonl").open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(redact_value(entry), default=str) + "\n")
+        append_jsonl(self._run_dir / "timeline.jsonl", entry)
 
     def _write_record(self, entry: dict) -> None:
         if not self._run_dir or not self._run_id:
@@ -572,8 +570,7 @@ class RPAWorkflow:
             "timestamp": utc_now_iso(),
             "finished_at": utc_now_iso(),
         }
-        with (self._run_dir / "records.jsonl").open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(redact_value(record), default=str) + "\n")
+        append_jsonl(self._run_dir / "records.jsonl", record)
 
     def _write_manifest(self, status: str, *, finished: bool = False) -> None:
         if not self._run_dir or not self._run_id:

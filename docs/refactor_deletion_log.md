@@ -649,3 +649,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_resume_ledger_records_latest_status tests/capabilities/test_reporting_evidence.py::test_failure_report_writes_redacted_evidence_bundle -q` → 2 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\core\artifacts.py harness\rpa\ledger.py harness\reporting\failure_report.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Python workflow JSONL append slice
+
+Deleted:
+- Python workflow local JSONL append writers for `timeline.jsonl` and `records.jsonl`
+- now-unused JSON import from Python workflow runtime
+
+Combined:
+- Python workflow timeline and record events now use the core redacted JSONL append helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON/JSONL artifact reads and writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_rpa_workflow_capabilities.py::test_python_rpa_workflow_writes_live_dashboard_artifacts tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\workflow.py` → passed
+- `git diff --check` → passed
