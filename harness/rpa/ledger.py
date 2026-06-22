@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
-from harness.core.artifacts import read_jsonl
+from harness.core.artifacts import append_jsonl, read_jsonl
 from harness.core.time import utc_now_iso
 from harness.security import redact_value
 
@@ -41,8 +40,7 @@ class ResumeLedger:
                 "details": details or {},
             }
         )
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, default=str) + "\n")
+        append_jsonl(self.path, entry)
         return entry
 
     def latest_by_record(self, workflow: str | None = None) -> dict[str, dict[str, Any]]:

@@ -39,6 +39,11 @@ def write_json(path: Path, payload: Any) -> None:
     )
 
 
+def append_jsonl(path: Path, payload: Any) -> None:
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(redact_value(payload), default=str) + "\n")
+
+
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []

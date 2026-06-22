@@ -630,3 +630,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_browser_selector_swarm.py tests/test_copilot_session.py::test_advance_copilot_session_runs_browser_discovery tests/test_copilot_session.py::test_run_copilot_try_url_creates_task_and_report -q` → 27 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\selectors\browser_swarm.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — JSONL append helper slice
+
+Deleted:
+- resume ledger's local JSONL append writer
+- failure report log's local redacted JSONL append writer
+- now-unused JSON import from failure reporting
+
+Combined:
+- resume ledger entries and failure logs now use the core redacted JSONL append helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON/JSONL artifact reads and writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_resume_ledger_records_latest_status tests/capabilities/test_reporting_evidence.py::test_failure_report_writes_redacted_evidence_bundle -q` → 2 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\core\artifacts.py harness\rpa\ledger.py harness\reporting\failure_report.py` → passed
+- `git diff --check` → passed
