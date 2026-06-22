@@ -7,6 +7,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from harness.core.artifacts import read_json
 from harness.security import redact_value
 
 
@@ -27,9 +28,7 @@ def bundle_run(run_path: str | Path, output_path: str | Path | None = None) -> P
 
 def _manifest(source: Path) -> dict[str, Any]:
     report_path = source / "failure_report.json"
-    report = {}
-    if report_path.exists():
-        report = redact_value(json.loads(report_path.read_text(encoding="utf-8")))
+    report = redact_value(read_json(report_path))
     return {
         "run_dir": source.name,
         "failure_report": report,

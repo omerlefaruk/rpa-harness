@@ -347,4 +347,18 @@ Source of truth:
 - `harness/core/ids.py` for workflow-safe ID creation and validation rules
 
 Checks:
-- pending
+- `.venv\Scripts\python.exe -m pytest tests/test_dsl.py tests/test_operator_layer.py::test_default_schema_validates_and_generates_graph tests/test_operator_layer.py::test_default_schema_rejects_missing_success_check_and_unsafe_retry tests/test_workflow_schema.py::test_validate_minimal_workflow tests/test_workflow_schema.py::test_validate_yaml_cli_outputs_workflow_summary tests/test_verification.py::test_validate_workflow_missing_fields tests/test_verification.py::test_validate_workflow_valid -q` → 11 passed
+
+## 2026-06-22 — Evidence bundle JSON reader slice
+
+Deleted:
+- direct `json.loads(...read_text...)` failure-report parsing in `harness/reporting/evidence_bundle.py`
+
+Combined:
+- evidence bundle manifest generation now reads `failure_report.json` through the core JSON artifact helper
+
+Source of truth:
+- `harness/core/artifacts.py` for JSON artifact reads
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_authoring_reporting.py::test_failure_report_html_and_evidence_bundle -q` → 1 passed
