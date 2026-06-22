@@ -1236,3 +1236,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_verification.py tests\capabilities\test_yaml_schema_edges.py -q` → 41 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Selector variation duplicate-branch slice
+
+Deleted:
+- duplicate role/tag branch body in selector variation generation
+
+Combined:
+- role and tag strategies now share the same synonym variation branch
+
+Source of truth:
+- `harness/selectors/strategies.py` owns selector variation ordering for repair/healing
+
+Checks:
+- `ruff check harness\selectors\strategies.py --select SIM114,F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\strategies.py`
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_recovery_selector_capabilities.py tests\test_browser_selector_swarm.py -q` → 33 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed

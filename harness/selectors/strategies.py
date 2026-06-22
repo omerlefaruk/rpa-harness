@@ -51,10 +51,7 @@ def generate_selector_variations(element_description: str, element_type: str = "
         if priority < 3:
             continue
 
-        if "role" in strategy_name:
-            for syn in synonyms:
-                variations.append(template.format(syn, name_original))
-        elif "tag" in strategy_name:
+        if "role" in strategy_name or "tag" in strategy_name:
             for syn in synonyms:
                 variations.append(template.format(syn, name_original))
         elif "{}" in template:
