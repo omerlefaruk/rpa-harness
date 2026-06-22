@@ -318,12 +318,6 @@ async def _sse_timeline(path: Path, after_id: int | None = None):
         await asyncio.sleep(0.5)
 
 
-def tail_text(path: Path, max_chars: int = 8000) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8", errors="replace")[-max_chars:]
-
-
 def run_text(command: list[str], cwd: Path) -> str:
     try:
         completed = subprocess.run(

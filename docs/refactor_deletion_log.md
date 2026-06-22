@@ -827,3 +827,21 @@ Checks:
 - `.venv\Scripts\python.exe -m compileall -q harness\builder.py` → passed
 - `git diff --check` → passed
 - `rg -n "\bnow_iso\(" harness tests tools -S` → clean
+
+
+## 2026-06-22 — Dashboard dead tail helper slice
+
+Deleted:
+- unused `tail_text()` helper from the dashboard module
+
+Combined:
+- nothing; dead presentation helper removed without replacement
+
+Source of truth:
+- dashboard endpoints read only the files they actively serve
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py -q` → 6 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\reporting\dashboard.py` → passed
+- `git diff --check` → passed
+- `rg -n "tail_text\(" harness tests tools -S` → clean
