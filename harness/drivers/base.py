@@ -3,7 +3,7 @@ Abstract base driver defining the interface for all automation drivers.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger

@@ -917,3 +917,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_logger.py tests\test_retry.py -q` → 17 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\logger.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Base driver unused-import slice
+
+Deleted:
+- unused `Any` and `Dict` imports from the base driver
+
+Combined:
+- nothing; dead imports removed without replacement
+
+Source of truth:
+- `harness/drivers/base.py` keeps only imports used by the driver base class
+
+Checks:
+- `ruff check harness\drivers\base.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_api_runtime.py -q` → 6 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\drivers\base.py harness\drivers\api.py harness\drivers\playwright.py harness\drivers\windows_ui.py` → passed
+- `git diff --check` → passed
