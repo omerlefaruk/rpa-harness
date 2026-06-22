@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Type
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
 from harness.test_case import AutomationTestCase, TestResult, TestStatus
-from harness.rpa.workflow import RPAWorkflow, WorkflowResult, WorkflowStatus
+from harness.rpa.workflow import RPAWorkflow, WorkflowResult
 from harness.reporting import HTMLReporter, JSONReporter
 
 

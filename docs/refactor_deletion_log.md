@@ -1025,3 +1025,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_selector_strategy.py tests\capabilities\test_recovery_selector_capabilities.py::test_selector_priority_identifies_stable_and_dynamic_selectors tests\capabilities\test_recovery_selector_capabilities.py::test_dynamic_selectors_score_worse_than_stable_selectors -q` → 7 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\selectors\strategies.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Orchestrator unused-import slice
+
+Deleted:
+- unused `WorkflowStatus` import from the orchestrator
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/orchestrator.py` imports only workflow types it uses for discovery and execution
+
+Checks:
+- `ruff check harness\orchestrator.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_harness_discovery.py -q` → 13 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\orchestrator.py` → passed
+- `git diff --check` → passed
