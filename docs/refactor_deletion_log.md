@@ -1043,3 +1043,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_harness_discovery.py -q` → 13 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\orchestrator.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Recovery unused-import slice
+
+Deleted:
+- unused `Any` import from resilience recovery helpers
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `harness/resilience/recovery.py` keeps only imports used by retry, polling, fallback, and circuit breaker helpers
+
+Checks:
+- `ruff check harness\resilience\recovery.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\test_retry.py tests\capabilities\test_recovery_selector_capabilities.py::test_smart_retry_retries_transient_but_not_permanent_errors -q` → 17 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\resilience\recovery.py` → passed
+- `git diff --check` → passed

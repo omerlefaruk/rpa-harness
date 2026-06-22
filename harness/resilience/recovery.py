@@ -8,7 +8,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Optional, TypeVar
+from typing import Awaitable, Callable, Optional, TypeVar
 
 from harness.logger import HarnessLogger
 from harness.resilience.errors import classify_error
