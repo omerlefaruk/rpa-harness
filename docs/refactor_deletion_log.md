@@ -1061,3 +1061,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_retry.py tests\capabilities\test_recovery_selector_capabilities.py::test_smart_retry_retries_transient_but_not_permanent_errors -q` → 17 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\resilience\recovery.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Benchmark tool unused-import slice
+
+Deleted:
+- unused `time` import from the benchmark tool
+
+Combined:
+- nothing; dead import removed without replacement
+
+Source of truth:
+- `tools/benchmark_real_life_rpa.py` keeps only imports used by benchmark measurement/reporting
+
+Checks:
+- `ruff check tools\benchmark_real_life_rpa.py --select F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q tools\benchmark_real_life_rpa.py`
+- `.venv\Scripts\python.exe tools\benchmark_real_life_rpa.py --help`
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q`

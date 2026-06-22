@@ -20,7 +20,6 @@ import statistics
 import sys
 import tempfile
 import threading
-import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
