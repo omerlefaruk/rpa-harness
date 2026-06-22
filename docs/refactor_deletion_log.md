@@ -953,3 +953,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_retry.py tests\test_config.py -q` → 23 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\ai\vision.py harness\ai\agent.py harness\drivers\playwright.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Queue unused-import slice
+
+Deleted:
+- unused `Path` and `Any` imports from the RPA job queue
+
+Combined:
+- nothing; dead imports removed without replacement
+
+Source of truth:
+- `harness/rpa/queue.py` keeps only imports used by queue scheduling and history
+
+Checks:
+- `ruff check harness\rpa\queue.py --select F401,F841 --output-format=concise` → passed
+- inline `JobQueue` enqueue/process/history smoke via `.venv\Scripts\python.exe -` → passed
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\queue.py` → passed
+- `git diff --check` → passed
