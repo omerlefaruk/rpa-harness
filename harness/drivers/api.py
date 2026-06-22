@@ -5,14 +5,13 @@ Uses httpx async client with retry, auth, and JSON handling.
 
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 import httpx
 
 from harness.config import HarnessConfig
 from harness.core.artifacts import write_json
 from harness.drivers.base import AbstractBaseDriver
-from harness.logger import HarnessLogger
 from harness.security import sanitize_url
 
 

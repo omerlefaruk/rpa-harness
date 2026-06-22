@@ -881,3 +881,21 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_repair_loop.py tests\capabilities\test_reporting_evidence.py -q` → 11 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\reporting\failure_report.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — API driver unused-import slice
+
+Deleted:
+- unused `List`, `Union`, and `HarnessLogger` imports from the API driver
+
+Combined:
+- nothing; dead imports removed without replacement
+
+Source of truth:
+- `harness/drivers/api.py` keeps only imports used by API driver execution and artifacts
+
+Checks:
+- `ruff check harness\drivers\api.py --select F401,F841 --output-format=concise` → passed
+- `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_api_runtime.py -q` → 6 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\drivers\api.py` → passed
+- `git diff --check` → passed
