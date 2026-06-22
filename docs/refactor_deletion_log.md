@@ -1445,3 +1445,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_yaml_browser_runtime.py tests\capabilities\test_recovery_selector_capabilities.py tests\test_workflow_schema.py -q` (41 passed, 4 skipped)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Verification URL/path suffix slice
+
+Deleted:
+- duplicate URL/path `endswith()` call joined by `or`
+
+Combined:
+- URL/path secret-use detection now uses tuple-based `endswith()`
+
+Source of truth:
+- `harness/verification/contract.py` owns workflow action security validation
+
+Checks:
+- `ruff check harness\verification\contract.py --select PIE810,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\verification\contract.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_verification.py tests\capabilities\test_yaml_schema_edges.py -q` (41 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`

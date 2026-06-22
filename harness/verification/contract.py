@@ -580,7 +580,7 @@ def _validate_workflow_action_rules(workflow: dict, step: dict, credentials: dic
                 errors.append(
                     f"security: Step '{step_id}' references undeclared secret '{value}'"
                 )
-            if path.endswith(".url") or path.endswith(".path"):
+            if path.endswith((".url", ".path")):
                 if SECRET_REF_RE.search(value):
                     errors.append(f"security: Step '{step_id}' cannot use secrets in URL/path")
 
