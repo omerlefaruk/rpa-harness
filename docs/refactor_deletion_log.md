@@ -509,3 +509,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests/capabilities/test_reporting_evidence.py::test_json_report_includes_test_and_workflow_metadata tests/capabilities/test_reporting_evidence.py::test_json_report_redacts_secret_like_log_values -q` → 2 passed
 - `.venv\Scripts\python.exe -m compileall -q harness\reporting\__init__.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — Failure report JSON writer slice
+
+Deleted:
+- failure report local redacted JSON write paths for `repair_packet.json`, `evidence_bundle.json`, and `failure_report.json`
+
+Combined:
+- failure evidence JSON surfaces now use the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON writes
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/capabilities/test_reporting_evidence.py::test_failure_report_includes_repro_command_and_evidence_paths tests/capabilities/test_reporting_evidence.py::test_failure_report_writes_redacted_evidence_bundle tests/capabilities/test_reporting_evidence.py::test_failure_report_includes_rulebook_failure_fields tests/test_repair_loop.py -q` → 9 passed
+- `.venv\Scripts\python.exe -m compileall -q harness\reporting\failure_report.py` → passed
+- `git diff --check` → passed

@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from harness.core.artifacts import write_json
 from harness.core.time import utc_now_iso
 from harness.resilience.errors import RULEBOOK_FAILURE_CLASSES, legacy_category_to_error_class
 from harness.security import redact_value
@@ -155,21 +156,17 @@ class FailureReport:
             normalized_evidence["repair_packet"] = "repair_packet.json"
             report["evidence"] = normalized_evidence
             repair_packet = self._repair_packet(report=report, evidence=normalized_evidence)
-            (self._run_dir / "repair_packet.json").write_text(
-                json.dumps(redact_value(repair_packet), indent=2, default=str)
-            )
+            write_json(self._run_dir / "repair_packet.json", repair_packet)
             bundle = self._evidence_bundle(
                 report=report,
                 failure_kind=normalized_failure_kind,
                 evidence=normalized_evidence,
             )
-            (self._run_dir / "evidence_bundle.json").write_text(
-                json.dumps(redact_value(bundle), indent=2, default=str)
-            )
+            write_json(self._run_dir / "evidence_bundle.json", bundle)
 
         report_path = self._run_dir / "failure_report.json" if self._run_dir else None
         if report_path:
-            report_path.write_text(json.dumps(redact_value(report), indent=2, default=str))
+            write_json(report_path, report)
 
         return str(report_path) if report_path else ""
 
