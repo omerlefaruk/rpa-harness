@@ -4,12 +4,11 @@ Registers all available tools as OpenAI function-calling schema
 with async handler functions.
 """
 
-import time
 from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass
 
 from harness.logger import HarnessLogger
-from harness.security import redact_mapping, redacted_preview, redact_value
+from harness.security import redact_mapping
 
 
 @dataclass
@@ -36,19 +35,11 @@ class ToolRegistry:
     def __init__(
         self,
         logger: Optional[HarnessLogger] = None,
-        memory_recorder=None,
-        memory_session_id: Optional[str] = None,
         approval_policy: Optional[Callable[[Tool, dict], bool]] = None,
     ):
         self.logger = logger or HarnessLogger("tools")
         self._tools: Dict[str, Tool] = {}
-        self.memory_recorder = memory_recorder
-        self.memory_session_id = memory_session_id
         self.approval_policy = approval_policy
-
-    def bind_memory(self, memory_recorder=None, memory_session_id: Optional[str] = None) -> None:
-        self.memory_recorder = memory_recorder
-        self.memory_session_id = memory_session_id
 
     def register(self, tool: Tool):
         self._tools[tool.name] = tool
@@ -81,38 +72,16 @@ class ToolRegistry:
             f"{', '.join(f'{k}={str(v)[:40]}' for k, v in safe_log_args.items())})"
         )
 
-        started_at = time.perf_counter()
         if tool.requires_approval and not self._is_approved(tool, arguments or {}):
             error = PermissionError(f"Tool requires approval before execution: {name}")
-            await self._record_tool_call(
-                tool=tool,
-                arguments=arguments,
-                started_at=started_at,
-                success=False,
-                error=error,
-            )
             raise error
 
         try:
             result = await tool.handler(**arguments)
             self.logger.debug(f"Tool result: {name} → {str(result)[:100]}")
-            await self._record_tool_call(
-                tool=tool,
-                arguments=arguments,
-                started_at=started_at,
-                success=True,
-                result=result,
-            )
             return result
         except Exception as e:
             self.logger.error(f"Tool execution failed: {name} — {e}")
-            await self._record_tool_call(
-                tool=tool,
-                arguments=arguments,
-                started_at=started_at,
-                success=False,
-                error=e,
-            )
             raise
 
     def _is_approved(self, tool: Tool, arguments: dict) -> bool:
@@ -124,76 +93,12 @@ class ToolRegistry:
             self.logger.warning(f"Approval policy failed for {tool.name}: {exc}")
             return False
 
-    async def _record_tool_call(
-        self,
-        tool: Tool,
-        arguments: dict,
-        started_at: float,
-        success: bool,
-        result: Any = None,
-        error: Optional[Exception] = None,
-    ) -> None:
-        if not self.memory_recorder or not self.memory_session_id:
-            return
-        if tool.category == "memory":
-            return
-
-        duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
-        tool_input = self._memory_tool_input(tool, arguments)
-        tool_response: dict[str, Any] = {
-            "success": success,
-            "duration_ms": duration_ms,
-            "category": tool.category,
-        }
-        if success:
-            tool_response["result_preview"] = redacted_preview(result, max_chars=1000)
-        else:
-            tool_response["error"] = redacted_preview(error or "", max_chars=1000)
-
-        try:
-            await self.memory_recorder.record_observation(
-                content_session_id=self.memory_session_id,
-                tool_name=f"tool_call.{tool.name}",
-                tool_input=tool_input,
-                tool_response=tool_response,
-                tool_use_id=f"tool-call-{tool.name}-{int(started_at * 1000000)}",
-            )
-        except Exception as exc:
-            required = bool(getattr(getattr(self.memory_recorder, "config", None), "required", False))
-            if required:
-                raise
-            self.logger.warning(f"Failed to record tool call to memory: {exc}")
-
-    @staticmethod
-    def _memory_tool_input(tool: Tool, arguments: dict) -> dict[str, Any]:
-        safe_args = redact_mapping(arguments or {}, max_chars=500)
-        evidence: dict[str, Any] = {
-            "tool": tool.name,
-            "category": tool.category,
-            "arguments": safe_args,
-        }
-        for key in (
-            "selector",
-            "url",
-            "path",
-            "method",
-            "automation_id",
-            "name",
-            "class_name",
-            "screenshot_path",
-        ):
-            if key in safe_args:
-                evidence[key] = redact_value(safe_args[key], max_chars=500)
-        return evidence
-
-
 def build_default_tools(
     playwright_driver=None,
     windows_driver=None,
     api_driver=None,
     excel_handler=None,
     vision_engine=None,
-    memory_client=None,
 ) -> List[Tool]:
 
     tools = []
@@ -505,62 +410,6 @@ def build_default_tools(
                 },
                 handler=vision_engine.verify_state,
                 category="ai",
-            ),
-        ])
-
-    # RPA Memory tools
-    if memory_client:
-        tools.extend([
-            Tool(
-                name="mem_search",
-                description="Search RPA Memory. Returns compact index results with IDs.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search query"},
-                        "project": {"type": "string", "description": "Project filter"},
-                        "type": {"type": "string", "enum": ["observations", "sessions", "prompts", "all"]},
-                        "limit": {"type": "integer", "description": "Max results"},
-                    },
-                    "required": ["query"],
-                },
-                handler=memory_client.search,
-                category="memory",
-            ),
-            Tool(
-                name="mem_timeline",
-                description="Get chronological RPA Memory context around an observation ID or query.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "anchor": {"type": "integer", "description": "Observation ID to center on"},
-                        "query": {"type": "string", "description": "Query to find an anchor"},
-                        "project": {"type": "string", "description": "Project filter"},
-                        "depth_before": {"type": "integer", "description": "Items before anchor"},
-                        "depth_after": {"type": "integer", "description": "Items after anchor"},
-                    },
-                    "required": [],
-                },
-                handler=memory_client.timeline,
-                category="memory",
-            ),
-            Tool(
-                name="mem_get_observations",
-                description="Fetch full RPA Memory observation details after search/timeline filtering.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "ids": {
-                            "type": "array",
-                            "items": {"type": "integer"},
-                            "description": "Observation IDs to fetch",
-                        },
-                        "project": {"type": "string", "description": "Project filter"},
-                    },
-                    "required": ["ids"],
-                },
-                handler=memory_client.get_observations,
-                category="memory",
             ),
         ])
 

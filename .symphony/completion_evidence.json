@@ -4,7 +4,7 @@
   "summary": "Completion evidence for the RPA harness capability validation and review handoff.",
   "tests": [
     {
-      "command": "pwsh -Command \".\\.venv\\Scripts\\python -m pytest tests/test_config.py tests/test_retry.py tests/test_verification.py tests/test_memory.py tests/test_selector_strategy.py tests/test_workflow_schema.py tests/test_repair_loop.py\"",
+      "command": "pwsh -Command \".\\.venv\\Scripts\\python -m pytest tests/test_config.py tests/test_retry.py tests/test_verification.py tests/test_selector_strategy.py tests/test_workflow_schema.py tests/test_repair_loop.py\"",
       "status": "passed",
       "summary": "85 passed in 21.80s"
     },

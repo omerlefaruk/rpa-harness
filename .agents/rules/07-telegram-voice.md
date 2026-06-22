@@ -17,14 +17,12 @@ Bots posting into Telegram topics should sound like coworkers, not system logs.
 - Failures go to `failures` when the message is mainly about a broken run.
 - Rants/friction notes go to `rants`.
 - Deploy updates go to `deployments`.
-- Memory save/indexing notes go to `memories`.
 
 ## Automatic Hooks
 
 - Ask in `questions` when a workflow cannot start because secrets, config, or action support is missing.
 - Post to `failures` when a record, YAML step, or critical agent step reaches a terminal failure.
 - Post to `rants` when retries, fallbacks, waits, or recovery actions are needed.
-- Post to `memories` when a meaningful workflow or agent summary is saved.
 - Do not post for every normal step; only post when the user would actually want to know.
 
 ## Safety

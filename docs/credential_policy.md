@@ -2,7 +2,7 @@
 
 ## Rule
 
-Credentials must never be pasted into prompts, source code, workflows, reports, logs, screenshots, memory, or tests.
+Credentials must never be pasted into prompts, source code, workflows, reports, logs, screenshots, or tests.
 
 Use secret names only.
 
@@ -46,4 +46,3 @@ Before writing logs or reports, redact:
 Screenshots may contain sensitive data.
 - Store in local run folders only
 - Do not upload automatically
-- Do not summarize sensitive content into long-term memory

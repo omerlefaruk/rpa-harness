@@ -7,8 +7,8 @@ import pytest
 from openpyxl import Workbook
 
 from harness.config import HarnessConfig
-from tests.rpa import the_automation_challenge as challenge_module
-from tests.rpa.the_automation_challenge import (
+from projects.rpa_challenge import the_automation_challenge as challenge_module
+from projects.rpa_challenge.the_automation_challenge import (
     HEADERS,
     TheAutomationChallengeWorkflow,
     read_rows,

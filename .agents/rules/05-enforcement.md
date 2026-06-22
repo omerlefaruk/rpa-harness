@@ -25,5 +25,5 @@ ruff check harness/ tests/ subagents/ main.py
 - [ ] Teardown always closes drivers and connections
 - [ ] Screenshots captured on failure when `screenshot_on_failure=True`
 - [ ] Error messages include context (selector, URL, step name)
-- [ ] Memory observations captured for each step
+- [ ] Run artifacts captured for each step
 - [ ] Tests pass: `python -m pytest tests/ -v`

@@ -100,7 +100,6 @@ async def test_bot_notifier_routes_questions_and_frustration():
 
     await notifier.question("Retry?", context={"step": "login"})
     await notifier.frustration("Retrying step", context={"attempt": 2})
-    await notifier.memory_note("Saved summary", context={"workflow": "demo"})
 
     assert channel.calls[0] == (
         "question",
@@ -112,15 +111,10 @@ async def test_bot_notifier_routes_questions_and_frustration():
         "yaml-runner\nRetrying step\nContext: attempt=2",
         "rants",
     )
-    assert channel.calls[2] == (
-        "message",
-        "yaml-runner: memory note.\n\nSaved summary\n\nContext: workflow=demo",
-        "memories",
-    )
 
 
 def test_bot_notifier_ignores_bad_optional_env_config(monkeypatch):
-    monkeypatch.setenv("RPA_TELEGRAM_TOPIC_MEMORIES", "not-a-number")
+    monkeypatch.setenv("RPA_TELEGRAM_TOPIC_REPORTS", "not-a-number")
 
     notifier = BotNotifier.from_env(source="workflow.bad-env")
 

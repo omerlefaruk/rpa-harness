@@ -27,7 +27,7 @@ model_profiles:
     temperature: 0.0
     max_tokens: 4000
     use_for:
-      - memory lookup
+      - artifact lookup
       - lightweight analysis
       - network summary
       - result merging
@@ -71,9 +71,9 @@ execution:
   page_context_parallelism: 3
   candidate_validation_parallelism: 8
   stop_on_first_proven_candidate: true
-  save_failed_candidates_to_memory: true
-  save_raw_html_to_memory: false
-  save_raw_screenshots_to_memory: false
+  save_failed_candidates_to_artifacts: true
+  save_raw_html_to_artifacts: false
+  save_raw_screenshots_to_artifacts: false
   raw_artifacts_dir: runs/browser_recon
 
 selector_policy:
@@ -113,18 +113,18 @@ safety:
     - archive
   destructive_actions_require_explicit_safe_mode: true
   prefer_disposable_contexts: true
-  redact_before_memory: true
+  redact_before_artifacts: true
 
 subagents:
-  memory_recon:
+  artifact_recon:
     model_profile: fast_general
     max_parallel: 2
     timeout_seconds: 20
     owns:
-      - memory search
+      - run artifact search
       - prior selector retrieval
       - known failure filtering
-    output_schema: memory_evidence_bundle
+    output_schema: artifact_evidence_bundle
 
   page_stabilizer:
     model_profile: ultra_fast
@@ -273,7 +273,7 @@ subagents:
 
 recommended_dispatch:
   first_wave_parallel:
-    - memory_recon
+    - artifact_recon
     - page_stabilizer
   second_wave_parallel:
     - dom_scraper

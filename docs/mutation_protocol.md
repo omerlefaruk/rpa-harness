@@ -1,6 +1,6 @@
 # Mutation Protocol
 
-Controls how the agent may improve the harness, skills, rules, and memory system.
+Controls how the agent may improve the harness, skills, and rules.
 
 ## Protected Areas
 
@@ -9,10 +9,8 @@ Controls how the agent may improve the harness, skills, rules, and memory system
 - `.agents/skills/`
 - `harness/core/`
 - `harness/orchestrator.py`
-- `harness/memory/`
 - `harness/resilience/`
 - `docs/credential_policy.md`
-- `docs/memory_policy.md`
 - `docs/mutation_protocol.md`
 
 ## Required Mutation Flow
@@ -47,12 +45,10 @@ A mutation is allowed only when:
 ### Allowed Automatically
 - Add new workflow example
 - Add selector candidate to cache after successful validation
-- Add error observation to runtime memory
 - Add test for existing bug
 - Improve documentation after implementation
 
 ### Requires Review
-- Change memory policy
 - Change credential policy
 - Change mutation protocol
 - Change core orchestrator behavior

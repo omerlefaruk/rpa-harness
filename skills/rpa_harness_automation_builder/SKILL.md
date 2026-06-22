@@ -11,7 +11,7 @@ Core rule: do not guess automation behavior. Build deterministic workflows from 
 
 Standard flow:
 
-1. Search RPA Memory first. If unavailable, say so and continue from repo evidence.
+1. Inspect existing run artifacts first. If unavailable, continue from repo evidence.
 2. Identify target type: browser, desktop, API, Excel/data, or mixed.
 3. Identify inputs, outputs, secret names, risky actions, and success criteria.
 4. Validate or preflight existing workflows.

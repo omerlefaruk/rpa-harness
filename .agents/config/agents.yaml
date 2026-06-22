@@ -45,10 +45,3 @@ subagents:
     max_parallel: 1
     description: "Task decomposition and dependency ordering"
     skills: ["agent-delegation"]
-
-  memory:
-    model: fast
-    timeout_seconds: 30
-    max_parallel: 2
-    description: "Memory search for past selectors, workflows, and error patterns"
-    skills: ["memory-search"]

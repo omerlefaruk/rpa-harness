@@ -57,12 +57,9 @@ A run directory may contain:
 ## Safety rules
 
 - Every workflow step must include success checks unless it is an explicitly allowed no-op.
-- Secret values must never be hardcoded, logged, reported, stored in memory, or included in repair packets.
+- Secret values must never be hardcoded, logged, reported, or included in repair packets.
 - Browser selectors should prefer stable selectors such as `data-testid`, role/name, label, placeholder, text, id, CSS, then XPath.
 - Desktop selectors should prefer automation IDs, name/control type, class/control type, tree paths, image anchors, then coordinates as last resort.
-- Memory should store evidence, not guesses.
-
-
 ## Tiny DSL compile flow
 
 Use `.rpa` files as a small, readable authoring layer. They compile to the existing schema v2 YAML format; YAML validation, preflight, execution, evidence, and reports still use the normal harness paths.

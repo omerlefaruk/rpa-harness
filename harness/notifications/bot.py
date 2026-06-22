@@ -105,18 +105,6 @@ class BotNotifier:
             action="frustration",
         )
 
-    async def memory_note(self, message: str, *, context: dict[str, Any] | None = None):
-        if not self.enabled:
-            return None
-        lines = [f"{self.source}: memory note.", "", message.strip()]
-        context_text = self._context_text(context)
-        if context_text:
-            lines.extend(["", context_text])
-        return await self._deliver(
-            self.channel.send_message("\n".join(lines), topic="memories"),
-            action="memory_note",
-        )
-
     async def _deliver(self, awaitable, *, action: str):
         try:
             return await awaitable

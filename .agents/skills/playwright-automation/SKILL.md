@@ -5,7 +5,7 @@ description: >
   navigate to page, wait for stability, inspect DOM, discover selectors,
   then execute actions. Use when automating web apps, finding selectors,
   testing forms, or extracting data from web pages.
-hooks: "preflight, compliance, validation, reporting, memory-save, memory-search"
+hooks: "preflight, compliance, validation, reporting"
 ---
 
 # Playwright Automation

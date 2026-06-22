@@ -31,14 +31,13 @@ export RPA_TELEGRAM_TOPIC_QUESTIONS="10"
 export RPA_TELEGRAM_TOPIC_FAILURES="11"
 export RPA_TELEGRAM_TOPIC_RANTS="12"
 export RPA_TELEGRAM_TOPIC_DEPLOYMENTS="13"
-export RPA_TELEGRAM_TOPIC_MEMORIES="14"
 ```
 
 ## Commands
 
 ```bash
 python main.py --telegram-message "RPA bot online"
-python main.py --telegram-message "Memory indexed" --telegram-topic memories
+python main.py --telegram-message "Report ready" --telegram-topic reports
 python main.py --telegram-question "Should I retry the failed invoice workflow?"
 python main.py --telegram-rant "Login page changed twice today" --telegram-rant "Selector cache is stale"
 python main.py --telegram-discover-chat

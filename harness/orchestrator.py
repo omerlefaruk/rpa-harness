@@ -17,7 +17,6 @@ from typing import Any, Dict, List, Optional, Type
 
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
-from harness.memory.recorder import MemoryRecorder
 from harness.test_case import AutomationTestCase, TestResult, TestStatus
 from harness.rpa.workflow import RPAWorkflow, WorkflowResult, WorkflowStatus
 from harness.reporting import HTMLReporter, JSONReporter
@@ -58,7 +57,6 @@ class AutomationHarness:
         self.workflow_classes: List[Type[RPAWorkflow]] = []
         self.results: List[TestResult] = []
         self.workflow_results: List[WorkflowResult] = []
-        self.memory = MemoryRecorder.from_harness_config(self.config)
         self._start_time: Optional[float] = None
         self._end_time: Optional[float] = None
 
@@ -137,8 +135,6 @@ class AutomationHarness:
         self.config.ensure_dirs()
         self.results = []
         self._start_time = time.time()
-        memory_session_id = self.memory.new_session_id("tests")
-        await self.memory.start_session(memory_session_id, "Run automation tests", custom_title="Test run")
 
         to_run = self.test_classes
         if tags:
@@ -164,20 +160,11 @@ class AutomationHarness:
         for test_class in to_run:
             result = await self._run_single(test_class)
             self.results.append(result)
-            await self.memory.record_test_result(memory_session_id, result)
             status_icon = "PASS" if result.passed else "FAIL"
             self.logger.info(f"[{status_icon}] {result.name} ({result.duration_ms:.0f}ms)")
 
         self._end_time = time.time()
         passed = sum(1 for r in self.results if r.passed)
-        await self.memory.summarize(
-            memory_session_id,
-            {
-                "total": len(self.results),
-                "passed": passed,
-                "failed": len(self.results) - passed,
-            },
-        )
         self.logger.info(f"Run complete: {passed}/{len(self.results)} passed")
         return self.results
 
@@ -186,8 +173,6 @@ class AutomationHarness:
         self.config.ensure_dirs()
         self.workflow_results = []
         self._start_time = time.time()
-        memory_session_id = self.memory.new_session_id("workflows")
-        await self.memory.start_session(memory_session_id, "Run RPA workflows", custom_title="Workflow run")
 
         to_run = self.workflow_classes
         if tags:
@@ -209,7 +194,6 @@ class AutomationHarness:
         for wf_class in to_run:
             result = await self._run_single_workflow(wf_class)
             self.workflow_results.append(result)
-            await self.memory.record_workflow_result(memory_session_id, result)
             status_icon = "PASS" if result.passed else "FAIL"
             self.logger.info(
                 f"[{status_icon}] {result.name} | "
@@ -218,14 +202,6 @@ class AutomationHarness:
             )
 
         self._end_time = time.time()
-        await self.memory.summarize(
-            memory_session_id,
-            {
-                "total": len(self.workflow_results),
-                "passed": sum(1 for r in self.workflow_results if r.passed),
-                "failed": sum(1 for r in self.workflow_results if not r.passed),
-            },
-        )
         return self.workflow_results
 
     async def run_agent(self, task: str, context: Optional[str] = None,
@@ -238,7 +214,6 @@ class AutomationHarness:
             playwright_driver=playwright_driver,
             windows_driver=windows_driver,
             api_driver=api_driver,
-            memory_recorder=self.memory,
         )
 
         result = await agent.execute(task, context)
@@ -286,7 +261,6 @@ class AutomationHarness:
                 "enable_agent": self.config.enable_agent,
             },
             "run_duration_sec": round(self._end_time - self._start_time, 2) if self._end_time else None,
-            "rpa_memory": self.memory.status_snapshot(),
         }
 
         all_results = list(self.results)

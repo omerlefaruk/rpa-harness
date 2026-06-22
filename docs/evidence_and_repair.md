@@ -19,7 +19,7 @@ Repair starts with evidence, not guesses.
 | Symptom | Likely source |
 |---|---|
 | Missing success check accepted | Validator bug |
-| Secret appears in report/log/memory | Redaction or secret boundary bug |
+| Secret appears in report/log | Redaction or secret boundary bug |
 | Action ran but no check executed | Runner bug |
 | Check failed correctly with evidence | Workflow, target, or data issue |
 | Failure has no evidence bundle | Reporting/evidence bug |

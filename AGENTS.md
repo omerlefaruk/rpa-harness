@@ -7,7 +7,7 @@
 ## Before changing code
 
 - Inspect existing modules first.
-- Reuse or refactor existing code instead of creating parallel reporting, memory, selector, workflow, or CLI systems.
+- Reuse or refactor existing code instead of creating parallel reporting, selector, workflow, or CLI systems.
 - Keep changes small and tested.
 - Prefer JSON/JSONL/static HTML/local files over servers, databases, or visual platforms unless the repo already uses them for the exact purpose.
 
@@ -24,8 +24,7 @@
 - Action execution is not success.
 - Do not hardcode, log, report, store, or serialize secret values.
 - Use secret names in workflow definitions; resolve secret values only at the execution edge.
-- Redact before writing reports, logs, memory, evidence bundles, repair packets, builder artifacts, or prompts.
-- Memory stores evidence, not guesses.
+- Redact before writing reports, logs, evidence bundles, repair packets, builder artifacts, or prompts.
 - Non-idempotent external writes must not be retried automatically.
 
 ## Protected areas
@@ -33,7 +32,6 @@
 Treat these as protected and modify only with explicit justification and tests:
 
 - core harness/orchestrator
-- memory policy
 - credential policy
 - AGENTS rules
 - skills

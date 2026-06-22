@@ -260,7 +260,7 @@ async def run_copilot_try_url(
         lines.append(f"intent: {intent}")
     if workflow:
         lines.append(f"workflow: {workflow}")
-    (task_dir / "task.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (task_dir / "task.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return await run_copilot_auto(
         task_dir / "task.md",
         root_dir=root,
@@ -285,6 +285,7 @@ async def _advance_discovery(session_dir: Path, state: dict[str, Any], config: H
         (output_dir / "browser_selector_swarm.json").write_text(
             json.dumps(redact_value(cached["result"]), indent=2, default=str),
             encoding="utf-8",
+            newline="\n",
         )
         state["discovery"] = {
             "browser_selector_swarm": cached["summary"],
@@ -313,6 +314,7 @@ async def _advance_discovery(session_dir: Path, state: dict[str, Any], config: H
     (output_dir / "browser_selector_swarm.json").write_text(
         json.dumps(redact_value(result), indent=2, default=str),
         encoding="utf-8",
+        newline="\n",
     )
     _write_discovery_cache(cache_path, result, summary)
     state["discovery"] = {
@@ -497,8 +499,8 @@ def _write_copilot_report(session_dir: Path, state: dict[str, Any]) -> dict[str,
     })
     json_path = session_dir / "copilot_report.json"
     md_path = session_dir / "copilot_report.md"
-    json_path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
-    md_path.write_text(_copilot_report_md(payload), encoding="utf-8")
+    json_path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8", newline="\n")
+    md_path.write_text(_copilot_report_md(payload), encoding="utf-8", newline="\n")
     return {"copilot_report_json": str(json_path), "copilot_report_md": str(md_path)}
 
 
@@ -574,6 +576,7 @@ def _write_discovery_cache(path: Path, result: dict[str, Any], summary: dict[str
             default=str,
         ),
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -610,6 +613,7 @@ def _write_state(session_dir: Path, state: dict[str, Any]) -> None:
     (session_dir / "copilot_state.json").write_text(
         json.dumps(_public_state(state), indent=2, default=str),
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -656,7 +660,7 @@ def _question(
 
 def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "a", encoding="utf-8") as handle:
+    with open(path, "a", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(redact_value(payload), default=str) + "\n")
 
 

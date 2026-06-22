@@ -6,7 +6,7 @@ Configured in `.agents/config/agents.yaml`. Default mapping:
 
 | Model Key | Provider | Default Model | Use Case |
 |---|---|---|---|
-| `fast` | openai-compatible | gpt-4o-mini | Explorer, Selector, UIA-tree, Memory search |
+| `fast` | openai-compatible | gpt-4o-mini | Explorer, Selector, UIA-tree, artifact recon |
 | `powerful` | openai-compatible | gpt-4o | Planner, Orchestrator, Agent decisions |
 | `vision` | openai-compatible | gpt-4o | Screenshot analysis, element detection |
 

@@ -42,10 +42,6 @@ class FakeNotifier:
     async def frustration(self, message: str, *, context: Optional[dict] = None):
         self.events.append(("frustration", message, context))
 
-    async def memory_note(self, message: str, *, context: Optional[dict] = None):
-        self.events.append(("memory_note", message, context))
-
-
 class ZeroRecordsWorkflow(RPAWorkflow):
     name = "zero_records_capability"
     tags = ["rpa", "capability"]

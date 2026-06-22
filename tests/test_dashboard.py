@@ -46,7 +46,7 @@ async def test_serve_dashboard_awaits_uvicorn_server(monkeypatch):
     }
 
 
-def test_dashboard_status_reports_memory_and_git(tmp_path):
+def test_dashboard_status_reports_git(tmp_path):
     app = create_dashboard(root_dir=tmp_path)
     client = TestClient(app)
 
@@ -54,7 +54,6 @@ def test_dashboard_status_reports_memory_and_git(tmp_path):
 
     assert response.status_code == 200
     payload = response.json()
-    assert "memory" in payload["services"]
     assert "git" in payload
 
 

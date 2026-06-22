@@ -8,9 +8,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from harness.memory.config import MemoryConfig
-
-
 @dataclass
 class ModelConfig:
     provider: str = "openai-compatible"
@@ -89,9 +86,6 @@ class HarnessConfig:
     models: Dict[str, ModelConfig] = field(default_factory=dict)
     subagents: Dict[str, SubagentConfig] = field(default_factory=dict)
 
-    # Memory
-    memory: MemoryConfig = field(default_factory=MemoryConfig)
-
     # Custom variables for workflows
     variables: Dict[str, Any] = field(default_factory=dict)
 
@@ -120,7 +114,6 @@ class HarnessConfig:
             allow_desktop_global_input_fallback=os.getenv(
                 "RPA_ALLOW_DESKTOP_GLOBAL_INPUT_FALLBACK", "false"
             ).lower() == "true",
-            memory=MemoryConfig.from_env(),
         )
 
     @classmethod
@@ -137,8 +130,6 @@ class HarnessConfig:
                 filtered[k] = {
                     name: SubagentConfig.from_dict(cfg) for name, cfg in v.items()
                 }
-            elif k == "memory" and isinstance(v, dict):
-                filtered[k] = MemoryConfig(**v)
             elif k in known_fields:
                 filtered[k] = v
 
@@ -159,8 +150,6 @@ class HarnessConfig:
     def ensure_dirs(self):
         for d in [self.report_dir, self.screenshot_dir]:
             Path(d).mkdir(parents=True, exist_ok=True)
-        if self.memory.enabled:
-            Path(self.memory.db_path).parent.mkdir(parents=True, exist_ok=True)
 
     def get_model_config(self, name: str) -> ModelConfig:
         if name in self.models:

@@ -14,10 +14,9 @@ harness/          ← Deterministic Python runner
   drivers/        ← Playwright, Windows UIA, API
   verification/   ← Success checks and contracts
   resilience/     ← Errors, retry, healing, recovery
-  selectors/      ← Priority ladder and cache
+  selectors/      ← Priority ladder and repair helpers
   rpa/            ← Excel, workflow, retry, queue, office
   ai/             ← Agent loop, vision, planner, tools
-  memory/         ← RPA Memory sessions, observations, summaries, search
   reporting/      ← HTML, JSON, failure reports
 tools/            ← CLI utilities (inspect, analyze, patch)
 projects/         ← Real workflow projects: workflow YAML, config, tests, README
@@ -36,7 +35,7 @@ User request → Codex plans → project folder created under projects/<project>
   → success checks per step
   → failure → failure_report.json + evidence
   → Codex reads failure → proposes patch → tests verify
-  → proven lessons → RPA Memory (sessions, observations, summaries, search)
+  → proven lessons → run artifacts and tests
 ```
 
 ## Safety Boundaries
@@ -44,5 +43,5 @@ User request → Codex plans → project folder created under projects/<project>
 - Runtime LLM: allowed for planning, diagnosis, summarization, selector healing, report analysis
 - Runtime LLM: NEVER directly executes destructive business actions without workflow approval gates
 - Core harness: protected, requires mutation protocol to edit
-- Credentials: never in code, logs, screenshots, memory, or reports
+- Credentials: never in code, logs, screenshots, or reports
 - Self-improvement: requires reproduced failure + root cause + passing tests

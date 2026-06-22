@@ -20,7 +20,6 @@ from harness.config import HarnessConfig
 from harness.core import audit_workflow_rulebook
 from harness.copilot import CopilotCheckpoint
 from harness.logger import HarnessLogger
-from harness.memory.recorder import MemoryRecorder
 from harness.notifications import BotNotifier
 from harness.reporting.failure_report import FailureReport
 from harness.resilience.errors import classify_failure
@@ -64,7 +63,6 @@ class YamlWorkflowRunner:
         self.logger = HarnessLogger("yaml-runner")
         self.verifier = WorkflowVerifier()
         self.failure = FailureReport("./runs")
-        self.memory = MemoryRecorder.from_harness_config(self.config)
         self.notifier = BotNotifier.from_env(source="yaml-runner")
         self._drivers: Dict[str, Any] = {}
         self._inputs: Dict[str, Any] = {}
@@ -173,7 +171,6 @@ class YamlWorkflowRunner:
                 "missing_secrets": missing_secrets,
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
-                "rpa_memory": self.memory.status_snapshot(),
                 "run_id": self.failure._current_run_id,
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
@@ -203,7 +200,6 @@ class YamlWorkflowRunner:
                 "preflight": preflight,
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
-                "rpa_memory": self.memory.status_snapshot(),
                 "run_id": self.failure._current_run_id,
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
@@ -229,7 +225,6 @@ class YamlWorkflowRunner:
                 "reason": selection_error,
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
-                "rpa_memory": self.memory.status_snapshot(),
                 "run_id": self.failure._current_run_id,
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
@@ -247,7 +242,6 @@ class YamlWorkflowRunner:
                 "unsupported_actions": unsupported,
                 "steps": [],
                 "rulebook_audit": rulebook_audit,
-                "rpa_memory": self.memory.status_snapshot(),
                 "run_id": self.failure._current_run_id,
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
@@ -265,7 +259,6 @@ class YamlWorkflowRunner:
 
         start_time = time.time()
         steps: List[Dict[str, Any]] = []
-        memory_session_id = self.memory.new_session_id("yaml")
         last_successful_step = ""
         original_auto_heal = self.config.auto_heal_selectors
         self.config.auto_heal_selectors = False
@@ -278,11 +271,6 @@ class YamlWorkflowRunner:
         )
         selected_steps = execution_plan.steps
         self.logger.info(f"Running workflow: {workflow_name} ({len(selected_steps)} steps)")
-        await self.memory.start_session(
-            memory_session_id,
-            f"Run YAML workflow {workflow_name}",
-            custom_title=workflow_name,
-        )
 
         try:
             active_phase = None
@@ -318,13 +306,6 @@ class YamlWorkflowRunner:
                 self._timeline(workflow, "step.started", status="running", phase=step_phase, step_id=step["id"], action_type=step.get("action", {}).get("type"))
                 step_result = await self._run_step(step)
                 steps.append(step_result)
-                await self.memory.record_observation(
-                    content_session_id=memory_session_id,
-                    tool_name="yaml_step",
-                    tool_input={"step": step.get("id"), "action": step.get("action", {})},
-                    tool_response=step_result,
-                    tool_use_id=f"yaml-step-{step.get('id')}",
-                )
 
                 if step_result["status"] == "passed":
                     self._record_step(workflow, step, "passed", step_result=step_result)
@@ -400,8 +381,6 @@ class YamlWorkflowRunner:
                 self._timeline(workflow, "phase.failed", status="failed", phase=step_phase, failure_kind=step_result.get("failure_kind"))
                 self._timeline(workflow, "evidence.created", phase=step_phase, step_id=step["id"], evidence_bundle=evidence_bundle)
                 self._timeline(workflow, "repair_packet.created", phase=step_phase, step_id=step["id"], evidence_bundle="repair_packet.json")
-                await self.memory.summarize(memory_session_id, step_result)
-                memory_status = self.memory.status_snapshot()
                 await self.notifier.failure(
                     "A YAML workflow step failed.",
                     context={
@@ -431,7 +410,6 @@ class YamlWorkflowRunner:
                     "steps": steps,
                     "duration_ms": (time.time() - start_time) * 1000,
                     "rulebook_audit": rulebook_audit,
-                    "rpa_memory": memory_status,
                     "run_id": self.failure._current_run_id,
                     "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
                 }
@@ -453,20 +431,9 @@ class YamlWorkflowRunner:
                 "run_id": self.failure._current_run_id,
                 "run_dir": str(self.failure._run_dir.resolve()) if self.failure._run_dir else "",
             }
-            summary_result = await self.memory.summarize(memory_session_id, result)
-            result["rpa_memory"] = self.memory.status_snapshot()
             self._timeline(workflow, "run.finished", status="passed")
             self._write_manifest(workflow, "passed", started_at=run_started_at, finished_at=self._now(), result=result)
             self._write_run_report(workflow, result)
-            if self._memory_write_succeeded(summary_result):
-                await self.notifier.memory_note(
-                    "I saved the YAML workflow summary.",
-                    context={
-                        "workflow": workflow_name,
-                        "status": result["status"],
-                        "steps_completed": result["steps_completed"],
-                    },
-                )
             return result
         finally:
             self.config.auto_heal_selectors = original_auto_heal
@@ -2327,10 +2294,6 @@ class YamlWorkflowRunner:
         if value is None:
             return None
         return self._redact_runtime_text(value, max_chars=max_chars)
-
-    @staticmethod
-    def _memory_write_succeeded(result: Any) -> bool:
-        return isinstance(result, dict) and result.get("status") == "stored"
 
     def _checks_passed(self, results: List[VerificationResult]) -> bool:
         return bool(results) and all(result.passed for result in results)

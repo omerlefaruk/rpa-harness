@@ -12,7 +12,7 @@ Use this skill when turning a user request, researched process, target website, 
 1. Start with task intake: goal, target system, input files, output expectations, secret names, risky actions, and success criteria.
 2. Search or inspect only enough to identify the deterministic automation path.
 3. Save findings in a dedicated harness artifact rather than free-form scratch notes.
-4. Check RPA Memory for prior selectors, workflows, failures, and repair evidence before creating new assumptions.
+4. Check existing run artifacts for prior selectors, workflows, failures, and repair evidence before creating new assumptions.
 5. Use browser selector swarm for browser targets when selectors are unknown or likely to be brittle.
 6. Use UIA/Win32 inspection for desktop targets before image/OCR/coordinate fallbacks.
 7. Draft workflow phases and steps with success checks on every step.
@@ -23,8 +23,8 @@ Use this skill when turning a user request, researched process, target website, 
 ## Hardening requirements
 
 - Action execution is not success; explicit success checks are required.
-- Secret values must not be hardcoded, logged, stored in RPA Memory, reports, screenshots metadata, or repair artifacts.
-- Evidence must support claims. Memory stores evidence, not guesses.
+- Secret values must not be hardcoded, logged, stored in reports, screenshots metadata, or repair artifacts.
+- Evidence must support claims. Use run artifacts, not guesses.
 - Risky actions such as submit, upload, delete, send, payment, and irreversible update require approval or explicit policy.
 - Do not auto-retry non-idempotent external writes.
 

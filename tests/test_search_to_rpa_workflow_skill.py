@@ -10,6 +10,6 @@ def test_search_to_rpa_workflow_skill_exists_and_requires_hardening():
     text = skill_path.read_text(encoding="utf-8")
 
     assert "name: search-to-rpa-workflow" in text
-    assert "RPA Memory" in text
+    assert "run artifacts" in text
     assert "dedicated harness artifact" in text
     assert "browser selector swarm" in text

@@ -1,9 +1,8 @@
-"""Capability characterization for selectors, recovery, memory, and mocked agent tools."""
+"""Capability characterization for selectors, recovery, and mocked agent tools."""
 
 import json
 from pathlib import Path
 
-import httpx
 import pytest
 import yaml
 
@@ -52,12 +51,6 @@ def _write_yaml(tmp_path: Path, workflow: dict) -> Path:
     path = tmp_path / f"{workflow['id']}.yaml"
     path.write_text(yaml.safe_dump(workflow))
     return path
-
-
-def _memory_api():
-    from harness.memory import MemoryClient, MemoryConfig, MemoryRecorder
-
-    return MemoryClient, MemoryConfig, MemoryRecorder
 
 
 async def _run_yaml_with_api(tmp_path: Path, workflow: dict, fake: SequencedAPIDriver):
@@ -185,112 +178,6 @@ async def test_circuit_breaker_open_state_is_deterministic():
         await breaker.call(fail)
 
 
-@pytest.mark.asyncio
-async def test_memory_search_timeline_get_observations_returns_evidence_records():
-    MemoryClient, MemoryConfig, _ = _memory_api()
-    seen_paths: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen_paths.append(request.url.path)
-        if request.url.path == "/api/search":
-            return httpx.Response(
-                200,
-                json={
-                    "results": [
-                        {
-                            "id": 101,
-                            "content": "Clicked submit button and observed success text.",
-                        }
-                    ]
-                },
-            )
-        if request.url.path == "/api/timeline":
-            return httpx.Response(
-                200,
-                json={"observations": [{"id": 100}, {"id": 101}]},
-            )
-        if request.url.path == "/api/observations/batch":
-            return httpx.Response(
-                200,
-                json={
-                    "observations": [
-                        {"id": 100, "tool_name": "browser.fill"},
-                        {
-                            "id": 101,
-                            "tool_name": "browser.click",
-                            "tool_response": {"success": True},
-                        },
-                    ]
-                },
-            )
-        return httpx.Response(404, json={"error": "unexpected endpoint"})
-
-    client = MemoryClient(
-        config=MemoryConfig(
-            enabled=True,
-            worker_url="http://127.0.0.1:37777",
-            required=True,
-            project="rpa-harness",
-            request_timeout_seconds=1,
-        ),
-        transport=httpx.MockTransport(handler),
-    )
-
-    search = await client.search(query="submit", project="rpa-harness", limit=5)
-    anchor_id = search["results"][0]["id"]
-    timeline = await client.timeline(anchor=anchor_id, project="rpa-harness")
-    details = await client.get_observations(
-        [observation["id"] for observation in timeline["observations"]],
-        project="rpa-harness",
-    )
-
-    assert seen_paths == ["/api/search", "/api/timeline", "/api/observations/batch"]
-    assert details["observations"][-1]["id"] == 101
-    assert details["observations"][-1]["tool_response"]["success"] is True
-
-
-@pytest.mark.asyncio
-async def test_memory_recorder_redacts_secret_values_before_persistent_write():
-    _, MemoryConfig, MemoryRecorder = _memory_api()
-    secret = "fixture-secret-value"
-
-    class FakeMemoryClient:
-        def __init__(self):
-            self.calls: list[dict] = []
-
-        async def record_observation(self, *args, **kwargs):
-            self.calls.append({"args": args, "kwargs": kwargs})
-            return {"id": "obs_secret_safe", "available": True}
-
-    fake_client = FakeMemoryClient()
-    recorder = MemoryRecorder(
-        client=fake_client,
-        config=MemoryConfig(
-            enabled=True,
-            worker_url="http://127.0.0.1:37777",
-            required=True,
-            project="rpa-harness",
-            request_timeout_seconds=1,
-        ),
-    )
-
-    await recorder.record_observation(
-        content_session_id="capability-session",
-        tool_name="api.get",
-        tool_input={
-            "headers": {"Authorization": "Bearer abc123"},
-            "secret_value": secret,
-        },
-        tool_response={"status_code": 200, "body": f"token={secret}"},
-        cwd="/tmp/rpa-harness",
-    )
-
-    serialized = json.dumps(fake_client.calls, sort_keys=True)
-    assert secret not in serialized
-    assert "Bearer abc123" not in serialized
-    assert "[REDACTED]" in serialized
-
-
 class FlakyTools:
     def __init__(self):
         self.calls = 0
@@ -314,10 +201,6 @@ class FakeNotifier:
 
     async def frustration(self, message: str, *, context: dict = None):
         self.events.append(("frustration", message, context))
-
-    async def memory_note(self, message: str, *, context: dict = None):
-        self.events.append(("memory_note", message, context))
-
 
 @pytest.mark.asyncio
 async def test_rpa_agent_step_execution_uses_mocked_tools_and_retries(monkeypatch):

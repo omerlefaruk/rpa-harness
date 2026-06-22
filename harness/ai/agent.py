@@ -14,7 +14,6 @@ from harness.ai.tools import ToolRegistry, build_default_tools
 from harness.ai.vision import VisionEngine
 from harness.config import HarnessConfig
 from harness.logger import HarnessLogger
-from harness.memory.recorder import MemoryRecorder
 from harness.notifications import BotNotifier
 from harness.resilience.recovery import smart_retry
 
@@ -28,7 +27,6 @@ class RPAAgent:
         api_driver=None,
         excel_handler=None,
         vision_engine: Optional[VisionEngine] = None,
-        memory_recorder: Optional[MemoryRecorder] = None,
     ):
         self.config = config or HarnessConfig.from_env()
         self.logger = HarnessLogger("agent", jsonl_output=True)
@@ -39,7 +37,6 @@ class RPAAgent:
         self.excel = excel_handler
 
         self.vision = vision_engine or (VisionEngine(config=self.config) if self.config.enable_vision else None)
-        self.memory_recorder = memory_recorder or MemoryRecorder.from_harness_config(self.config)
         self.notifier = BotNotifier.from_env(source="rpa-agent")
 
         tools = build_default_tools(
@@ -48,7 +45,6 @@ class RPAAgent:
             api_driver=self.api,
             excel_handler=self.excel,
             vision_engine=self.vision,
-            memory_client=self.memory_recorder.client,
         )
 
         tools_desc = "\n".join(
@@ -76,14 +72,6 @@ class RPAAgent:
     async def execute(self, task: str, context: Optional[str] = None) -> Dict[str, Any]:
         start_time = datetime.now()
         self.logger.info(f"Agent task: {task[:100]}")
-        memory_session_id = self.memory_recorder.new_session_id("agent")
-        await self.memory_recorder.start_session(memory_session_id, task, custom_title="Agent task")
-        self.tools.bind_memory(self.memory_recorder, memory_session_id)
-
-        if self.memory_recorder.config.enabled:
-            past_context = await self.memory_recorder.semantic_context(task)
-            if past_context:
-                context = (context or "") + "\n\n[Previous session context]\n" + past_context
 
         plan = await self.planner.plan(task, context)
         self.logger.info(f"Plan: {plan.step_count} steps (risk: {plan.risk_assessment})")
@@ -132,15 +120,6 @@ class RPAAgent:
             "steps": step_results,
             "step_history": self.history.summarize(),
         }
-
-        await self.memory_recorder.record_observation(
-            content_session_id=memory_session_id,
-            tool_name="agent_result",
-            tool_input={"task": task},
-            tool_response=summary,
-            tool_use_id="agent-result",
-        )
-        await self.memory_recorder.summarize(memory_session_id, summary)
 
         self.logger.info(f"Agent complete: {summary['successful_steps']}/{summary['total_steps']} steps passed ({duration:.1f}s)")
         return summary

@@ -295,7 +295,7 @@ class FailureReport:
             "selector_candidates": [],
             "safe_repair_scope": "Patch only the failed workflow step and rerun its success checks.",
             "protected_paths_reminder": (
-                "Protected core harness, memory policy, credentials, rules, and skills require "
+                "Protected core harness, credentials, rules, and skills require "
                 "reproduced failure, test, smallest patch, and verification."
             ),
             "recommended_next_action": self._recommended_next_action(report),

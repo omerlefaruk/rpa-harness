@@ -4,7 +4,7 @@ description: >
   Windows desktop automation using pywinauto UIA backend.
   Launch apps, walk UIA element trees, discover element names and automation IDs,
   interact with desktop UI elements. Use when automating Windows desktop applications.
-hooks: "preflight, compliance, validation, reporting, memory-save, memory-search"
+hooks: "preflight, compliance, validation, reporting"
 ---
 
 # Windows UI Automation

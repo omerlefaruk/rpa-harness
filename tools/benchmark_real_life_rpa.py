@@ -35,8 +35,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from harness.config import HarnessConfig
-from harness.memory.client import MemoryClient
-from harness.memory.config import MemoryConfig
 from harness.rpa.yaml_runner import YamlWorkflowRunner
 from harness.security import redact_text
 
@@ -119,7 +117,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Benchmark real-life-like RPA workflows")
     parser.add_argument("--iterations", type=int, default=3, help="Runs per scenario")
     parser.add_argument("--report-dir", default="./reports", help="HTML report output directory")
-    parser.add_argument("--memory-url", default="http://127.0.0.1:37777", help="RPA Memory service URL")
     parser.add_argument("--headless", action="store_true", default=True, help="Run browser headless")
     return parser.parse_args()
 
@@ -135,16 +132,8 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             enable_vision=False,
             report_dir=str(tmp_path / "reports"),
             screenshot_dir=str(tmp_path / "screenshots"),
-            memory=MemoryConfig(
-                enabled=True,
-                worker_url=args.memory_url,
-                required=True,
-                project=PROJECT,
-                request_timeout_seconds=2,
-            ),
         )
 
-        memory_checks = await check_memory_available(args.memory_url)
         api_server = LocalApiServer()
         api_server.start()
         try:
@@ -183,14 +172,10 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         finally:
             api_server.stop()
 
-        memory_checks.extend(await check_memory_observations(args.memory_url, scenarios))
-        passed = all(scenario.passed for scenario in scenarios) and all(
-            check.passed for check in memory_checks
-        )
+        passed = all(scenario.passed for scenario in scenarios)
         return {
             "passed": passed,
             "scenarios": scenarios,
-            "memory_checks": memory_checks,
             "api_requests": api_server.requests,
         }
 
@@ -484,54 +469,6 @@ def write_yaml(tmp_path: Path, workflow: dict[str, Any]) -> Path:
     return path
 
 
-async def check_memory_available(memory_url: str) -> list[Check]:
-    client = MemoryClient(MemoryConfig(worker_url=memory_url, required=False))
-    result = await client.health()
-    return [
-        Check(
-            "RPA Memory service reachable",
-            isinstance(result, dict) and result.get("status") == "ok",
-            json.dumps(result, sort_keys=True),
-        )
-    ]
-
-
-async def check_memory_observations(
-    memory_url: str,
-    scenarios: list[ScenarioResult],
-) -> list[Check]:
-    client = MemoryClient(MemoryConfig(worker_url=memory_url, required=False))
-    checks: list[Check] = []
-    for scenario in scenarios:
-        query = scenario.name.split()[0].lower()
-        result = await client.search(query=query, project=PROJECT, type="observations", limit=20)
-        observations = result.get("results", {}).get("observations", []) if isinstance(result, dict) else []
-        checks.append(
-            Check(
-                f"memory observations exist for {scenario.name}",
-                bool(observations),
-                f"query={query}, count={len(observations)}",
-            )
-        )
-
-    redaction_result = await client.search(query="real-rpa", project=PROJECT, type="observations", limit=50)
-    ids = [
-        item["id"]
-        for item in redaction_result.get("results", {}).get("observations", [])
-        if "id" in item
-    ][:20]
-    details = await client.get_observations(ids=ids, project=PROJECT) if ids else {"observations": []}
-    serialized = json.dumps(details, default=str)
-    checks.append(
-        Check(
-            "memory redacts benchmark secrets",
-            API_SECRET not in serialized and BROWSER_SECRET not in serialized,
-            "detail payload checked for fixture API/browser secrets",
-        )
-    )
-    return checks
-
-
 class LocalApiServer:
     def __init__(self):
         self._server = ThreadingHTTPServer(("127.0.0.1", 0), self._handler())
@@ -663,7 +600,7 @@ def render_html(
 <body>
 <main>
   <h1>Real-Life RPA Benchmark Report</h1>
-  <p class="note">Runs deterministic local workflows through the real YAML runner: browser form automation, HTTP API automation, Excel processing, verification checks, and RPA Memory capture.</p>
+  <p class="note">Runs deterministic local workflows through the real YAML runner: browser form automation, HTTP API automation, Excel processing, and verification checks.</p>
 
   <section class="summary">
     <div class="tile"><div class="label">Result</div><div class="value {'pass' if result['passed'] else 'fail'}">{'PASS' if result['passed'] else 'FAIL'}</div></div>
@@ -681,13 +618,11 @@ def render_html(
       <tr><td>Finished</td><td>{escape(finished.isoformat(timespec="seconds"))}</td></tr>
       <tr><td>Python</td><td>{escape(platform.python_version())}</td></tr>
       <tr><td>Platform</td><td>{escape(platform.platform())}</td></tr>
-      <tr><td>Memory URL</td><td class="mono">{escape(args.memory_url)}</td></tr>
       <tr><td>Working Directory</td><td class="mono">{escape(os.getcwd())}</td></tr>
     </table>
   </section>
 
   {''.join(render_scenario(scenario) for scenario in scenarios)}
-  {render_checks("RPA Memory Checks", result["memory_checks"])}
 </main>
 </body>
 </html>"""

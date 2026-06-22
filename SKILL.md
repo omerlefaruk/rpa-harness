@@ -3,10 +3,10 @@ name: rpa-harness
 description: >
   AI-powered RPA automation harness for Playwright browser automation,
   Windows UIAutomation (desktop), API integrations, Excel-driven workflows,
-  agentic AI loop, RPA Memory, and web dashboard.
+  agentic AI loop, evidence artifacts, and web dashboard.
   Use when: automating web apps, desktop apps, writing test suites,
   running UI validations, creating RPA-style automation workflows,
-  delegating to fast/powerful subagents, or searching RPA Memory.
+  delegating to fast/powerful subagents, or inspecting run artifacts.
 ---
 
 # RPA Harness
@@ -18,7 +18,7 @@ description: >
 - API integration testing (REST, GraphQL via httpx)
 - RPA workflows (Excel-driven data processing with mismatch detection)
 - Agentic AI execution (natural language task → autonomous execution with tools)
-- RPA Memory search (sessions, observations, summaries, selector/failure evidence)
+- Evidence-backed run inspection (timeline, manifest, reports, bundles, repair packets)
 
 ## Core Architecture
 
@@ -41,11 +41,12 @@ AI Layer
 ├── TaskPlanner        (task → step decomposition with dependencies)
 └── AgentStepHistory   (short-term step history within session)
 
-RPA Memory (local service)
-├── Sessions       (suite, workflow, YAML, and agent run lifecycle)
-├── Observations   (verified step evidence, failures, selector healing)
-├── Summaries      (compact run/session summaries)
-└── Search         (keyword, timeline, observation lookup, context injection)
+Evidence Surfaces
+├── timeline.jsonl
+├── run_manifest.json
+├── report.html
+├── evidence_bundle.json
+└── repair_packet.json
 ```
 
 ## Quick Start
@@ -67,8 +68,6 @@ python main.py --agent "Login to example.com and verify dashboard" --headless
 # Serve dashboard
 python main.py --serve --port 8080
 
-# RPA Memory service
-python main.py --rpa-memory-serve
 ```
 
 ## Writing Tests
@@ -129,7 +128,7 @@ When delegating, use the appropriate subagent:
 | Browser inspection, selector discovery | selector | fast |
 | Windows UIA tree walking | uia-tree | fast |
 | Task decomposition | planner | powerful |
-| RPA Memory search | memory | fast |
+| Run artifact inspection | explorer | fast |
 
 ## CLI Reference
 
@@ -139,6 +138,5 @@ python main.py --run --tags browser --headless
 python main.py --agent "Login and verify" --headless
 python main.py --run-workflows --discover-wf projects/example_data_verification
 python main.py --serve --port 8080
-python main.py --rpa-memory-serve --rpa-memory-port 37777
 python main.py --config ./config/default.yaml --discover ./tests --run
 ```

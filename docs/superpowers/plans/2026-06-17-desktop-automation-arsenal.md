@@ -453,7 +453,6 @@ Every weak fallback report must say:
 
 **Files:**
 - Create: `tests/integration/test_windows_desktop_smoke.py`
-- Modify: `docs/rpa_capability_test_plan.md`
 
 - [ ] **Step 1: Add Windows-only Calculator UIA smoke**
 

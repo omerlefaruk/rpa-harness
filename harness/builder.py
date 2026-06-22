@@ -30,12 +30,14 @@ def create_builder_session(
     (session_dir / "task_spec.md").write_text(
         redact_text(task.read_text(encoding="utf-8")),
         encoding="utf-8",
+        newline="\n",
     )
     (session_dir / "assumptions.md").write_text(
         "# Assumptions\n\n- Unverified until target discovery runs.\n",
         encoding="utf-8",
+        newline="\n",
     )
-    (session_dir / "questions.json").write_text("[]\n", encoding="utf-8")
+    (session_dir / "questions.json").write_text("[]\n", encoding="utf-8", newline="\n")
     write_json(
         session_dir / "discovery_session.json",
         {
@@ -50,10 +52,12 @@ def create_builder_session(
     (session_dir / "workflow_draft_report.md").write_text(
         "# Workflow Draft Report\n\nStatus: discovery not run.\n",
         encoding="utf-8",
+        newline="\n",
     )
     (session_dir / "unresolved_risks.md").write_text(
         "# Unresolved Risks\n\n- Selectors, success checks, and risky actions are not validated yet.\n",
         encoding="utf-8",
+        newline="\n",
     )
     return session_dir.resolve()
 
@@ -126,10 +130,12 @@ def capture_desktop_session(
     (capture_dir / "candidate_steps.yaml").write_text(
         "# No candidate steps recorded yet.\n",
         encoding="utf-8",
+        newline="\n",
     )
     (capture_dir / "weak_points.md").write_text(
         "# Weak Points\n\n- Discovery is blocked until UIA/Win32/screenshot evidence exists.\n",
         encoding="utf-8",
+        newline="\n",
     )
     return capture_dir.resolve()
 
@@ -160,7 +166,7 @@ def validate_discovery_fixtures(root_dir: str | Path = ".") -> dict[str, Any]:
 
 
 def write_json(path: Path, payload: Any) -> None:
-    path.write_text(json.dumps(redact_value(payload), indent=2, default=str), encoding="utf-8")
+    path.write_text(json.dumps(redact_value(payload), indent=2, default=str), encoding="utf-8", newline="\n")
 
 
 def read_json(path: Path, default: Any = None) -> Any:

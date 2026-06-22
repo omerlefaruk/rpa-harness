@@ -72,12 +72,12 @@ async def test_send_message_routes_to_named_topic():
             enabled=True,
             bot_token="token",
             chat_id="-1001",
-            topic_threads={"memories": 14},
+            topic_threads={"reports": 14},
         ),
         client=client,
     )
 
-    await channel.send_message("Memory updated", topic="memories", strict=True)
+    await channel.send_message("Report updated", topic="reports", strict=True)
 
     assert client.posts[0]["json"]["message_thread_id"] == 14
 

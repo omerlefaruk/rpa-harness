@@ -18,13 +18,3 @@ variables:
   opera_live_preflight: false
   opera_allow_login: false
   opera_authenticated_marker: ""
-
-memory:
-  enabled: true
-  worker_url: http://127.0.0.1:37777
-  db_path: ./data/rpa_memory.db
-  required: false
-  project: rpa-harness
-  request_timeout_seconds: 2
-  semantic_inject: false
-  semantic_inject_limit: 5

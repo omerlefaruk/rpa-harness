@@ -11,8 +11,6 @@ All agent roles and skills must declare required hooks.
 | `validation` | Run appropriate tests, validators, linters, type checks |
 | `reporting` | Summarize changes, tests, risks, and open questions |
 | `failure` | Capture error context and propose next step or fallback |
-| `memory-save` | Capture observations to persistent memory after each step |
-| `memory-search` | Query memory for relevant past context before execution |
 | `perf-scout` | Note performance optimization opportunities (advisory) |
 | `refactor-scout` | Note safe refactor opportunities (advisory) |
 
@@ -21,4 +19,3 @@ All agent roles and skills must declare required hooks.
 1. Required hooks must be declared in SKILL.md frontmatter
 2. If a hook is not applicable, state why in the response
 3. `perf-scout` and `refactor-scout` are advisory only
-4. `memory-save` and `memory-search` are specific to RPA Harness

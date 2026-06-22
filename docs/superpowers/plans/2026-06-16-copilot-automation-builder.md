@@ -28,7 +28,7 @@ The first shippable version should build from known workflow files and discovery
   - Add reusable question append/read helpers if needed.
 - Create: `harness/copilot_session.py`
   - Own file-backed copilot session state and phase transitions.
-  - Call existing helpers instead of duplicating workflow, reporting, memory, or repair logic.
+  - Call existing helpers instead of duplicating workflow, reporting, or repair logic.
 - Modify: `main.py`
   - Add `--copilot-build`, `--copilot-session`, `--copilot-answer`, and `--copilot-advance`.
 - Modify: `.agents/config/agent_command_manifest.json`
@@ -210,7 +210,7 @@ Use existing code only:
 - `YamlWorkflowRunner.run`
 - existing policy checks from `harness.autopilot`
 
-Do not duplicate runner, report, memory, selector, or retry logic.
+Do not duplicate runner, report, selector, or retry logic.
 
 - [ ] **Step 3: Add risk gates**
 

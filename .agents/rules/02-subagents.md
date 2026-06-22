@@ -10,7 +10,7 @@ Use Task tool with appropriate subagent_type for efficient parallel execution.
 | "find selectors", "inspect page", "HTML snapshot", "DOM", "screenshot page" | selector | fast (gpt-4o-mini) | 2 |
 | "desktop element", "UIA tree", "windows control", "app window", "dump tree" | uia-tree | fast (gpt-4o-mini) | 1 |
 | "plan task", "decompose", "break down", "create workflow from" | planner | powerful (gpt-4o) | 1 |
-| "remember", "previous session", "selector cache", "error history", "past runs" | memory | fast (gpt-4o-mini) | 2 |
+| "previous run", "selector evidence", "error history", "past runs" | artifact-recon | fast (gpt-4o-mini) | 2 |
 | "execute", "click", "type", "navigate", "run workflow", "run agent" | orchestrator | powerful (gpt-4o) | 1 |
 
 ## Dispatch Rules
@@ -30,7 +30,7 @@ User task received
   ├─ Planner (with Explorer + Selector results) → steps
   │
   └─ Orchestrator executes steps
-      ├─ Per step: Memory search for cached selectors
+      ├─ Per step: Inspect artifact evidence for cached selectors
       ├─ Per step: Selector validates current page selectors
-      └─ Per step: Capture observation to memory
+      └─ Per step: Capture observation to run artifacts
 ```

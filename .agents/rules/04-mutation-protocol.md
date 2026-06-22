@@ -7,10 +7,8 @@
 - `.agents/skills/`
 - `harness/core/`
 - `harness/orchestrator.py`
-- `harness/memory/`
 - `harness/resilience/`
 - `docs/credential_policy.md`
-- `docs/memory_policy.md`
 - `docs/mutation_protocol.md`
 
 ## Required Before Editing Protected Areas
@@ -31,7 +29,6 @@ No self-improvement enters the harness unless:
 4. The test fails before the patch
 5. The test passes after the patch
 6. The change is logged
-7. The memory update is evidence-based
 
 ## Allowed / Requires Review / Forbidden
 

@@ -23,9 +23,6 @@ class FakeNotifier:
     async def frustration(self, message: str, *, context: dict = None):
         self.events.append(("frustration", message, context))
 
-    async def memory_note(self, message: str, *, context: dict = None):
-        self.events.append(("memory_note", message, context))
-
 
 def _workflow(workflow_type: str, steps: list[dict], **extra: object) -> dict:
     data = {
@@ -302,12 +299,6 @@ def test_yaml_runner_redacts_runtime_errors_with_workflow_secrets():
         runner._redact_runtime_text("expected super-secret-token in response")
         == "expected [REDACTED] in response"
     )
-
-
-def test_yaml_runner_only_announces_successful_memory_writes():
-    assert YamlWorkflowRunner._memory_write_succeeded({"status": "stored", "id": 1}) is True
-    assert YamlWorkflowRunner._memory_write_succeeded({"status": "disabled"}) is False
-    assert YamlWorkflowRunner._memory_write_succeeded({"available": False}) is False
 
 
 @pytest.mark.asyncio

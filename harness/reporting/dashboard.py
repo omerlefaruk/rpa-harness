@@ -8,8 +8,6 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.error import URLError
-from urllib.request import urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
@@ -51,7 +49,6 @@ def create_dashboard(
             "time": datetime.now().isoformat(),
             "reports_dir": str(report_path),
             "reports_count": len(list(report_path.glob("*.html"))) if report_path.exists() else 0,
-            "services": {"memory": memory_health()},
             "git": {
                 "status": run_text(["git", "status", "--short", "--branch"], root_path),
                 "log": run_text(["git", "log", "--oneline", "--decorate", "-8"], root_path),
@@ -462,15 +459,6 @@ def tail_text(path: Path, max_chars: int = 8000) -> str:
     return path.read_text(encoding="utf-8", errors="replace")[-max_chars:]
 
 
-def memory_health() -> dict[str, Any]:
-    try:
-        with urlopen("http://127.0.0.1:37777/health", timeout=1.5) as response:
-            payload = json.loads(response.read().decode("utf-8", errors="replace"))
-            return {"status": payload.get("status", "ok"), "detail": payload}
-    except (OSError, URLError, json.JSONDecodeError) as exc:
-        return {"status": "down", "detail": str(exc)}
-
-
 def run_text(command: list[str], cwd: Path) -> str:
     try:
         completed = subprocess.run(
@@ -636,7 +624,6 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
             <div class="panel">
                 <h2>Live State</h2>
                 <div class="metrics">
-                    <div class="metric"><div class="label">Memory</div><div class="value" id="memory">-</div></div>
                     <div class="metric"><div class="label">Reports</div><div class="value" id="reports">-</div></div>
                 </div>
             </div>
@@ -677,7 +664,6 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
             const res = await fetch('/api/status', { cache: 'no-store' });
             const data = await res.json();
             $('clock').textContent = `last update ${data.time}`;
-            setValue('memory', data.services.memory.status);
             setValue('reports', data.reports_count);
             const runs = await (await fetch('/api/runs', { cache: 'no-store' })).json();
             $('yamlRuns').innerHTML = (runs.runs || []).slice(0, 8).map(run => `

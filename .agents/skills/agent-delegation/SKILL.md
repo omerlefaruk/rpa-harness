@@ -2,7 +2,7 @@
 name: agent-delegation
 description: >
   Subagent routing rules for RPA Harness. When to dispatch
-  explorer, selector, uia-tree, planner, or memory subagents.
+  explorer, selector, uia-tree, planner, or artifact-recon subagents.
   Model routing for fast vs powerful tasks.
   Use when planning complex multi-step automation tasks.
 hooks: "preflight, compliance, validation, reporting"
@@ -22,7 +22,7 @@ For complex tasks, use pipelined subagent dispatch:
 1. Explorer (fast) + Selector (fast) → parallel reconnaissance
 2. Planner (powerful) → decompose with gathered context
 3. Orchestrator (powerful) → execute steps
-4. Memory (fast) → capture and search between steps
+4. Artifact recon (fast) → inspect prior run evidence between steps
 ```
 
 ## Parallel Dispatch Example

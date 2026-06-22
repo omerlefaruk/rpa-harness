@@ -2,7 +2,7 @@
 
 ## Core Rule
 
-Use secret names only. Never paste real credentials into prompts, code, workflows, logs, screenshots, memory, or tests.
+Use secret names only. Never paste real credentials into prompts, code, workflows, logs, screenshots, or tests.
 
 ## Sources
 
@@ -14,7 +14,7 @@ Before writing logs or reports, redact passwords, tokens, cookies, authorization
 
 ## Screenshot Safety
 
-Store in local run folders. Do not upload automatically. Do not summarize sensitive content into memory. Redact if necessary.
+Store in local run folders. Do not upload automatically. Redact if necessary.
 
 ## See Also
 

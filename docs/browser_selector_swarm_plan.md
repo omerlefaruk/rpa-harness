@@ -13,7 +13,7 @@ can be used in a workflow.
 
 ## Principles
 
-- Use RPA Memory before page discovery.
+- Inspect prior run artifacts before page discovery.
 - Scrape broadly, but feed agents compact structured maps instead of full raw
   HTML by default.
 - Prefer deterministic Playwright checks over model judgment.
@@ -25,9 +25,9 @@ can be used in a workflow.
 
 ## Pipeline
 
-### 1. Memory Recon
+### 1. Artifact Recon
 
-Query RPA Memory for the target domain, route, workflow name, action intent,
+Query existing run artifacts for the target domain, route, workflow name, action intent,
 known selectors, failure signatures, and previous success checks.
 
 Outputs:
@@ -82,7 +82,7 @@ Dispatch specialized subagents over the maps:
   strategies are missing.
 - Network mapper proposes success checks based on route/API changes.
 - Vision mapper proposes fallback selectors from screenshot evidence.
-- Memory mapper merges previous winners and removes known failures.
+- Artifact mapper merges previous winners and removes known failures.
 
 Outputs:
 
@@ -110,8 +110,8 @@ Scoring should prioritize:
 3. Unique match.
 4. Short and readable selector.
 5. No dynamic tokens.
-6. Prior memory success.
-7. No prior memory failures.
+6. Prior artifact success.
+7. No prior artifact failures.
 
 ### 6. Workflow Synthesis
 
@@ -144,7 +144,7 @@ Do not store secrets, cookies, personal data, or raw credentials.
 
 | Role | Purpose | Output |
 |---|---|---|
-| `memory_recon` | Find prior selectors and failures | Memory evidence bundle |
+| `artifact_recon` | Find prior selectors and failures | Run artifact evidence |
 | `page_stabilizer` | Reach stable page state | URL/title/screenshot/network summary |
 | `dom_scraper` | Build compact interactive DOM map | Element inventory |
 | `accessibility_mapper` | Extract role/name/label selectors | A11y candidates |
@@ -195,14 +195,14 @@ Do not store secrets, cookies, personal data, or raw credentials.
 
 - Add a browser recon command that produces page maps.
 - Store redacted artifacts under run output directories.
-- Redact sensitive values before memory writes.
+- Redact sensitive values before writing artifacts.
 
 ### Phase 3: Candidate Tournament
 
 - Add a validator that runs candidate selectors through deterministic
   Playwright checks.
 - Return a structured proof report.
-- Save winner/loser observations to RPA Memory.
+- Save winner/loser observations to run artifacts.
 
 ### Phase 4: Workflow Generation
 
@@ -213,7 +213,7 @@ Do not store secrets, cookies, personal data, or raw credentials.
 ### Phase 5: Benchmark Mode
 
 - Run multiple pages/domains.
-- Measure time-to-first-proven-selector, pass rate, retry rate, and memory hit
+- Measure time-to-first-proven-selector, pass rate, retry rate, and artifact hit
   rate.
 - Emit an HTML report.
 
