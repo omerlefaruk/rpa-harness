@@ -394,7 +394,7 @@ def _default_side_effect(action_type: Any) -> str:
     action = str(action_type or "no_op")
     if action in {"api.post", "api.put", "api.patch", "api.delete"}:
         return "external_write"
-    if action.startswith("excel.write") or action.startswith("excel.append"):
+    if action.startswith(("excel.write", "excel.append")):
         return "local_only"
     if action in {"no_op"}:
         return "none"

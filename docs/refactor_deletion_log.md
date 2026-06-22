@@ -1407,3 +1407,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_selector_strategy.py tests\capabilities\test_recovery_selector_capabilities.py -q` (13 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Schema Excel side-effect prefix slice
+
+Deleted:
+- duplicate Excel side-effect `startswith()` call joined by `or`
+
+Combined:
+- Excel write/append side-effect detection now uses tuple-based `startswith()`
+
+Source of truth:
+- `harness/rpa/schema.py` owns default YAML workflow side-effect classification
+
+Checks:
+- `ruff check harness\rpa\schema.py --select PIE810,F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\rpa\schema.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_workflow_schema.py tests\test_operator_layer.py -q` (40 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
