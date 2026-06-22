@@ -25,3 +25,18 @@ Checks:
 - `.venv\Scripts\python.exe -m compileall -q harness tools main.py`
 - removed-store `rg` scan → clean
 - `git diff --check`
+
+## 2026-06-22 — Dashboard artifact adapter slice
+
+Deleted:
+- duplicate run manifest/detail/jsonl readers from `harness/reporting/dashboard.py`
+
+Combined:
+- dashboard run artifact reads now call `harness/reporting/run_artifacts.py`
+
+Source of truth:
+- `harness/reporting/run_artifacts.py` for run manifest/detail/tail helpers
+- dashboard remains the FastAPI presentation adapter
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_dashboard.py tests/test_workflow_schema.py::test_run_artifact_cli_helpers -q` → 7 passed

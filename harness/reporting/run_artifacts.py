@@ -5,9 +5,105 @@ from __future__ import annotations
 import json
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from harness.config import HarnessConfig
+
+
+
+def run_dir_for_id(runs_dir: Path, run_id: str) -> Path:
+    safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in run_id)
+    return runs_dir / safe_id
+
+
+def collect_run_manifests(run_path: Path, limit: int = 40) -> list[dict[str, Any]]:
+    if not run_path.exists():
+        return []
+    manifests = sorted(
+        run_path.glob("*/run_manifest.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )[:limit]
+    runs = []
+    for manifest in manifests:
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        runs.append(
+            {
+                "run_id": data.get("run_id") or manifest.parent.name,
+                "workflow": data.get("workflow"),
+                "status": data.get("status"),
+                "started_at": data.get("started_at"),
+                "finished_at": data.get("finished_at"),
+                "duration_ms": data.get("duration_ms"),
+                "summary": data.get("summary") or {},
+                "report": str(manifest.parent / "report.html"),
+                "report_path": str(manifest.parent / "report.html"),
+                "manifest": str(manifest),
+                "records": str(manifest.parent / "records.jsonl")
+                if (manifest.parent / "records.jsonl").exists()
+                else "",
+                "modified": datetime.fromtimestamp(manifest.stat().st_mtime).isoformat(),
+            }
+        )
+    return runs
+
+
+def merge_runs(primary: list[dict[str, Any]], secondary: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    runs: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for run in [*primary, *secondary]:
+        run_id = str(run.get("run_id") or "")
+        if not run_id or run_id in seen:
+            continue
+        seen.add(run_id)
+        runs.append(run)
+    return runs
+
+
+def read_run_detail(run_path: Path, run_id: str) -> dict[str, Any]:
+    run_dir = run_dir_for_id(run_path, run_id)
+    manifest = run_dir / "run_manifest.json"
+    if not manifest.exists():
+        return {}
+    return {
+        "manifest": read_json(manifest),
+        "timeline": read_jsonl_tail(run_dir / "timeline.jsonl", limit=200),
+        "records": read_jsonl_tail(run_dir / "records.jsonl", limit=200),
+        "report_html": str(run_dir / "report.html") if (run_dir / "report.html").exists() else "",
+        "failure_report": read_json(run_dir / "failure_report.json"),
+        "repair_packet": read_json(run_dir / "repair_packet.json"),
+    }
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def read_jsonl_tail(path: Path, limit: int = 20) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    entries: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[-limit:]:
+        if not line.strip():
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            entries.append(parsed)
+    return entries
 
 
 def print_runs_list(runs_dir: str = "runs", limit: int = 20):
