@@ -1464,3 +1464,20 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_verification.py tests\capabilities\test_yaml_schema_edges.py -q` (41 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Benchmark spec line-ending cleanup
+
+Deleted:
+- stray CRLF line ending from the tracked benchmark design spec
+
+Combined:
+- benchmark spec now follows the repo LF-only text-file rule
+
+Source of truth:
+- `tests/test_line_endings.py` enforces repository text-file line endings
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`
+- direct byte check: CRLF=0, CR=0
