@@ -405,3 +405,17 @@ Source of truth:
 
 Checks:
 - `.venv\Scripts\python.exe -m pytest tests/test_autopilot.py::test_autopilot_policy_and_command_manifest_are_agent_readable tests/test_copilot_session.py::test_start_copilot_session_creates_redacted_state tests/test_authoring_reporting.py::test_failure_report_html_and_evidence_bundle -q` → 3 passed
+
+## 2026-06-22 — Secret reference regex slice
+
+Deleted:
+- duplicate `${secrets.NAME}` regex definitions from schema, verification contract, and YAML runner modules
+
+Combined:
+- schema validation, verification contract validation, and YAML runtime interpolation now use the shared security secret-reference pattern
+
+Source of truth:
+- `harness/security.py` for secret reference parsing/redaction primitives
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests/test_workflow_schema.py::test_validate_secret_reference_must_be_declared tests/test_workflow_schema.py::test_validate_rejects_secret_in_inputs tests/test_verification.py::test_validate_workflow_missing_fields tests/test_verification.py::test_validate_workflow_valid tests/test_workflow_schema.py::test_yaml_runner_failed_run_artifacts_are_redacted tests/test_security.py -q` → 10 passed

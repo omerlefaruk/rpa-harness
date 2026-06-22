@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 
 from harness.core.ids import WORKFLOW_ID_RE, slug_id
-from harness.security import redact_value
+from harness.security import SECRET_REF_RE, redact_value
 from harness.verification.contract import CheckType, SUPPORTED_ACTIONS
 
 
@@ -32,9 +32,6 @@ SECRET_CANARIES = (
     "sk-test-canary-12345",
     "Bearer rpa-canary-token",
 )
-SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
-
-
 def load_workflow_yaml_compat(path: str | Path) -> dict[str, Any]:
     workflow = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
     if int(workflow.get("schema_version") or 1) == 2:

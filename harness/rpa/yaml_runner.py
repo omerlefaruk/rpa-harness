@@ -28,6 +28,7 @@ from harness.rpa.execution_plan import build_execution_plan
 from harness.selectors.repair import selector_repair_plan
 from harness.security import (
     SecretValue,
+    SECRET_REF_RE,
     redact_mapping,
     redact_text,
     redact_value,
@@ -45,7 +46,6 @@ from harness.verification.checks import CheckRunner
 
 INPUT_REF_RE = re.compile(r"\$\{inputs\.([A-Za-z_][A-Za-z0-9_]*)\}")
 VARIABLE_REF_RE = re.compile(r"\$\{variables\.([A-Za-z_][A-Za-z0-9_]*)\}")
-SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
 FILE_PWD_REF_RE = re.compile(r"file://\$PWD(?![A-Za-z0-9_])")
 PWD_REF_RE = re.compile(r"(?<![A-Za-z0-9_])\$PWD(?![A-Za-z0-9_])")
 

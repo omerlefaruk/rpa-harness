@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 REDACTED = "[REDACTED]"
+SECRET_REF_RE = re.compile(r"\$\{secrets\.([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
 @dataclass(frozen=True)
