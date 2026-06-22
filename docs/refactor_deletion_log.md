@@ -774,3 +774,21 @@ Checks:
 - `.venv\Scripts\python.exe tools\inspect_page.py --help` → passed
 - `.venv\Scripts\python.exe -m compileall -q tools\inspect_page.py` → passed
 - `git diff --check` → passed
+
+
+## 2026-06-22 — UIA dump JSON writer slice
+
+Deleted:
+- UIA dump direct `write_text(json.dumps(...))` writer for output JSON
+- now-unused `time` import from the UIA dump tool
+
+Combined:
+- UIA dump output artifacts now use the core redacted JSON writer
+
+Source of truth:
+- `harness/core/artifacts.py` for redacted JSON artifact writes
+
+Checks:
+- `.venv\Scripts\python.exe tools\dump_uia_tree.py --help` → passed
+- `.venv\Scripts\python.exe -m compileall -q tools\dump_uia_tree.py` → passed
+- `git diff --check` → passed

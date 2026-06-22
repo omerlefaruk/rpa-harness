@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Dump Windows UIA element tree for a process or window."""
-import argparse, json, sys, time
+import argparse, json, sys
+from pathlib import Path
+
+from harness.core.artifacts import write_json
 
 
 def main():
@@ -65,9 +68,9 @@ def main():
     tree = dump(window)
 
     if args.output:
-        import pathlib
-        pathlib.Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        pathlib.Path(args.output).write_text(json.dumps(tree, indent=2, default=str))
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(output_path, tree)
 
     print(json.dumps({"status": "ok", "depth": args.max_depth, "tree": tree}, indent=2, default=str))
 
