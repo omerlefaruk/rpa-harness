@@ -1217,3 +1217,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_verification.py -q` → 26 passed
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Verification contract input-file predicate slice
+
+Deleted:
+- redundant boolean branch in `_looks_like_input_file`
+
+Combined:
+- URL/secret-reference exclusions now return the negated condition directly
+
+Source of truth:
+- `harness/verification/contract.py` owns workflow input-file detection for validation/preflight
+
+Checks:
+- `ruff check harness\verification\contract.py --select SIM103,F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\verification\contract.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_verification.py tests\capabilities\test_yaml_schema_edges.py -q` → 41 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed

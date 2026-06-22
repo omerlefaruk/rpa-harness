@@ -387,9 +387,7 @@ def _looks_like_input_file(key: str, value: Any) -> bool:
     lowered = key.lower()
     if not any(part in lowered for part in ("input_file", "source_file", "workbook", "file")):
         return False
-    if value.startswith(("http://", "https://")) or "${" in value:
-        return False
-    return True
+    return not (value.startswith(("http://", "https://")) or "${" in value)
 
 
 def _required_input_files(workflow: dict, inputs: dict) -> set[str]:
