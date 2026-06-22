@@ -113,7 +113,7 @@ class CheckRunner:
         return VerificationResult(
             passed=has,
             check_type=check.type,
-            expected=f"non-empty value",
+            expected="non-empty value",
             actual=str(value)[:100] if value else "None/empty",
             message="" if has else f"Variable '{check.value}' has no value",
         )
@@ -165,7 +165,7 @@ class CheckRunner:
         return VerificationResult(
             passed=match, check_type=check.type,
             expected=check.value, actual=url,
-            message="" if match else f"URL mismatch",
+            message="" if match else "URL mismatch",
         )
 
     def _check_visible_text(self, check: SuccessCheck) -> VerificationResult:

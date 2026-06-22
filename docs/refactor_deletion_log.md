@@ -1198,3 +1198,22 @@ Checks:
 - `ruff check harness\reporting\run_artifacts.py harness\core\artifacts.py --select F401,F841 --output-format=concise`
 - `git diff --check`
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+
+
+## 2026-06-22 — Verification check dead f-string slice
+
+Deleted:
+- unused `f` prefixes from verification result strings with no interpolation
+
+Combined:
+- nothing; string values are unchanged
+
+Source of truth:
+- `harness/verification/checks.py` owns verification messages without dead formatting syntax
+
+Checks:
+- `ruff check harness\verification\checks.py --select F541,F401,F841 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\verification\checks.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_verification.py -q` → 26 passed
+- `git diff --check`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
