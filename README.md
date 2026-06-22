@@ -4,6 +4,17 @@
 
 The core rule is simple: an action executing is not success. A workflow step only passes after explicit success checks pass. Runs should produce evidence, reports, repair guidance, and redacted artifacts that operators and AI agents can inspect.
 
+
+## Install as an AI-agent workspace product
+
+```bash
+npx roi-harness init
+npx roi-harness validate workflows/example.yaml
+npx roi-harness mcp
+```
+
+The npm package is a thin launcher. The real runtime stays in Python inside `.rpa-harness/venv`, and the generated workspace contains `workflows/`, `config/`, `.agents/`, `runs/`, and `reports/`. AI agents should connect through `npx roi-harness mcp`; it exposes allowlisted workflow tools only, not arbitrary shell access.
+
 ## Typical operator flow
 
 ```bash
