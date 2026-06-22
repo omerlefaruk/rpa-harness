@@ -1312,3 +1312,22 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\capabilities\test_rpa_workflow_capabilities.py tests\capabilities\test_yaml_excel_desktop_runtime.py -q` (18 passed)
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
 - `git diff --check`
+
+
+## 2026-06-22 — Circuit breaker open fallback branch slice
+
+Deleted:
+- nested `else: if fallback` branch inside open-circuit handling
+
+Combined:
+- reset, fallback, and open-error paths now live in one `if/elif/else` chain
+
+Source of truth:
+- `harness/resilience/recovery.py` owns shared circuit-breaker recovery behavior
+
+Checks:
+- `ruff check harness\resilience\recovery.py --select F401,F841,F541 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\resilience\recovery.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_retry.py tests\capabilities\test_recovery_selector_capabilities.py -q` (24 passed)
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` (1 passed)
+- `git diff --check`

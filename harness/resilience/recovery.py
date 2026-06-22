@@ -42,10 +42,10 @@ class CircuitBreaker:
                 self._state = CircuitState.HALF_OPEN
                 self._half_open_attempts = 0
                 self._logger.info("Circuit breaker transitioning to HALF_OPEN")
+            elif fallback:
+                self._logger.warning("Circuit OPEN — using fallback")
+                return await fallback()
             else:
-                if fallback:
-                    self._logger.warning("Circuit OPEN — using fallback")
-                    return await fallback()
                 raise CircuitBreakerOpenError(
                     f"Circuit is OPEN. Retry after {self.timeout_ms}ms"
                 )
