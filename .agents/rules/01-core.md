@@ -19,16 +19,13 @@
 ## File Organization
 
 ```
-harness/          # Core framework code ONLY
-subagents/        # Subagent Python classes
-tests/            # Test and workflow implementations
-  browser/        # Playwright tests
-  desktop/        # Windows UIA tests
-  api/            # API tests
-  rpa/            # RPA workflows
-workflows/        # Workflow definitions
+harness/          # Core YAML runner, drivers, reporting, repair, selector code
+projects/         # Project descriptors under projects/<project>/workflows/main.yaml
+workflows/        # Shared workflow examples and capability fixtures
+tests/            # Tests for YAML runtime, drivers, reporting, repair, and policy
 config/           # Config templates
 reports/          # Generated reports (gitignored)
+runs/             # Run artifacts (gitignored)
 data/             # Input/output data (gitignored)
 .agents/          # Agent skills and rules
 ```

@@ -450,20 +450,10 @@ class CheckRunner:
         if data is None or not path.startswith("$"):
             return False, None
 
-        try:
-            from jsonpath_ng.ext import parse
-        except ModuleNotFoundError:
-            return self._resolve_basic_json_path(data, path)
-
-        matches = [match.value for match in parse(path).find(data)]
-        if not matches:
-            return False, None
-
-        actual = matches[0] if len(matches) == 1 else matches
-        return True, actual
+        return self._resolve_basic_json_path(data, path)
 
     def _resolve_basic_json_path(self, data: Any, path: str) -> tuple[bool, Any]:
-        """Resolve common JSONPath checks without requiring jsonpath-ng.
+        """Resolve common JSONPath checks without external dependencies.
 
         Supported subset:
         - ``$``

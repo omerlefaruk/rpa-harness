@@ -10,6 +10,8 @@ timestamp: 2026-06-17T00:00:00Z
 
 Agents may inspect, draft, repair, and explain workflows. Production execution must remain explicit, validated, and evidence-backed. Secret values must not be hardcoded, logged, reported, stored, serialized, or added to OKF.
 
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
+
 # OKF Maintenance
 
 When agents change docs, workflow schema, CLI commands, skills, or automation policy, they should update the relevant OKF concept, regenerate indexes, and validate the bundle.

@@ -5,7 +5,7 @@ type: mixed
 description: >
   Dry-run OPERA Cloud reservation workbook access and document the live booking
   stages derived from the supplied Canvas Main.json. Field and code-list
-  validation is implemented by projects/operaRezervasyon/workflow.py.
+  validation is represented by this YAML descriptor.
 owner: ops
 target_systems:
   - opera-cloud
@@ -20,9 +20,9 @@ input_schema:
 output_destination: reports/operaRezervasyon/
 system_of_record: opera-cloud
 success_condition: >
-  The YAML dry-run can read the configured workbook and sheet; the Python RPA
-  workflow validates required fields and OPERA code lists before live use.
-safe_test_case: Run the Python workflow in dry-run mode, then run this YAML against a non-production workbook.
+  The YAML dry-run can read the configured workbook and sheet, and the
+  descriptor records required field and OPERA code-list gates before live use.
+safe_test_case: Audit this YAML descriptor, then run it against a non-production workbook.
 allowed_side_effects:
   - write_report
 rerun_policy: >
@@ -73,15 +73,15 @@ steps:
       - type: sheet_exists
         value: ${inputs.sheet}
 
-  - id: document_python_validation_gate
+  - id: document_yaml_validation_gate
     current_stage: init
-    intent: Record that required field and code-list validation is handled by the Python RPA workflow.
+    intent: Record the required field and code-list validation gate in the YAML descriptor.
     preconditions:
       - reservation_rows has workbook data
     postconditions:
-      - executable validation gate is identified
-    proof: projects/operaRezervasyon/tests/test_workflow.py
-    failure_path: Run projects/operaRezervasyon/tests/test_workflow.py for validation details.
+      - descriptor validation gate is identified
+    proof: python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
+    failure_path: Fix the YAML descriptor before production execution.
     action:
       type: no_op
     success_check:

@@ -23,7 +23,6 @@ def test_real_projects_use_single_project_folder_layout():
     required_files = (
         "workflows/main.yaml",
         "config.yaml",
-        "tests/test_workflow.py",
         "README.md",
     )
 

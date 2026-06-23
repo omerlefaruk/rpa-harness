@@ -165,7 +165,7 @@ def audit_workflow_rulebook(workflow: dict[str, Any]) -> RulebookAuditResult:
 
     score = _score(present, total)
     summary = _summary(score, missing_fields, warnings)
-    suggestions = suggest_rulebook_fixes(workflow, missing_fields, warnings)
+    suggestions = suggest_rulebook_fixes(workflow, missing_fields)
     return RulebookAuditResult(
         score=score,
         warnings=warnings,
@@ -178,7 +178,6 @@ def audit_workflow_rulebook(workflow: dict[str, Any]) -> RulebookAuditResult:
 def suggest_rulebook_fixes(
     workflow: dict[str, Any],
     missing_fields: list[str] | None = None,
-    warnings: list[str] | None = None,
 ) -> list[dict[str, str]]:
     """Return concrete, machine-readable rulebook hardening suggestions."""
 

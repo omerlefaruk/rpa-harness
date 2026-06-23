@@ -1,7 +1,6 @@
 # Browser selector swarm subagent configuration.
 #
-# This config is intentionally separate from .agents/config/agents.yaml so the
-# default agent routing remains stable. Use it for high-speed browser
+# Browser selector swarm has its own config. Use it for high-speed browser
 # reconnaissance, selector candidate generation, and deterministic validation.
 
 version: 1

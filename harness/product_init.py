@@ -15,7 +15,7 @@ def init_workspace(target: Path) -> None:
 
 def _copy_tree(source: Traversable, target: Path) -> None:
     for item in source.iterdir():
-        if item.name == "__pycache__" or item.name == "__init__.py":
+        if item.name in {"__pycache__", "__init__.py"}:
             continue
         destination = target / item.name
         if item.is_dir():

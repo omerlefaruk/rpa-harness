@@ -19,7 +19,6 @@ from harness.resilience.recovery import (
     retry_with_backoff,
     smart_retry,
 )
-from harness.rpa.workflow import RPAWorkflow
 
 
 def run(coro):
@@ -179,32 +178,6 @@ def test_smart_retry_does_not_retry_permanent_error():
         run(smart_retry(op))
 
     assert len(calls) == 1
-
-
-class _RetryingWorkflow(RPAWorkflow):
-    name = "retrying-workflow"
-
-    def __init__(self):
-        super().__init__()
-        self.calls = 0
-
-    def get_records(self):
-        return iter([])
-
-    async def process_record(self, record: dict) -> dict:
-        self.calls += 1
-        if self.calls < 2:
-            return {"status": "retry", "reason": "temporary"}
-        return {"status": "passed"}
-
-
-def test_workflow_process_with_retry_uses_shared_recovery():
-    workflow = _RetryingWorkflow()
-    result = run(workflow._process_with_retry({"id": 1}))
-
-    assert result["status"] == "passed"
-    assert workflow.calls == 2
-    assert workflow.result.retried_records == 1
 
 
 class _FlakyTools:

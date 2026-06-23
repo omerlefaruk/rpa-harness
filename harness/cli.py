@@ -3,10 +3,8 @@
 RPA Harness CLI entry point.
 
 Usage:
-    python main.py --discover ./tests --run --report html
-    python main.py --agent "Login to example.com and verify dashboard" --headless
-    python main.py --serve --port 8080
-    python main.py --run-workflows --discover-wf projects/example_data_verification
+    python main.py --run-yaml workflows/examples/minimal_example.yaml
+    python main.py --validate-yaml workflows/examples/minimal_example.yaml
     python main.py --browser-selector-swarm https://example.com/login
 """
 
@@ -17,7 +15,6 @@ import sys
 from pathlib import Path
 
 from harness.config import HarnessConfig
-from harness.orchestrator import AutomationHarness
 from harness.reporting.run_artifacts import (
     live_tail,
     print_run_logs,
@@ -41,24 +38,13 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py --discover ./tests --run --report html
-  python main.py --run --tags browser --headless
-  python main.py --agent "Login and verify dashboard" --headless
-  python main.py --serve --port 8080
+  python main.py --run-yaml workflows/examples/minimal_example.yaml
+  python main.py --validate-yaml workflows/examples/minimal_example.yaml
   python main.py --browser-selector-swarm https://example.com/login
         """,
     )
     parser.add_argument("--config", "-c", help="Path to YAML config file")
     parser.add_argument("--init-workspace", help="Initialize an agent-ready rpa-harness workspace")
-    parser.add_argument("--discover", "-d", help="Test discovery directory")
-    parser.add_argument("--discover-wf", "-dw", help="Workflow discovery directory")
-    parser.add_argument("--run", "-r", action="store_true", help="Run tests")
-    parser.add_argument("--run-workflows", "-rw", action="store_true", help="Run workflows")
-    parser.add_argument("--agent", "-a", help="Agent task (natural language)")
-    parser.add_argument("--tags", "-t", help="Comma-separated tag filter")
-    parser.add_argument("--test-name", "-n", help="Specific test name")
-    parser.add_argument("--workflow-name", "-wn", help="Specific workflow name")
-    parser.add_argument("--report", default="html,json", help="Report formats (html,json)")
     parser.add_argument("--browser", choices=["chromium", "firefox", "webkit"])
     parser.add_argument("--browser-cdp", help="Attach to an existing Chromium CDP endpoint, for example http://127.0.0.1:9222")
     parser.add_argument("--headless", action="store_true")
@@ -85,8 +71,6 @@ Examples:
     parser.add_argument("--autopilot-policy", default=".agents/config/autopilot.yaml", help="Policy YAML for --autopilot-build")
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--serve", action="store_true", help="Start web dashboard")
-    parser.add_argument("--port", type=int, default=8080, help="Dashboard port")
     parser.add_argument(
         "--browser-selector-swarm",
         help="Run browser selector swarm discovery for a URL",
@@ -157,11 +141,6 @@ Examples:
     parser.add_argument("--migration-report", help="Markdown report path for --migrate-workflow")
     parser.add_argument("--workflow-graph", help="Generate workflow graph JSON from a workflow YAML file")
     parser.add_argument("--workflow-graph-output", help="Output path for --workflow-graph")
-    parser.add_argument("--observability-index", action="store_true", help="Index run artifacts into SQLite")
-    parser.add_argument("--observability-rebuild", action="store_true", help="Rebuild the observability SQLite index")
-    parser.add_argument("--observability-stats", action="store_true", help="Print observability summary")
-    parser.add_argument("--observability-db-path", action="store_true", help="Print observability database path")
-    parser.add_argument("--observability-db", help="Override observability database path")
     parser.add_argument("--runs-dir", default="runs", help="Run artifact directory")
     parser.add_argument("--live-tail", help="Tail timeline events for a run id or run directory")
     parser.add_argument("--new-workflow", help="Create a workflow YAML file from a template")
@@ -297,16 +276,6 @@ def _strip_env_quotes(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         return value[1:-1]
     return value
-
-
-def has_run_failures(summary: dict) -> bool:
-    tests = summary.get("tests") or {}
-    workflows = summary.get("workflows") or {}
-    return (
-        tests.get("failed", 0) > 0
-        or workflows.get("failed", 0) > 0
-        or workflows.get("failed_records", 0) > 0
-    )
 
 
 async def main():
@@ -455,19 +424,24 @@ async def main():
         return
 
     if args.runs_list:
-        print_runs_list()
+        print_runs_list(args.runs_dir)
         return
 
     if args.runs_show:
-        print_run_manifest(args.runs_show)
+        print_run_manifest(args.runs_show, runs_dir=args.runs_dir)
         return
 
     if args.logs_show:
-        print_run_logs(args.logs_show, tail=args.logs_tail, step=args.log_step)
+        print_run_logs(
+            args.logs_show,
+            tail=args.logs_tail,
+            step=args.log_step,
+            runs_dir=args.runs_dir,
+        )
         return
 
     if args.report_open:
-        print(run_report_path(args.report_open))
+        print(run_report_path(args.report_open, runs_dir=args.runs_dir))
         return
 
     if args.build_start:
@@ -634,12 +608,6 @@ async def main():
         print(json.dumps(ResumeLedger(args.resume_ledger_status).summary(), indent=2))
         return
 
-    # Serve modes
-    if args.serve:
-        from harness.reporting.dashboard import serve_dashboard
-        await serve_dashboard(port=args.port)
-        return
-
     if args.audit_workflow:
         import json
 
@@ -697,37 +665,6 @@ async def main():
             print(f"Workflow graph written: {args.workflow_graph_output}")
         else:
             print(json.dumps(graph, indent=2, default=str))
-        return
-
-    if (
-        args.observability_index
-        or args.observability_rebuild
-        or args.observability_stats
-        or args.observability_db_path
-    ):
-        import json
-
-        from harness.observability import ObservabilityDB, index_runs, rebuild_runs
-
-        db_path = Path(args.observability_db) if args.observability_db else Path(args.runs_dir) / "observability.db"
-        if args.observability_db_path:
-            print(db_path.resolve())
-            return
-        if args.observability_rebuild:
-            print(json.dumps(rebuild_runs(args.runs_dir, db_path), indent=2, default=str))
-            return
-        if args.observability_index:
-            print(json.dumps(index_runs(args.runs_dir, db_path), indent=2, default=str))
-            return
-        db = ObservabilityDB(db_path)
-        try:
-            print(json.dumps({
-                "runs": db.get_recent_runs(limit=10),
-                "failure_kinds": db.get_failure_kinds_summary(),
-                "record_failures": db.get_record_failures(),
-            }, indent=2, default=str))
-        finally:
-            db.close()
         return
 
     if args.live_tail:
@@ -832,102 +769,10 @@ async def main():
             sys.exit(1)
         return
 
-    config = build_config(args)
-    harness = AutomationHarness(config)
-
-    # Discover
-    if args.discover:
-        harness.discover_tests(args.discover)
-    if args.discover_wf:
-        harness.discover_workflows(args.discover_wf)
-
-    # Agent mode
-    if args.agent:
-        print(f"\n{'='*60}")
-        print(f"Agent Task: {args.agent}")
-        print(f"{'='*60}\n")
-
-        from harness.drivers.playwright import PlaywrightDriver
-
-        driver = None
-        try:
-            driver = await PlaywrightDriver.launch(config=config)
-            result = await harness.run_agent(
-                task=args.agent,
-                playwright_driver=driver,
-            )
-            await _notify_agent_result(result)
-            print(f"\n{'='*60}")
-            print(f"Status: {result['status']}")
-            print(f"Steps: {result['successful_steps']}/{result['total_steps']} passed")
-            print(f"Duration: {result['duration_seconds']}s")
-            print(f"{'='*60}")
-        finally:
-            if driver:
-                await driver.close()
-
-    # Run tests
-    if args.run and harness.test_classes:
-        tags = args.tags.split(",") if args.tags else None
-        test_names = [args.test_name] if args.test_name else None
-        await harness.run(tags=tags, test_names=test_names)
-
-    # Run workflows
-    if args.run_workflows and harness.workflow_classes:
-        tags = args.tags.split(",") if args.tags else None
-        wf_names = [args.workflow_name] if args.workflow_name else None
-        await harness.run_workflows(tags=tags, workflow_names=wf_names)
-
-    # Report
-    if (args.run or args.run_workflows) and args.report:
-        formats = [f.strip() for f in args.report.split(",")]
-        reports = harness.report(formats=formats)
-        print("\nReports:")
-        for fmt, path in reports.items():
-            print(f"  [{fmt.upper()}] {path}")
-        await _notify_run_report(config, harness.summary(), reports)
-
-    # Summary
-    if args.run or args.run_workflows:
-        summary = harness.summary()
-        print(f"\n{'='*50}")
-
-        if summary.get("tests") and summary["tests"]["total"] > 0:
-            t = summary["tests"]
-            print(f"TESTS: {t['passed']}/{t['total']} passed ({t['pass_rate']}%)")
-
-        if summary.get("workflows"):
-            w = summary["workflows"]
-            print(
-                f"WORKFLOWS: {w['processed_records']} records processed, "
-                f"{w['failed_records']} mismatches, "
-                f"{w.get('failed', 0)} failed workflow(s)"
-            )
-
-        if has_run_failures(summary):
-            sys.exit(1)
-
-    # Show discovery
-    if not any(
-        [
-            args.agent,
-            args.run,
-            args.run_workflows,
-            args.serve,
-            args.preflight_yaml,
-            args.runs_list,
-            args.runs_show,
-            args.live_tail,
-            args.autopilot_build,
-            args.browser_selector_swarm,
-        ]
-    ):
-        print(
-            f"Discovered {len(harness.test_classes)} test(s), "
-            f"{len(harness.workflow_classes)} workflow(s). "
-            "Use --run, --run-workflows, --agent, --serve, "
-            "or --browser-selector-swarm."
-        )
+    print(
+        "No YAML command selected. Use --run-yaml, --preflight-yaml, "
+        "--validate-yaml, --audit-workflow, --new-workflow, or --browser-selector-swarm."
+    )
 
 
 def _telegram_channel_or_skip():
@@ -962,37 +807,6 @@ def _capture_desktop(app: str, session_dir: str | None = None) -> Path:
     target_dir = Path(session_dir) if session_dir else Path("builder_sessions") / "desktop_capture"
     return capture_desktop_session(app=app, session_dir=target_dir)
 
-
-async def _notify_run_report(config: HarnessConfig, summary: dict, reports: dict[str, str]):
-    channel, telegram_config = _telegram_channel_or_skip()
-    if channel is None:
-        return
-    try:
-        result = await channel.send_run_report(
-            suite_name=config.name,
-            summary=summary,
-            report_paths=reports,
-        )
-        if result is None:
-            print("Telegram notification failed.", file=sys.stderr)
-    except Exception as exc:
-        if telegram_config.strict:
-            raise
-        print(f"Telegram notification failed: {exc}", file=sys.stderr)
-
-
-async def _notify_agent_result(result: dict):
-    channel, telegram_config = _telegram_channel_or_skip()
-    if channel is None:
-        return
-    try:
-        telegram_result = await channel.send_agent_report(result)
-        if telegram_result is None:
-            print("Telegram notification failed.", file=sys.stderr)
-    except Exception as exc:
-        if telegram_config.strict:
-            raise
-        print(f"Telegram notification failed: {exc}", file=sys.stderr)
 
 
 def run() -> None:

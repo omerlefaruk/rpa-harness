@@ -101,10 +101,9 @@ Available templates:
 
 ## Resume Ledger
 
-Python `RPAWorkflow` subclasses can opt into an append-only record resume ledger
-by setting `config.variables["resume_ledger_path"]`. Each terminal record writes
-record id, status, stage, retry metadata, external reference id, and evidence
-path when provided.
+YAML workflow runs can use an append-only record resume ledger for record-oriented
+workflows. Each terminal record writes record id, status, stage, retry metadata,
+external reference id, and evidence path when provided.
 
 ```bash
 python main.py --resume-ledger-status runs/resume/my_workflow.jsonl

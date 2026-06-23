@@ -26,7 +26,6 @@ def test_config_from_dict():
         "browser": "firefox",
         "log_level": "DEBUG",
         "models": {},
-        "subagents": {},
         "variables": {},
     })
     assert config.name == "test-suite"

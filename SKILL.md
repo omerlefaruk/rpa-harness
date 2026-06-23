@@ -3,10 +3,9 @@ name: rpa-harness
 description: >
   AI-powered RPA automation harness for Playwright browser automation,
   Windows UIAutomation (desktop), API integrations, Excel-driven workflows,
-  agentic AI loop, evidence artifacts, and web dashboard.
+  agentic AI loop, and evidence artifacts.
   Use when: automating web apps, desktop apps, writing test suites,
-  running UI validations, creating RPA-style automation workflows,
-  delegating to fast/powerful subagents, or inspecting run artifacts.
+  running UI validations, creating terminal YAML workflows, or inspecting run artifacts.
 ---
 
 # RPA Harness
@@ -23,30 +22,23 @@ description: >
 ## Core Architecture
 
 ```
-AutomationHarness (orchestrator)
-├── discovers AutomationTestCase and RPAWorkflow subclasses
-├── runs setup() → run() → teardown() (tests)
-├── runs setup() → get_records() → process_record() → teardown() (workflows)
-├── runs plan() → observe → decide → act → verify (agent mode)
-└── generates HTML/JSON reports + web dashboard
+YAML workflow runtime
+├── validates workflow schema and rulebook fields
+├── runs explicit browser, desktop, API, Excel, and no-op actions
+├── verifies every executable step with success checks
+├── writes timeline.jsonl, run_manifest.json, report.html, evidence_bundle.json, and repair_packet.json
+└── supports repair, retry, preflight, audit, graph, and run-inspection commands
 
 Drivers
-├── PlaywrightDriver   (browser: goto, click, fill, extract, screenshot, ai_action)
+├── PlaywrightDriver   (browser: goto, click, fill, extract, screenshot)
 ├── WindowsUIDriver    (desktop: launch_app, click, type_keys, dump_tree, screenshot)
 └── APIDriver          (REST: get, post, put, delete, graphql)
 
-AI Layer
-├── RPAAgent           (agent loop with tool registry and decision making)
-├── VisionEngine       (screenshot analysis, element detection, state verification)
-├── TaskPlanner        (task → step decomposition with dependencies)
-└── AgentStepHistory   (short-term step history within session)
-
-Evidence Surfaces
-├── timeline.jsonl
-├── run_manifest.json
-├── report.html
-├── evidence_bundle.json
-└── repair_packet.json
+AI-assisted surfaces
+├── Copilot/autopilot builder sessions for drafting and repairing YAML
+├── Selector swarm discovery for browser selectors
+├── Desktop AI assist for governed inspect/draft/repair flows
+└── Evidence-backed run inspection from local artifacts
 ```
 
 ## Quick Start
@@ -56,87 +48,39 @@ Evidence Surfaces
 pip install -r requirements.txt
 playwright install
 
-# Set API key
-export OPENAI_API_KEY="your-key"
-
-# Run tests
-python main.py --discover ./tests --run --report html
-
-# Agent mode
-python main.py --agent "Login to example.com and verify dashboard" --headless
-
-# Serve dashboard
-python main.py --serve --port 8080
-
+# Validate and run YAML
+python main.py --validate-yaml workflows/examples/default_schema_example.yaml
+python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
+python main.py --run-yaml workflows/examples/minimal_example.yaml
 ```
 
-## Writing Tests
+## Writing YAML Workflows
 
-```python
-from harness import AutomationTestCase, PlaywrightDriver
-
-class MyTest(AutomationTestCase):
-    name = "my_test"
-    tags = ["browser"]
-
-    async def setup(self):
-        self.driver = await PlaywrightDriver.launch(config=self.config)
-
-    async def run(self):
-        self.step("Navigate")
-        await self.driver.goto("https://example.com")
-        await self.driver.fill("#search", "query")
-        await self.driver.click("#submit")
-        self.expect(await self.driver.is_visible(".results"))
-
-    async def teardown(self):
-        if self.driver:
-            await self.driver.close()
+```yaml
+id: my_workflow
+name: My Workflow
+version: "0.1.0"
+type: browser
+description: Open a page and verify it loaded.
+inputs:
+  target_url: "https://example.com"
+steps:
+  - id: open_page
+    description: Open target page.
+    action:
+      type: browser.goto
+      url: "${inputs.target_url}"
+    success_check:
+      - type: url_contains
+        value: "example.com"
 ```
-
-## Writing RPA Workflows
-
-```python
-from harness import RPAWorkflow, ExcelHandler
-
-class MyWorkflow(RPAWorkflow):
-    name = "my_rpa"
-    tags = ["rpa", "excel"]
-
-    async def setup(self):
-        self.input_excel = ExcelHandler(self.config.variables["input_file"])
-
-    def get_records(self):
-        for row in self.input_excel.iter_rows(sheet="Sheet1"):
-            yield {"id": row.get("ID"), "amount": row.get("Amount")}
-
-    async def process_record(self, record):
-        # ... lookup in web system ...
-        return {"status": "passed"}
-
-    async def on_mismatch(self, record, reason, details=None):
-        self.output_excel.append_row(sheet="Mismatches", ...)
-```
-
-## Subagent Dispatch
-
-When delegating, use the appropriate subagent:
-
-| Task | Subagent | Model |
-|---|---|---|
-| Read files, scan directories | explorer | fast |
-| Browser inspection, selector discovery | selector | fast |
-| Windows UIA tree walking | uia-tree | fast |
-| Task decomposition | planner | powerful |
-| Run artifact inspection | explorer | fast |
 
 ## CLI Reference
 
 ```bash
-python main.py --discover ./tests --run --report html,json
-python main.py --run --tags browser --headless
-python main.py --agent "Login and verify" --headless
-python main.py --run-workflows --discover-wf projects/example_data_verification
-python main.py --serve --port 8080
-python main.py --config ./config/default.yaml --discover ./tests --run
+python main.py --validate-yaml workflows/examples/default_schema_example.yaml
+python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
+python main.py --run-yaml workflows/examples/minimal_example.yaml
+python main.py --runs-list
+python main.py --runs-show RUN_ID
 ```

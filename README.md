@@ -4,6 +4,7 @@
 
 The core rule is simple: an action executing is not success. A workflow step only passes after explicit success checks pass. Runs should produce evidence, reports, repair guidance, and redacted artifacts that operators and AI agents can inspect.
 
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
 
 ## Install as an AI-agent workspace product
 
@@ -22,11 +23,10 @@ python main.py --validate-yaml workflows/examples/default_schema_example.yaml
 python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
 python main.py --run-yaml workflows/examples/minimal_example.yaml
 python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
-python main.py --config projects/example_data_verification/config.yaml --run-workflows --discover-wf projects/example_data_verification
-python main.py --observability-index --runs-dir runs
-python main.py --serve --port 8080
+python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
+python main.py --logs-show <RUN_ID> --logs-tail 50
 python main.py --report-open <RUN_ID>
 ```
 
@@ -69,7 +69,7 @@ python main.py --validate-dsl workflows/examples/download_invoice.rpa
 python main.py --compile-dsl workflows/examples/download_invoice.rpa --workflow-output .pytest_tmp/download_invoice.yaml
 python main.py --validate-yaml .pytest_tmp/download_invoice.yaml
 ```
-## Default schema and dashboard
+## Default schema and artifacts
 
 Real projects must live under `projects/<project>/`:
 
@@ -77,7 +77,6 @@ Real projects must live under `projects/<project>/`:
 projects/<project>/
   workflows/main.yaml
   config.yaml
-  tests/test_workflow.py
   README.md
 ```
 
@@ -89,4 +88,4 @@ python main.py --migrate-workflow workflows/examples/minimal_example.yaml --work
 python main.py --workflow-graph workflows/examples/default_schema_example.yaml --workflow-graph-output workflow_graph.json
 ```
 
-The local dashboard API indexes run folders into `runs/observability.db` without replacing artifacts as the source of truth.
+Run artifacts under `runs/` are the source of truth for operator inspection. Use `--runs-list`, `--runs-show`, `--logs-show`, and `--report-open` to inspect them directly.

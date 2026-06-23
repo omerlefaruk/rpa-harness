@@ -43,11 +43,11 @@ python main.py --telegram-rant "Login page changed twice today" --telegram-rant 
 python main.py --telegram-discover-chat
 ```
 
-After the environment variables are set, normal test and workflow runs post a
-short report automatically:
+After the environment variables are set, YAML workflow runs can send explicit
+Telegram messages or questions from the terminal workflow flow.
 
 ```bash
-python main.py --discover ./tests --run --report html,json
+python main.py --run-yaml workflows/examples/minimal_example.yaml
 ```
 
 ## Setup Notes

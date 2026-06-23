@@ -2,7 +2,7 @@ id: trip_com_reviews
 name: Trip.com Reviews
 version: "0.1.0"
 type: mixed
-description: Project descriptor for the Python RPAWorkflow in projects/trip_com_reviews/workflow.py.
+description: YAML workflow descriptor for projects/trip_com_reviews/workflows/main.yaml.
 owner: ops
 target_systems:
   - trip.com
@@ -21,15 +21,15 @@ inputs:
   input_excel: data/ota_links.xlsx
   sheet: Taksim Analiz
 steps:
-  - id: python_workflow_entrypoint
-    current_stage: execute_python_workflow
-    intent: Run the project Python RPAWorkflow.
+  - id: yaml_descriptor_entrypoint
+    current_stage: audit_yaml_descriptor
+    intent: Run the project YAML workflow.
     preconditions:
       - input workbook exists
     postconditions:
       - Trip.com review report exists
-    proof: projects/trip_com_reviews/tests/test_workflow.py
-    failure_path: Fix project tests before production execution.
+    proof: python main.py --audit-workflow projects/trip_com_reviews/workflows/main.yaml
+    failure_path: Fix the YAML descriptor before production execution.
     action:
       type: no_op
     success_check:

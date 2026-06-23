@@ -8,13 +8,17 @@ timestamp: 2026-06-17T00:00:00Z
 
 # Behavior
 
-The YAML runner loads workflow definitions, resolves declared inputs and secrets at the execution edge, runs preflight checks, executes steps, evaluates success checks, and writes redacted run artifacts.
+The YAML runner is the only workflow runtime. It loads workflow definitions, resolves declared inputs and secrets at the execution edge, runs preflight checks, executes steps, evaluates success checks, and writes redacted run artifacts.
+
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
 
 # Evidence
 
 Runs may write `timeline.jsonl`, `run_manifest.json`, `preflight.json`, `records.jsonl`, `evidence_bundle.json`, `repair_packet.json`, `report.json`, and `report.html`.
 
-Shared artifact path and JSON/JSONL reads live in `harness.core.artifacts`; reporting, dashboard, observability, and repair code consume those helpers instead of owning parallel readers.
+Shared artifact path and JSON/JSONL reads live in `harness.core.artifacts`; run artifact scanning and reporting commands consume those helpers instead of owning parallel readers.
+
+Operators inspect run folders directly with `--runs-list`, `--runs-show`, `--logs-show`, and `--report-open`.
 
 # Relationships
 

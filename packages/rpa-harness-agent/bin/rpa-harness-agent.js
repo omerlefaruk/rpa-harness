@@ -7,7 +7,7 @@ import { startMcpServer } from "../lib/mcp-server.js";
 const [command, ...args] = process.argv.slice(2);
 
 if (!command || command === "--help" || command === "help") {
-  console.log("Usage: rpa-harness-agent <init|serve|mcp|validate|preflight|run|runs-list|runs-show|report-open|repair-selector> [arg]");
+  console.log("Usage: rpa-harness-agent <init|mcp|validate|preflight|run|runs-list|runs-show|report-open|repair-selector> [arg]");
   process.exit(0);
 }
 
@@ -19,10 +19,6 @@ if (command === "init") {
 }
 
 const python = runtimePaths().python;
-
-if (command === "serve") {
-  runChecked(python, ["-m", "harness.cli", "--serve", "--port", args[0] || "8080"]);
-}
 
 if (command === "mcp") {
   startMcpServer(python);

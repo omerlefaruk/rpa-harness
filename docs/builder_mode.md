@@ -11,7 +11,7 @@ Builder mode is for creating deterministic workflows from target discovery evide
 5. Safe dry-run: run non-destructive phases and pause before external writes.
 6. Risk review: mark weak selectors, unresolved checks, and business ambiguities.
 7. One-record test: run only after approval for risky actions.
-8. Promotion: keep deterministic YAML/Python workflow and evidence.
+8. Promotion: keep deterministic YAML workflow and evidence.
 
 ## Builder artifacts
 

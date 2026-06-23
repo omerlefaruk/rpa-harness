@@ -1,14 +1,13 @@
 # example_data_verification
 
-Python RPAWorkflow example for Excel-style data verification.
+YAML workflow example for Excel-style data verification.
 
-- Workflow code: `workflow.py`
 - Config: `config.yaml`
 - Project workflow descriptor: `workflows/main.yaml`
-- Tests: `tests/test_workflow.py`
 
 Run:
 
 ```bash
-python main.py --config projects/example_data_verification/config.yaml --run-workflows --discover-wf projects/example_data_verification --workflow-name example_data_verification
+python main.py --audit-workflow projects/example_data_verification/workflows/main.yaml
+python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
 ```
