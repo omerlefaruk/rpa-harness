@@ -1,42 +1,50 @@
 ---
 name: excel-workflows
 description: >
-  Excel-driven RPA workflow patterns. Read input Excel,
-  process each row against web/desktop systems,
-  write mismatch results to output Excel.
-  Use when creating data-driven automation workflows.
+  Use when creating Excel-driven YAML RPA workflows that read workbook rows,
+  validate sheet/column assumptions, process rows through browser/desktop/API
+  steps, and write run artifacts or reports.
 hooks: "preflight, compliance, validation, reporting"
 ---
 
 # Excel Workflows
 
-## Pattern: Read → Process → Report
+YAML is the only supported runtime. Do not create Python class workflow subclasses.
 
-```python
-from harness import RPAWorkflow, ExcelHandler
+## Pattern: Validate → Read → Process → Report
 
-class DataVerificationWorkflow(RPAWorkflow):
-    async def setup(self):
-        self.input = ExcelHandler(self.config.variables["input_file"])
-        self.output = ExcelHandler(self.config.variables["output_file"])
-        self.output.write_rows(sheet="Mismatches", headers=["ID", "Reason", "Expected", "Actual"])
+```yaml
+id: workbook_check
+name: Workbook Check
+version: "0.1.0"
+type: excel
+inputs:
+  input_excel: ./data/input.xlsx
+  sheet: Sheet1
+steps:
+  - id: read_rows
+    action:
+      type: excel.read
+      path: ${inputs.input_excel}
+      sheet: ${inputs.sheet}
+      output: rows
+    success_check:
+      - type: sheet_exists
+        value: ${inputs.sheet}
 
-    def get_records(self):
-        for row in self.input.iter_rows(sheet="Sheet1", header_row=1,
-                                         columns=["ID", "Name", "Value"]):
-            yield {"id": row.get("ID"), "name": row.get("Name"), "value": row.get("Value")}
-
-    async def process_record(self, record):
-        # Look up in system, compare values
-        return {"status": "passed" if match else "failed", ...}
-
-    async def on_mismatch(self, record, reason, details=None):
-        self.output.append_row(sheet="Mismatches", mapping={...}, headers=[...])
+  - id: process_rows
+    action:
+      type: no_op
+    success_check:
+      - type: always_pass
 ```
 
-## Column Validation
+Use terminal checks:
 
-```python
-assert self.input.validate_columns(sheet="Sheet1",
-    expected_columns=["ID", "Name", "Value"])
+```powershell
+.\.venv\Scripts\python.exe main.py --audit-workflow projects/<project>/workflows/main.yaml
+.\.venv\Scripts\python.exe main.py --run-yaml projects/<project>/workflows/main.yaml
+.\.venv\Scripts\python.exe main.py --runs-show RUN_ID
 ```
+
+Keep workbook parsing explicit in YAML inputs and success checks. Add Python only when a real action type is missing and the YAML runner needs it.

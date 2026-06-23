@@ -5,8 +5,7 @@ description: >
   Windows UIAutomation (desktop), API integrations, Excel-driven workflows,
   agentic AI loop, and evidence artifacts.
   Use when: automating web apps, desktop apps, writing test suites,
-  running UI validations, creating RPA-style automation workflows,
-  delegating to fast/powerful subagents, or inspecting run artifacts.
+  running UI validations, creating terminal YAML workflows, or inspecting run artifacts.
 ---
 
 # RPA Harness
@@ -85,15 +84,3 @@ python main.py --run-yaml workflows/examples/minimal_example.yaml
 python main.py --runs-list
 python main.py --runs-show RUN_ID
 ```
-
-## Subagent Dispatch
-
-When delegating, use the appropriate subagent:
-
-| Task | Subagent | Model |
-|---|---|---|
-| Read files, scan directories | explorer | fast |
-| Browser inspection, selector discovery | selector | fast |
-| Windows UIA tree walking | uia-tree | fast |
-| Task decomposition | planner | powerful |
-| Run artifact inspection | explorer | fast |
