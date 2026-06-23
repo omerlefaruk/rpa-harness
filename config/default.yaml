@@ -54,27 +54,6 @@ models:
     temperature: 0.1
     max_tokens: 4000
 
-subagents:
-  explorer:
-    model: fast
-    timeout_seconds: 30
-    max_parallel: 4
-
-  selector:
-    model: fast
-    timeout_seconds: 60
-    max_parallel: 2
-
-  uia_tree:
-    model: fast
-    timeout_seconds: 60
-    max_parallel: 1
-
-  planner:
-    model: powerful
-    timeout_seconds: 120
-    max_parallel: 1
-
 # Telegram notifications are configured through environment variables so bot
 # tokens never enter config files:
 # RPA_TELEGRAM_ENABLED=1

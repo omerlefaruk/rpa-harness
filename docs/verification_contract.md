@@ -35,9 +35,9 @@ Missing `success_check` fails validation unless the step is `type: no_op` and ex
 | `json_path_equals` | JSON path has value | `{"path": "$.status", "value": "ok"}` |
 | `response_contains` | Response body contains text | `"success"` |
 
-`json_path_equals` uses `jsonpath-ng` extended JSONPath parsing. Supported
-examples include dot properties, list indexes, wildcards, filters, and quoted
-keys: `$.user.name`, `$.items[0].id`, `$.items[*].name`,
+`json_path_equals` uses the built-in basic JSONPath resolver. Supported examples
+include dot properties, list indexes, wildcards, filters, and quoted keys:
+`$.user.name`, `$.items[0].id`, `$.items[*].name`,
 `$.items[?(@.status == "ready")].id`, and `$['meta']['odd.key']`.
 When a path returns multiple matches, compare against a list in declaration
 order.

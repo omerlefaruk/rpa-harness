@@ -13,9 +13,9 @@ harness/          ← Deterministic Python runner
   core/           ← Session, step, result, evidence
   drivers/        ← Playwright, Windows UIA, API
   verification/   ← Success checks and contracts
-  resilience/     ← Errors, retry, healing, recovery
+  resilience/     ← Errors and recovery helpers
   selectors/      ← Priority ladder and repair helpers
-  rpa/            ← Excel, workflow, retry, queue, office
+  rpa/            ← YAML runner, schema, ledger, Excel helpers
   ai/             ← Agent loop, vision, planner, tools
   reporting/      ← HTML, JSON, failure reports
 tools/            ← CLI utilities (inspect, analyze, patch)

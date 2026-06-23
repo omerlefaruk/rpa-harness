@@ -6,7 +6,7 @@ Supports dataclass, environment variables, YAML files, and model routing.
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 @dataclass
 class ModelConfig:
@@ -19,18 +19,6 @@ class ModelConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "ModelConfig":
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
-
-
-@dataclass
-class SubagentConfig:
-    model: str = "fast"
-    timeout_seconds: int = 30
-    max_parallel: int = 4
-    tools: List[str] = field(default_factory=list)
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "SubagentConfig":
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
@@ -84,7 +72,6 @@ class HarnessConfig:
 
     # Model routing
     models: Dict[str, ModelConfig] = field(default_factory=dict)
-    subagents: Dict[str, SubagentConfig] = field(default_factory=dict)
 
     # Custom variables for workflows
     variables: Dict[str, Any] = field(default_factory=dict)
@@ -126,10 +113,6 @@ class HarnessConfig:
                 filtered[k] = {
                     name: ModelConfig.from_dict(cfg) for name, cfg in v.items()
                 }
-            elif k == "subagents" and isinstance(v, dict):
-                filtered[k] = {
-                    name: SubagentConfig.from_dict(cfg) for name, cfg in v.items()
-                }
             elif k in known_fields:
                 filtered[k] = v
 
@@ -160,11 +143,6 @@ class HarnessConfig:
             "vision": ModelConfig(model="gpt-4o", temperature=0.1, max_tokens=4000),
         }
         return defaults.get(name, defaults["fast"])
-
-    def get_subagent_config(self, name: str) -> SubagentConfig:
-        if name in self.subagents:
-            return self.subagents[name]
-        return SubagentConfig()
 
     def get_openai_client_kwargs(self) -> dict:
         kwargs: dict = {}

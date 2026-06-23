@@ -69,10 +69,3 @@ def excel_handler():
     excel = ExcelHandler(path)
     yield excel
     excel.close()
-
-
-@pytest.fixture
-def job_queue():
-    from harness.rpa.queue import JobQueue
-
-    return JobQueue(max_concurrent=1)
