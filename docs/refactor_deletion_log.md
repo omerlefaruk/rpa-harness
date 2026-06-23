@@ -1608,3 +1608,20 @@ Checks:
 - `git diff --check` → passed
 - dependency grep for removed direct dependencies → clean
 - acceptance grep leaves only intentional core-boundary, sample app, benchmark negative, protected untracked, and historical log mentions
+
+## 2026-06-23 — Memory reference cleanup slice
+
+Deleted:
+- last tracked test fixture reference to a `MEMORIES` Telegram topic
+
+Combined:
+- strict bad-topic env validation now uses the existing `QUESTIONS` topic fixture
+
+Source of truth:
+- run artifacts and CLI state remain the repo evidence surface; no tracked memory-specific code/docs references remain
+
+Checks:
+- `rg -n -i "\bmemory\b|memories|memory_|memory-" ...` → clean for tracked repo surfaces
+- `.venv\Scripts\python.exe -m pytest tests\test_bot_notifications.py -q` → 7 passed
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+- `git diff --check`

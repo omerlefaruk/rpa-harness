@@ -141,7 +141,7 @@ def test_bot_notifier_redacts_neutral_context_values_from_secret_values():
 
 def test_bot_notifier_strict_bad_env_config_raises(monkeypatch):
     monkeypatch.setenv("RPA_TELEGRAM_STRICT", "true")
-    monkeypatch.setenv("RPA_TELEGRAM_TOPIC_MEMORIES", "not-a-number")
+    monkeypatch.setenv("RPA_TELEGRAM_TOPIC_QUESTIONS", "not-a-number")
 
     with pytest.raises(ValueError):
         BotNotifier.from_env(source="workflow.bad-env")
