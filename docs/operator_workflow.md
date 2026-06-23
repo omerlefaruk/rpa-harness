@@ -1,5 +1,7 @@
 # Operator Workflow
 
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
+
 Recommended flow:
 
 ```bash

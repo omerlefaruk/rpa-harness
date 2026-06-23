@@ -10,6 +10,7 @@ timestamp: 2026-06-17T00:00:00Z
 
 The packaged CLI lives in `harness.cli` and remains available through the compatibility shim `main.py`. Operators and agents use it for YAML workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, and OKF maintenance. The old Python class discovery/run flags are not part of the CLI surface.
 
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
 
 # Product launcher
 
@@ -24,6 +25,11 @@ npx roi-harness mcp
 python main.py --validate-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --preflight-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
+python main.py --audit-workflow projects/example_data_verification/workflows/main.yaml
+python main.py --runs-list
+python main.py --runs-show RUN_ID
+python main.py --logs-show RUN_ID --logs-tail 50
+python main.py --report-open RUN_ID
 python scripts/okf.py validate docs/okf
 ```
 

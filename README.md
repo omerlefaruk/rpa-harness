@@ -4,6 +4,7 @@
 
 The core rule is simple: an action executing is not success. A workflow step only passes after explicit success checks pass. Runs should produce evidence, reports, repair guidance, and redacted artifacts that operators and AI agents can inspect.
 
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
 
 ## Install as an AI-agent workspace product
 
@@ -25,6 +26,7 @@ python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
 python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
+python main.py --logs-show <RUN_ID> --logs-tail 50
 python main.py --report-open <RUN_ID>
 ```
 

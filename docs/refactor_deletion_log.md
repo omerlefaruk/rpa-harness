@@ -1584,3 +1584,27 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
 - stale dashboard entrypoint `rg` scan → clean
 - `git diff --check`
+
+## 2026-06-23 — YAGNI core deletion acceptance docs
+
+Deleted:
+- historical plan docs under `docs/superpowers/plans/`
+- unreferenced stale browser selector swarm plan doc
+
+Combined:
+- durable README, operator, architecture, and OKF docs now describe a terminal-only YAML core
+- run artifacts are documented as the source of truth for operator inspection
+
+Source of truth:
+- `main.py --run-yaml` and `main.py --audit-workflow`
+- `--runs-list`, `--runs-show`, `--logs-show`, and `--report-open`
+- `timeline.jsonl`, `run_manifest.json`, `report.html`, `evidence_bundle.json`, and `repair_packet.json`
+
+Checks:
+- `.venv\Scripts\python.exe scripts/okf.py generate-indexes docs\okf` → passed
+- `.venv\Scripts\python.exe scripts/okf.py validate docs\okf` → passed
+- `.venv\Scripts\python.exe -m pytest -q` → 271 passed, 7 skipped
+- `.venv\Scripts\python.exe -m compileall -q harness scripts tools` → passed
+- `git diff --check` → passed
+- dependency grep for removed direct dependencies → clean
+- acceptance grep leaves only intentional core-boundary, sample app, benchmark negative, protected untracked, and historical log mentions

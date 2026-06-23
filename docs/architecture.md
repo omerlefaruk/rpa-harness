@@ -4,6 +4,8 @@
 
 Local-first AI-assisted RPA automation harness. Describe a task or provide step-by-step instructions, input files, and secret names → the system helps build, run, debug, repair, and improve automations.
 
+YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
+
 ## Layers
 
 ```
@@ -29,13 +31,12 @@ config/           ← Shared default config template
 ## Execution Flow
 
 ```
-User request → Codex plans → project folder created under projects/<project>
-  → harness.cli validate → harness.cli run
+User request → YAML workflow under projects/<project>/workflows/main.yaml
+  → python main.py --audit-workflow / --run-yaml
   → deterministic step execution with verification
   → success checks per step
-  → failure → failure_report.json + evidence
-  → Codex reads failure → proposes patch → tests verify
-  → proven lessons → run artifacts and tests
+  → run artifacts under runs/<run_id>/
+  → operator inspects with --runs-list / --runs-show / --logs-show / --report-open
 ```
 
 ## Safety Boundaries
