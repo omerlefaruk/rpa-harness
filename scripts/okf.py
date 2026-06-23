@@ -146,7 +146,7 @@ def generate_indexes(root: str | Path) -> list[str]:
             continue
         text = build_index_text(bundle, directory)
         index_path = directory / "index.md"
-        index_path.write_text(text, encoding="utf-8")
+        index_path.write_text(text, encoding="utf-8", newline="\n")
         written.append(str(index_path))
     return written
 
