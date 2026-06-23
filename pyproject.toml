@@ -24,7 +24,6 @@ rpa-harness = "harness.cli:run"
 windows = [
     "pywinauto>=0.6.8",
     "pywin32>=306",
-    "comtypes>=1.4.0",
 ]
 outlook = [
     "pywin32>=306",
@@ -37,10 +36,6 @@ test = [
 dev = [
     "ruff>=0.8.0",
     "mypy>=1.0.0",
-]
-ocr = [
-    "paddleocr==3.7.0",
-    "paddlepaddle==3.3.1",
 ]
 
 [build-system]

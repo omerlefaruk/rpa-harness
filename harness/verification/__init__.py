@@ -11,7 +11,6 @@ from harness.verification.contract import (
     validate_workflow_step,
 )
 from harness.verification.checks import CheckRunner, run_all_checks
-from harness.verification.verifier import WorkflowVerifier
 
 __all__ = [
     "CheckType",
@@ -23,5 +22,4 @@ __all__ = [
     "validate_workflow_step",
     "CheckRunner",
     "run_all_checks",
-    "WorkflowVerifier",
 ]

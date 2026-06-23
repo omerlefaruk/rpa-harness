@@ -45,8 +45,8 @@ AI-assisted surfaces
 
 ```bash
 # Install
-pip install -r requirements.txt
-playwright install
+python -m pip install -e ".[test]"
+python -m playwright install chromium
 
 # Validate and run YAML
 python main.py --validate-yaml workflows/examples/default_schema_example.yaml

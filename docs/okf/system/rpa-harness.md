@@ -12,6 +12,8 @@ timestamp: 2026-06-17T00:00:00Z
 
 YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
 
+Python dependencies are declared in `pyproject.toml` and locked with `uv.lock`; there is no mirrored pip requirements file.
+
 # Relationships
 
 * Uses the [CLI](/interfaces/cli.md) as the operator and agent entrypoint.

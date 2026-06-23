@@ -641,7 +641,7 @@ def test_run_artifact_cli_helpers(tmp_path, monkeypatch, capsys):
     assert discovery["desktop_fixture"]["status"] == "blocked"
 
 
-def test_validate_workflow_tool_outputs_valid_json(tmp_path):
+def test_validate_workflow_cli_entrypoint_outputs_summary(tmp_path):
     wf_path = tmp_path / "noop.yaml"
     wf_path.write_text("""
 id: noop_tool_validate
@@ -657,18 +657,13 @@ steps:
 """)
 
     completed = subprocess.run(
-        [sys.executable, "tools/validate_workflow.py", str(wf_path)],
+        [sys.executable, "main.py", "--validate-yaml", str(wf_path)],
         check=True,
         capture_output=True,
         text=True,
     )
 
-    payload = json.loads(completed.stdout)
-    assert payload["status"] == "valid"
-    assert payload["workflow_id"] == "noop_tool_validate"
-    assert payload["step_count"] == 1
-    assert payload["total_steps"] == 1
-    assert payload["steps_with_success_checks"] == 1
+    assert "VALID: noop_tool_validate (1 steps)" in completed.stdout
 
 
 def test_preflight_blocks_missing_input_file(tmp_path):

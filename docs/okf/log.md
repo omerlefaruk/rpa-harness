@@ -9,3 +9,4 @@
 
 ## 2026-06-23
 * **YAGNI core deletion acceptance**: Documented terminal-only YAML operation, run artifacts as the source of truth, and the absence of dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, and job queue from the core.
+* **Ponytail package cleanup**: Recorded `pyproject.toml` plus `uv.lock` as the dependency source of truth after deleting the duplicate pip requirements mirror.

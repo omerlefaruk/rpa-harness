@@ -42,8 +42,8 @@ from harness.verification import (
     CheckType,
     SuccessCheck,
     VerificationResult,
-    WorkflowVerifier,
     preflight_workflow,
+    validate_workflow,
 )
 from harness.verification.checks import CheckRunner
 
@@ -64,7 +64,6 @@ class YamlWorkflowRunner:
     def __init__(self, config: Optional[HarnessConfig] = None):
         self.config = config or HarnessConfig.from_env()
         self.logger = HarnessLogger("yaml-runner")
-        self.verifier = WorkflowVerifier()
         self.failure = FailureReport("./runs")
         self.notifier = BotNotifier.from_env(source="yaml-runner")
         self._drivers: Dict[str, Any] = {}
@@ -81,14 +80,14 @@ class YamlWorkflowRunner:
 
     def load(self, path: str) -> dict:
         workflow = load_workflow_yaml(path)
-        errors = self.verifier.validate(workflow)
+        errors = validate_workflow(workflow)
         if errors:
             raise ValueError(f"Workflow validation failed: {'; '.join(errors)}")
         return workflow
 
     def validate(self, path: str) -> List[str]:
         workflow = load_workflow_yaml(path)
-        return self.verifier.validate(workflow)
+        return validate_workflow(workflow)
 
     async def preflight(self, workflow_path: str) -> Dict[str, Any]:
         self._workflow_path = str(workflow_path)

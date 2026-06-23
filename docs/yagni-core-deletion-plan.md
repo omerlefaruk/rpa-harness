@@ -66,7 +66,7 @@ Expected: branch created.
 - Delete: `docs/live_ui.md`
 - Modify: `harness/cli.py`
 - Modify: `pyproject.toml`
-- Modify: `requirements.txt`
+- Modify: `uv.lock`
 - Modify: tests importing `create_dashboard`
 
 - [ ] **Step 1: Remove dashboard CLI and imports**
@@ -86,7 +86,7 @@ Remove-Item -Force docs/live_ui.md
 
 - [ ] **Step 3: Remove dashboard dependencies**
 
-Remove from `pyproject.toml` and `requirements.txt`:
+Remove from `pyproject.toml` and `uv.lock`:
 
 ```text
 fastapi
@@ -231,7 +231,7 @@ git commit -m "refactor: remove duplicated rezervasyon workflow code"
 - Modify: `conftest.py`
 - Modify: `harness/verification/checks.py`
 - Modify: `pyproject.toml`
-- Modify: `requirements.txt`
+- Modify: `uv.lock`
 
 - [ ] **Step 1: Remove unused subagent config**
 
@@ -257,7 +257,7 @@ In `harness/verification/checks.py`, remove the optional `jsonpath_ng.ext.parse`
 
 - [ ] **Step 5: Remove unused dependencies**
 
-Remove from `pyproject.toml` and `requirements.txt`:
+Remove from `pyproject.toml` and `uv.lock`:
 
 ```text
 pydantic
@@ -344,7 +344,6 @@ git commit -m "refactor: use run artifacts instead of observability db"
 - Delete: `docs/superpowers/plans/`
 - Modify: `README.md`
 - Modify: `docs/okf/*`
-- Modify: `docs/refactor_deletion_log.md`
 - Modify: docs that still mention dashboard, Python class runtime, SQLite observability, subagents, Office/PDF, or JobQueue.
 
 - [ ] **Step 1: Delete historical plan docs**
@@ -394,11 +393,11 @@ git commit -m "docs: document terminal-only yaml core"
 
 ## Final acceptance
 
-- [ ] `rg "frontend|dashboard|observability|SubagentConfig|JobQueue|OfficeHandler|RPAWorkflow|AutomationHarness" harness tests docs README.md pyproject.toml requirements.txt` returns only intentional historical mentions.
+- [ ] `rg "frontend|dashboard|observability|SubagentConfig|JobQueue|OfficeHandler|RPAWorkflow|AutomationHarness" harness tests docs README.md pyproject.toml uv.lock` returns only intentional historical mentions.
 - [ ] `python -m pytest -q` passes.
 - [ ] `python -m compileall -q harness scripts tools` passes.
 - [ ] `git diff --check` passes.
-- [ ] `pyproject.toml` and `requirements.txt` agree.
+- [ ] `pyproject.toml` and `uv.lock` agree.
 
 ## Expected net cut
 
