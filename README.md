@@ -23,7 +23,6 @@ python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
 python main.py --run-yaml workflows/examples/minimal_example.yaml
 python main.py --audit-workflow projects/operaRezervasyon/workflows/main.yaml
 python main.py --run-yaml projects/example_data_verification/workflows/main.yaml
-python main.py --observability-index --runs-dir runs
 python main.py --runs-list
 python main.py --runs-show <RUN_ID>
 python main.py --report-open <RUN_ID>
@@ -87,4 +86,4 @@ python main.py --migrate-workflow workflows/examples/minimal_example.yaml --work
 python main.py --workflow-graph workflows/examples/default_schema_example.yaml --workflow-graph-output workflow_graph.json
 ```
 
-Run artifacts under `runs/` are the source of truth for operator inspection.
+Run artifacts under `runs/` are the source of truth for operator inspection. Use `--runs-list`, `--runs-show`, `--logs-show`, and `--report-open` to inspect them directly.

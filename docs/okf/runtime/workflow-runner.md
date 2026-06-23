@@ -14,7 +14,9 @@ The YAML runner is the only workflow runtime. It loads workflow definitions, res
 
 Runs may write `timeline.jsonl`, `run_manifest.json`, `preflight.json`, `records.jsonl`, `evidence_bundle.json`, `repair_packet.json`, `report.json`, and `report.html`.
 
-Shared artifact path and JSON/JSONL reads live in `harness.core.artifacts`; reporting, observability, and repair code consume those helpers instead of owning parallel readers.
+Shared artifact path and JSON/JSONL reads live in `harness.core.artifacts`; run artifact scanning and reporting commands consume those helpers instead of owning parallel readers.
+
+Operators inspect run folders directly with `--runs-list`, `--runs-show`, `--logs-show`, and `--report-open`.
 
 # Relationships
 

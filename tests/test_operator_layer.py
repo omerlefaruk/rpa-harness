@@ -1,8 +1,6 @@
 import json
-import sqlite3
 import subprocess
 import sys
-from harness.observability import ObservabilityDB, index_runs
 from harness.rpa.schema import (
     generate_workflow_graph,
     load_workflow_yaml_compat,
@@ -156,68 +154,7 @@ steps:
     assert CANARY not in report.read_text(encoding="utf-8")
 
 
-def test_observability_indexes_runs_idempotently_and_redacts(tmp_path):
-    run = tmp_path / "runs" / "run-1"
-    run.mkdir(parents=True)
-    (run / "run_manifest.json").write_text(
-        json.dumps(
-            {
-                "run_id": "run-1",
-                "workflow": "wf",
-                "schema_version": 1,
-                "status": "failed",
-                "started_at": "2026-06-16T00:00:00Z",
-                "finished_at": "2026-06-16T00:00:01Z",
-                "run_directory": str(run),
-                "report": "report.html",
-                "timeline": "timeline.jsonl",
-                "records": "records.jsonl",
-                "preflight": "preflight.json",
-                "redaction": {"status": "passed"},
-            }
-        ),
-        encoding="utf-8",
-    )
-    (run / "timeline.jsonl").write_text(
-        json.dumps(
-            {
-                "timestamp": "2026-06-16T00:00:00Z",
-                "run_id": "run-1",
-                "workflow": "wf",
-                "event": "step.failed",
-                "phase": "login",
-                "step_id": "submit",
-                "status": "failed",
-                "failure_kind": "verification_failed",
-                "message": f"token={CANARY}",
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (run / "records.jsonl").write_text(
-        json.dumps({"run_id": "run-1", "workflow": "wf", "record_id": "A", "status": "failed"})
-        + "\n",
-        encoding="utf-8",
-    )
-
-    db_path = tmp_path / "runs" / "observability.db"
-    first = index_runs(tmp_path / "runs", db_path)
-    second = index_runs(tmp_path / "runs", db_path)
-    db = ObservabilityDB(db_path)
-
-    assert first["indexed_runs"] == 1
-    assert second["indexed_runs"] == 1
-    assert db.list_runs()[0]["run_id"] == "run-1"
-    assert db.get_failure_kinds_summary()[0]["failure_kind"] == "verification_failed"
-    assert db.get_run_records("run-1")[0]["record_id"] == "A"
-    assert CANARY.encode() not in db_path.read_bytes()
-    with sqlite3.connect(db_path) as conn:
-        assert conn.execute("select count(*) from timeline_events").fetchone()[0] == 1
-
-
-
-def test_operator_cli_migrates_graphs_and_indexes(tmp_path):
+def test_operator_cli_migrates_graphs_and_reads_run_artifacts(tmp_path):
     legacy = tmp_path / "legacy.yaml"
     migrated = tmp_path / "workflow.yaml"
     migration_report = tmp_path / "migration.md"
@@ -245,6 +182,8 @@ steps:
         encoding="utf-8",
     )
     (run / "timeline.jsonl").write_text('{"run_id":"run-1","event":"run.finished","status":"passed"}\n', encoding="utf-8")
+    (run / "logs.jsonl").write_text('{"run_id":"run-1","step":"read","status":"passed"}\n', encoding="utf-8")
+    (run / "report.html").write_text("<html>ok</html>", encoding="utf-8")
 
     subprocess.run(
         [
@@ -274,20 +213,26 @@ steps:
         capture_output=True,
         text=True,
     )
-    indexed = subprocess.run(
-        [
-            sys.executable,
-            "main.py",
-            "--observability-index",
-            "--runs-dir",
-            str(runs),
-        ],
+    runs_list = subprocess.run(
+        [sys.executable, "main.py", "--runs-list", "--runs-dir", str(runs)],
         check=True,
         capture_output=True,
         text=True,
     )
-    db_path = subprocess.run(
-        [sys.executable, "main.py", "--observability-db-path", "--runs-dir", str(runs)],
+    run_show = subprocess.run(
+        [sys.executable, "main.py", "--runs-show", "run-1", "--runs-dir", str(runs)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    logs_show = subprocess.run(
+        [sys.executable, "main.py", "--logs-show", "run-1", "--runs-dir", str(runs)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    report_open = subprocess.run(
+        [sys.executable, "main.py", "--report-open", "run-1", "--runs-dir", str(runs)],
         check=True,
         capture_output=True,
         text=True,
@@ -296,5 +241,7 @@ steps:
     assert migrated.exists()
     assert migration_report.exists()
     assert json.loads(graph.read_text(encoding="utf-8"))["summary"]["total_steps"] == 1
-    assert "indexed_runs" in indexed.stdout
-    assert db_path.stdout.strip().endswith("observability.db")
+    assert "run-1" in runs_list.stdout
+    assert json.loads(run_show.stdout)["run_id"] == "run-1"
+    assert json.loads(logs_show.stdout)["step"] == "read"
+    assert report_open.stdout.strip().endswith("report.html")

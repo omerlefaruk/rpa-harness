@@ -146,10 +146,10 @@ def print_runs_list(runs_dir: str = "runs", limit: int = 20):
         )
 
 
-def resolve_run_dir(run: str) -> Path:
+def resolve_run_dir(run: str, runs_dir: str = "runs") -> Path:
     path = Path(run)
     if not path.exists():
-        path = Path("runs") / run
+        path = Path(runs_dir) / run
     if path.is_file():
         path = path.parent
     if not path.exists():
@@ -158,8 +158,8 @@ def resolve_run_dir(run: str) -> Path:
     return path
 
 
-def print_run_manifest(run: str):
-    path = resolve_run_dir(run)
+def print_run_manifest(run: str, runs_dir: str = "runs"):
+    path = resolve_run_dir(run, runs_dir=runs_dir)
     manifest = path / "run_manifest.json"
     if not manifest.exists():
         print(f"Run manifest not found: {run}", file=sys.stderr)
@@ -167,8 +167,13 @@ def print_run_manifest(run: str):
     print(json.dumps(_read_json(manifest), indent=2, default=str))
 
 
-def print_run_logs(run: str, tail: int | None = None, step: str | None = None):
-    path = resolve_run_dir(run) / "logs.jsonl"
+def print_run_logs(
+    run: str,
+    tail: int | None = None,
+    step: str | None = None,
+    runs_dir: str = "runs",
+):
+    path = resolve_run_dir(run, runs_dir=runs_dir) / "logs.jsonl"
     if not path.exists():
         print(f"Run logs not found: {path}", file=sys.stderr)
         sys.exit(1)
@@ -187,8 +192,8 @@ def print_run_logs(run: str, tail: int | None = None, step: str | None = None):
         except json.JSONDecodeError:
             print(line)
 
-def run_report_path(run: str) -> Path:
-    path = resolve_run_dir(run) / "report.html"
+def run_report_path(run: str, runs_dir: str = "runs") -> Path:
+    path = resolve_run_dir(run, runs_dir=runs_dir) / "report.html"
     if not path.exists():
         print(f"Run report not found: {path}", file=sys.stderr)
         sys.exit(1)

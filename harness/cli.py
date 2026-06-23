@@ -141,11 +141,6 @@ Examples:
     parser.add_argument("--migration-report", help="Markdown report path for --migrate-workflow")
     parser.add_argument("--workflow-graph", help="Generate workflow graph JSON from a workflow YAML file")
     parser.add_argument("--workflow-graph-output", help="Output path for --workflow-graph")
-    parser.add_argument("--observability-index", action="store_true", help="Index run artifacts into SQLite")
-    parser.add_argument("--observability-rebuild", action="store_true", help="Rebuild the observability SQLite index")
-    parser.add_argument("--observability-stats", action="store_true", help="Print observability summary")
-    parser.add_argument("--observability-db-path", action="store_true", help="Print observability database path")
-    parser.add_argument("--observability-db", help="Override observability database path")
     parser.add_argument("--runs-dir", default="runs", help="Run artifact directory")
     parser.add_argument("--live-tail", help="Tail timeline events for a run id or run directory")
     parser.add_argument("--new-workflow", help="Create a workflow YAML file from a template")
@@ -429,19 +424,24 @@ async def main():
         return
 
     if args.runs_list:
-        print_runs_list()
+        print_runs_list(args.runs_dir)
         return
 
     if args.runs_show:
-        print_run_manifest(args.runs_show)
+        print_run_manifest(args.runs_show, runs_dir=args.runs_dir)
         return
 
     if args.logs_show:
-        print_run_logs(args.logs_show, tail=args.logs_tail, step=args.log_step)
+        print_run_logs(
+            args.logs_show,
+            tail=args.logs_tail,
+            step=args.log_step,
+            runs_dir=args.runs_dir,
+        )
         return
 
     if args.report_open:
-        print(run_report_path(args.report_open))
+        print(run_report_path(args.report_open, runs_dir=args.runs_dir))
         return
 
     if args.build_start:
@@ -665,37 +665,6 @@ async def main():
             print(f"Workflow graph written: {args.workflow_graph_output}")
         else:
             print(json.dumps(graph, indent=2, default=str))
-        return
-
-    if (
-        args.observability_index
-        or args.observability_rebuild
-        or args.observability_stats
-        or args.observability_db_path
-    ):
-        import json
-
-        from harness.observability import ObservabilityDB, index_runs, rebuild_runs
-
-        db_path = Path(args.observability_db) if args.observability_db else Path(args.runs_dir) / "observability.db"
-        if args.observability_db_path:
-            print(db_path.resolve())
-            return
-        if args.observability_rebuild:
-            print(json.dumps(rebuild_runs(args.runs_dir, db_path), indent=2, default=str))
-            return
-        if args.observability_index:
-            print(json.dumps(index_runs(args.runs_dir, db_path), indent=2, default=str))
-            return
-        db = ObservabilityDB(db_path)
-        try:
-            print(json.dumps({
-                "runs": db.get_recent_runs(limit=10),
-                "failure_kinds": db.get_failure_kinds_summary(),
-                "record_failures": db.get_record_failures(),
-            }, indent=2, default=str))
-        finally:
-            db.close()
         return
 
     if args.live_tail:
