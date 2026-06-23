@@ -6,9 +6,6 @@ import asyncio
 import contextlib
 import html
 import json
-import shutil
-import subprocess
-import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,7 +15,6 @@ from harness.core.artifacts import write_json
 from harness.security import redact_text, sanitize_url
 from harness.selectors.strategies import is_dynamic_selector
 
-SWARM_CONFIG_PATH = Path(".agents/config/browser_selector_swarm.yaml")
 
 INTERACTIVE_QUERY = ",".join(
     [
@@ -449,8 +445,6 @@ async def run_browser_selector_swarm(
     expect_text: str | None = None,
     save_raw_html: bool = False,
     intent: str | None = None,
-    use_subagents: bool = False,
-    subagent_policy: str = "auto",
 ) -> dict[str, Any]:
     """Run selector discovery and validation for a URL and write a JSON report."""
     from playwright.async_api import async_playwright
@@ -494,13 +488,11 @@ async def run_browser_selector_swarm(
                 json.dumps(page_map, indent=2, default=str),
                 encoding="utf-8",
             )
-        deterministic_candidates = generate_selector_candidates(page_map["elements"], intent=intent)
-        policy = _normalize_subagent_policy(use_subagents, subagent_policy)
-        probe_limit = min(max_candidates, 5) if policy == "auto" else max_candidates
+        candidates = generate_selector_candidates(page_map["elements"], intent=intent)
         validation = await validate_selector_candidates(
             page,
-            deterministic_candidates,
-            max_candidates=probe_limit,
+            candidates,
+            max_candidates=max_candidates,
             timeout_ms=1500,
             safe_click=safe_click,
             expect_url_contains=expect_url_contains,
@@ -508,63 +500,6 @@ async def run_browser_selector_swarm(
             restore_wait_until=wait_until,
             start_url=initial_page_url,
         )
-        candidates = deterministic_candidates
-        subagent_results: list[dict[str, Any]] = []
-        escalation_reasons = _subagent_escalation_reasons(
-            policy=policy,
-            deterministic_validation=validation,
-            deterministic_candidates=deterministic_candidates,
-            page_map=page_map,
-        )
-
-        if policy == "off":
-            subagent_results = await run_selector_subagents(
-                page_map=page_map,
-                candidates=deterministic_candidates,
-                intent=intent,
-                enabled=False,
-                skip_reason="Subagent mode was disabled for this run.",
-            )
-        elif policy == "auto" and "insufficient actionable page evidence" in escalation_reasons:
-            subagent_results = await run_selector_subagents(
-                page_map=page_map,
-                candidates=deterministic_candidates,
-                intent=intent,
-                enabled=False,
-                skip_reason=(
-                    "Skipped: page evidence has no visible actionable elements. "
-                    "Subagents would not have selector context."
-                ),
-            )
-        elif policy == "auto" and not escalation_reasons:
-            subagent_results = await run_selector_subagents(
-                page_map=page_map,
-                candidates=deterministic_candidates,
-                intent=intent,
-                enabled=False,
-                skip_reason="Skipped: deterministic selector proof passed.",
-            )
-        else:
-            selected_agents = _selected_subagents_for_policy(policy, escalation_reasons)
-            subagent_results = await run_selector_subagents(
-                page_map=page_map,
-                candidates=deterministic_candidates,
-                intent=intent,
-                enabled=True,
-                selected_names=selected_agents,
-            )
-            candidates = merge_subagent_candidates(deterministic_candidates, subagent_results)
-            validation = await validate_selector_candidates(
-                page,
-                candidates,
-                max_candidates=max_candidates,
-                timeout_ms=1500,
-                safe_click=safe_click,
-                expect_url_contains=expect_url_contains,
-                expect_text=expect_text,
-                restore_wait_until=wait_until,
-                start_url=initial_page_url,
-            )
 
         report = {
             "status": "passed" if validation["winner"] else "no_winner",
@@ -579,8 +514,6 @@ async def run_browser_selector_swarm(
             "summary": {
                 "intent": intent,
                 "wait_until": wait_until,
-                "subagent_policy": policy,
-                "subagent_escalation_reasons": escalation_reasons,
                 "interactive_elements": page_map.get("element_count", 0),
                 "candidates": len(candidates),
                 "validated": validation["validated_count"],
@@ -596,11 +529,7 @@ async def run_browser_selector_swarm(
                 expect_url_contains=expect_url_contains,
                 expect_text=expect_text,
                 validation=validation,
-                subagent_results=subagent_results,
-                subagent_policy=policy,
-                escalation_reasons=escalation_reasons,
             ),
-            "subagent_results": subagent_results,
             "console_errors": console_errors,
             "failed_requests": failed_requests,
         }
@@ -860,362 +789,6 @@ def _css_fallback(element: dict[str, Any]) -> str | None:
     return tag
 
 
-def _normalize_subagent_policy(use_subagents: bool, policy: str) -> str:
-    normalized = str(policy or "auto").strip().lower()
-    if normalized not in {"off", "auto", "focused", "all"}:
-        raise ValueError(f"Unsupported subagent policy: {policy}")
-    if not use_subagents:
-        return "off"
-    return normalized
-
-
-def _subagent_escalation_reasons(
-    *,
-    policy: str,
-    deterministic_validation: dict[str, Any],
-    deterministic_candidates: list[dict[str, Any]],
-    page_map: dict[str, Any] | None = None,
-) -> list[str]:
-    if policy == "off":
-        return []
-    if policy in {"focused", "all"}:
-        return [f"subagent policy is {policy}"]
-    if deterministic_validation.get("winner"):
-        return []
-
-    reasons = ["deterministic validation did not prove a selector"]
-    if not deterministic_candidates:
-        if page_map is not None and not _has_actionable_page_evidence(page_map):
-            reasons.append("insufficient actionable page evidence")
-        else:
-            reasons.append("no deterministic candidates found")
-    elif all(
-        candidate.get("selector", {}).get("strategy") in {"css", "xpath"}
-        for candidate in deterministic_candidates[:5]
-    ):
-        reasons.append("top deterministic candidates are fallback selectors")
-    return reasons
-
-
-def _has_actionable_page_evidence(page_map: dict[str, Any]) -> bool:
-    for element in page_map.get("elements", []) or []:
-        if element.get("visible") and _is_actionable_element(element):
-            return True
-    return False
-
-
-def _selected_subagents_for_policy(policy: str, reasons: list[str]) -> list[str]:
-    if policy == "all":
-        config = _load_swarm_config(SWARM_CONFIG_PATH)
-        return [
-            name
-            for name in _subagent_dispatch_order(config.get("recommended_dispatch", {}))
-            if name != "candidate_validator"
-        ]
-    focused = ["accessibility_mapper", "form_mapper", "selector_scorer"]
-    if "no deterministic candidates found" in reasons:
-        return focused + ["text_mapper"]
-    if "top deterministic candidates are fallback selectors" in reasons:
-        return focused + ["structure_mapper"]
-    return focused
-
-
-async def run_selector_subagents(
-    *,
-    page_map: dict[str, Any],
-    candidates: list[dict[str, Any]],
-    intent: str | None,
-    enabled: bool,
-    selected_names: list[str] | None = None,
-    skip_reason: str = "Subagent mode was disabled for this run.",
-    config_path: Path = SWARM_CONFIG_PATH,
-) -> list[dict[str, Any]]:
-    """Run configured LLM subagents and return report-safe result records."""
-    config = _load_swarm_config(config_path)
-    subagents = config.get("subagents", {})
-    model_profiles = config.get("model_profiles", {})
-    dispatch = config.get("recommended_dispatch", {})
-    agent_names = selected_names or _subagent_dispatch_order(dispatch)
-
-    if not enabled:
-        return [
-            _subagent_result(
-                name=name,
-                subagent=subagents.get(name, {}),
-                profile=model_profiles.get(subagents.get(name, {}).get("model_profile"), {}),
-                status="not_sent",
-                summary=skip_reason,
-            )
-            for name in agent_names
-            if name in subagents and name != "candidate_validator"
-        ]
-
-    codex_path = _find_codex_cli()
-    if not codex_path:
-        return [
-            _subagent_result(
-                name=name,
-                subagent=subagents.get(name, {}),
-                profile=model_profiles.get(subagents.get(name, {}).get("model_profile"), {}),
-                status="unavailable",
-                summary="Codex CLI unavailable. Install or expose codex on PATH.",
-            )
-            for name in agent_names
-            if name in subagents and name != "candidate_validator"
-        ]
-
-    context = _subagent_context(page_map, candidates, intent)
-    runnable_names = [
-        name for name in agent_names
-        if name in subagents and name not in {"candidate_validator", "workflow_generator", "repair_agent"}
-    ]
-    tasks = [
-        _run_one_selector_subagent(
-            codex_path=codex_path,
-            name=name,
-            subagent=subagents[name],
-            profile=model_profiles.get(subagents[name].get("model_profile"), {}),
-            context=context,
-        )
-        for name in runnable_names
-    ]
-    return list(await asyncio.gather(*tasks))
-
-
-def merge_subagent_candidates(
-    candidates: list[dict[str, Any]],
-    subagent_results: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Merge LLM-proposed candidates ahead of deterministic candidates when valid."""
-    proposed: list[dict[str, Any]] = []
-    for result in subagent_results:
-        for candidate in result.get("proposed_candidates", []) or []:
-            selector = candidate.get("selector")
-            if not isinstance(selector, dict):
-                continue
-            proposed.append(
-                {
-                    "selector": selector,
-                    "source": f"subagent:{result.get('name')}",
-                    "score": _safe_int(candidate.get("score"), default=75),
-                    "element_index": candidate.get("element_index"),
-                    "intent_hint": candidate.get("intent_hint"),
-                    "reasons": _string_list(
-                        candidate.get("reasons") or [result.get("summary", "")]
-                    ),
-                    "risk_flags": _string_list(candidate.get("risk_flags")),
-                }
-            )
-
-    if not proposed:
-        return candidates
-
-    merged = proposed + candidates
-    seen: set[str] = set()
-    unique: list[dict[str, Any]] = []
-    for candidate in sorted(
-        merged,
-        key=lambda item: _safe_int(item.get("score"), default=0),
-        reverse=True,
-    ):
-        key = json.dumps(candidate.get("selector", {}), sort_keys=True)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(candidate)
-    return unique
-
-
-async def _run_one_selector_subagent(
-    *,
-    codex_path: str,
-    name: str,
-    subagent: dict[str, Any],
-    profile: dict[str, Any],
-    context: dict[str, Any],
-) -> dict[str, Any]:
-    started = time.perf_counter()
-    prompt = _subagent_prompt(name, subagent, context)
-    try:
-        response_text = await asyncio.to_thread(
-            _call_codex_cli_subagent,
-            codex_path,
-            name,
-            subagent,
-            profile,
-            prompt,
-        )
-        parsed = _parse_subagent_json(response_text)
-        return _subagent_result(
-            name=name,
-            subagent=subagent,
-            profile=profile,
-            status="sent",
-            summary=redact_text(parsed.get("summary", ""), max_chars=500),
-            proposed_candidates=parsed.get("candidates", []),
-            notes=parsed.get("notes", []),
-            duration_ms=round((time.perf_counter() - started) * 1000, 2),
-        )
-    except Exception as exc:
-        return _subagent_result(
-            name=name,
-            subagent=subagent,
-            profile=profile,
-            status="error",
-            summary=redact_text(exc, max_chars=500),
-            duration_ms=round((time.perf_counter() - started) * 1000, 2),
-        )
-
-
-def _call_codex_cli_subagent(
-    codex_path: str,
-    name: str,
-    subagent: dict[str, Any],
-    profile: dict[str, Any],
-    prompt: str,
-) -> str:
-    model = profile.get("model") or "gpt-5.4-mini"
-    reasoning_effort = profile.get("reasoning_effort") or "medium"
-    timeout = int(subagent.get("timeout_seconds") or 60)
-    with tempfile.NamedTemporaryFile("w+", suffix=f"-{name}.json", delete=True) as output:
-        command = [
-            codex_path,
-            "exec",
-            "--model",
-            str(model),
-            "--cd",
-            str(Path.cwd()),
-            "--sandbox",
-            "read-only",
-            "--skip-git-repo-check",
-            "--output-last-message",
-            output.name,
-            "-c",
-            f'model_reasoning_effort="{reasoning_effort}"',
-            "-",
-        ]
-        result = subprocess.run(
-            command,
-            input=prompt,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
-        output.seek(0)
-        response_text = output.read().strip()
-    if result.returncode != 0:
-        stderr = redact_text(result.stderr, max_chars=500)
-        stdout = redact_text(result.stdout, max_chars=500)
-        raise RuntimeError(f"Codex CLI subagent failed ({result.returncode}): {stderr or stdout}")
-    return response_text or result.stdout or "{}"
-
-
-def _find_codex_cli() -> str | None:
-    return shutil.which("codex") or (
-        "/Applications/Codex.app/Contents/Resources/codex"
-        if Path("/Applications/Codex.app/Contents/Resources/codex").exists()
-        else None
-    )
-
-
-def _parse_subagent_json(text: str) -> dict[str, Any]:
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError:
-        return {"summary": redact_text(text, max_chars=500), "candidates": [], "notes": []}
-    if not isinstance(parsed, dict):
-        return {"summary": "Subagent returned non-object JSON.", "candidates": [], "notes": []}
-    return parsed
-
-
-def _safe_int(value: Any, *, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _string_list(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(item) for item in value]
-    return [str(value)]
-
-
-def _subagent_context(
-    page_map: dict[str, Any],
-    candidates: list[dict[str, Any]],
-    intent: str | None,
-) -> dict[str, Any]:
-    return {
-        "intent": intent,
-        "url": page_map.get("url"),
-        "title": page_map.get("title"),
-        "headings": page_map.get("headings", [])[:20],
-        "elements": page_map.get("elements", [])[:80],
-        "top_candidates": candidates[:40],
-    }
-
-
-def _subagent_prompt(name: str, subagent: dict[str, Any], context: dict[str, Any]) -> str:
-    return json.dumps(
-        {
-            "role": name,
-            "owns": subagent.get("owns", []),
-            "task": (
-                "Analyze the selector evidence for your role. Return JSON with "
-                "summary, candidates, and notes. Candidate format: "
-                "{selector: object, score: number, intent_hint: string, reasons: [], risk_flags: []}. "
-                "Use only selectors supported by the harness: data-testid, data-test, data-qa, "
-                "role, label, name, aria-label, placeholder, text, id, css, xpath. "
-                "Do not include private chain-of-thought."
-            ),
-            "context": context,
-        },
-        default=str,
-    )
-
-
-def _subagent_dispatch_order(dispatch: dict[str, Any]) -> list[str]:
-    names: list[str] = []
-    for key in ("first_wave_parallel", "second_wave_parallel", "fallback_wave", "sequential"):
-        for name in dispatch.get(key, []) or []:
-            if name not in names:
-                names.append(name)
-    return names
-
-
-def _subagent_result(
-    *,
-    name: str,
-    subagent: dict[str, Any],
-    profile: dict[str, Any],
-    status: str,
-    summary: str,
-    proposed_candidates: list[dict[str, Any]] | None = None,
-    notes: list[str] | None = None,
-    duration_ms: float | None = None,
-) -> dict[str, Any]:
-    return {
-        "name": name,
-        "status": status,
-        "attempted": status in {"sent", "error", "unavailable"},
-        "sent": status in {"sent", "error"},
-        "runtime": subagent.get("runtime") or "codex_cli",
-        "model_profile": subagent.get("model_profile"),
-        "model": profile.get("model"),
-        "reasoning_effort": profile.get("reasoning_effort"),
-        "timeout_seconds": subagent.get("timeout_seconds"),
-        "max_parallel": subagent.get("max_parallel"),
-        "owns": subagent.get("owns", []),
-        "output_schema": subagent.get("output_schema"),
-        "summary": summary,
-        "proposed_candidates": proposed_candidates or [],
-        "notes": notes or [],
-        "duration_ms": duration_ms,
-    }
 
 
 def build_orchestration_report(
@@ -1225,94 +798,39 @@ def build_orchestration_report(
     expect_url_contains: str | None,
     expect_text: str | None,
     validation: dict[str, Any],
-    subagent_results: list[dict[str, Any]] | None = None,
-    subagent_policy: str = "off",
-    escalation_reasons: list[str] | None = None,
-    config_path: Path = SWARM_CONFIG_PATH,
 ) -> dict[str, Any]:
-    """Return report-safe orchestration details without exposing hidden reasoning."""
-    config = _load_swarm_config(config_path)
-    model_profiles = config.get("model_profiles", {})
-    subagent_config = config.get("subagents", {})
-    recommended_dispatch = config.get("recommended_dispatch", {})
-
-    subagent_results = subagent_results or []
-    escalation_reasons = escalation_reasons or []
-    result_by_name = {result.get("name"): result for result in subagent_results}
-    deterministic_roles = {
-        "page_stabilizer",
-        "dom_scraper",
-        "accessibility_mapper",
-        "form_mapper",
-        "text_mapper",
-        "structure_mapper",
-        "network_mapper",
-        "state_mapper",
-        "selector_scorer",
-        "candidate_validator",
-    }
-    executed_agents = []
-    configured_agents = []
-
-    for name, subagent in subagent_config.items():
-        profile_name = subagent.get("model_profile")
-        profile = model_profiles.get(profile_name, {}) if profile_name else {}
-        row = {
+    """Return report-safe deterministic orchestration details."""
+    executed_workers = [
+        {
             "name": name,
-            "sent": False,
-            "runtime": subagent.get("runtime") or "codex",
-            "model_profile": profile_name,
-            "model": profile.get("model"),
-            "reasoning_effort": profile.get("reasoning_effort"),
-            "max_parallel": subagent.get("max_parallel"),
-            "timeout_seconds": subagent.get("timeout_seconds"),
-            "owns": subagent.get("owns", []),
-            "output_schema": subagent.get("output_schema"),
-        }
-        if name in result_by_name:
-            result = result_by_name[name]
-            row.update(
-                {
-                    "sent": result.get("sent", False),
-                    "attempted": result.get("attempted", False),
-                    "runtime": result.get("runtime", row["runtime"]),
-                    "status": result.get("status"),
-                    "decision_summary": result.get("summary"),
-                    "duration_ms": result.get("duration_ms"),
-                    "proposed_candidates": len(result.get("proposed_candidates") or []),
-                }
-            )
-            executed_agents.append(row)
-        elif name in deterministic_roles:
-            row["sent"] = True
-            row["runtime"] = subagent.get("runtime") or "deterministic_python"
-            row["status"] = "deterministic"
-            row["decision_summary"] = _decision_summary_for_agent(
+            "runtime": "deterministic_python",
+            "status": "deterministic",
+            "decision_summary": _decision_summary_for_agent(
                 name,
                 intent=intent,
                 safe_click=safe_click,
                 winner=validation.get("winner"),
-            )
-            executed_agents.append(row)
-        configured_agents.append(row)
+            ),
+        }
+        for name in (
+            "page_stabilizer",
+            "dom_scraper",
+            "accessibility_mapper",
+            "form_mapper",
+            "text_mapper",
+            "structure_mapper",
+            "selector_scorer",
+            "candidate_validator",
+        )
+    ]
 
-    orchestrator_profile = model_profiles.get("planner", {})
     decision_trace = [
-        "Loaded selector swarm configuration.",
         "Opened the target page with Playwright and waited for page stability.",
         "Captured screenshot, console errors, failed requests, and compact interactive DOM map.",
         "Generated selector candidates from test ids, accessibility data, labels, text, ids, and structural fallbacks.",
         "Boosted candidates matching the requested intent." if intent else "No explicit intent was provided, so candidates kept base ranking.",
-        "Validated deterministic candidates with Playwright checks before any Codex subagent dispatch.",
+        "Validated deterministic candidates with Playwright checks.",
     ]
-    if subagent_policy == "auto" and not escalation_reasons:
-        decision_trace.append("Codex CLI subagents were skipped because deterministic proof passed.")
-    elif subagent_policy in {"auto", "focused", "all"}:
-        decision_trace.append(
-            "Codex CLI subagents were selected because: "
-            + (", ".join(escalation_reasons) if escalation_reasons else subagent_policy)
-        )
-        decision_trace.append("Merged subagent proposals with deterministic candidates and revalidated with Playwright.")
     if safe_click:
         checks = []
         if expect_url_contains:
@@ -1327,55 +845,18 @@ def build_orchestration_report(
         decision_trace.append("Safe-click validation was disabled; proof stopped at selector presence/visibility/enabled checks.")
 
     return {
-        "execution_mode": (
-            "llm_subagent_selector_swarm" if any(
-                result.get("status") == "sent" for result in subagent_results
-            )
-            else "deterministic_selector_swarm"
-        ),
-        "subagent_policy": subagent_policy,
-        "subagent_escalation_reasons": escalation_reasons,
-        "codex_subagents_invoked": any(
-            result.get("status") == "sent" for result in subagent_results
-        ),
+        "execution_mode": "deterministic_selector_swarm",
         "hidden_chain_of_thought_recorded": False,
-        "thinking_process_note": (
-            "Report exposes configuration, reasoning_effort, and decision summaries. "
-            "It does not expose private chain-of-thought."
-        ),
+        "thinking_process_note": "Report exposes deterministic evidence and decision summaries only.",
         "orchestrator": {
             "name": "browser_selector_swarm_orchestrator",
             "runtime": "harness.selectors.browser_swarm.run_browser_selector_swarm",
-            "model_profile": "planner",
-            "model": orchestrator_profile.get("model"),
-            "reasoning_effort": orchestrator_profile.get("reasoning_effort"),
-            "model_used_in_this_run": any(
-                result.get("status") == "sent" for result in subagent_results
-            ),
-            "decision_summary": (
-                "The orchestrator dispatched configured selector subagents before "
-                "deterministic Playwright validation through local Codex CLI."
-                if any(result.get("status") == "sent" for result in subagent_results)
-                else "The current implementation used deterministic Python and Playwright. "
-                "The planner model is the configured model for future LLM planning handoff."
-            ),
+            "decision_summary": "The current implementation used deterministic Python and Playwright validation.",
         },
-        "recommended_dispatch": recommended_dispatch,
-        "executed_agents": executed_agents,
-        "configured_agents": configured_agents,
+        "executed_workers": executed_workers,
         "decision_trace": decision_trace,
     }
 
-
-def _load_swarm_config(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        import yaml
-
-        return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return {}
 
 
 def _decision_summary_for_agent(
@@ -1397,7 +878,7 @@ def _decision_summary_for_agent(
         "selector_scorer": "Merged candidates, removed duplicates, ranked stability, and applied intent boosts.",
         "candidate_validator": "Used Playwright to prove uniqueness, visibility, enabled state, and optional action success.",
     }
-    summary = summaries.get(name, "Configured for future selector-swarm handoff.")
+    summary = summaries.get(name, "No deterministic summary is configured for this worker.")
     if name == "selector_scorer" and intent:
         summary += f" Intent boost was applied for: {intent}."
     if name == "candidate_validator" and winner:
@@ -1458,33 +939,17 @@ def _render_html_report(report: dict[str, Any]) -> str:
     summary = report.get("summary", {})
     orchestration = report.get("orchestration", {})
     orchestrator = orchestration.get("orchestrator", {})
-    executed_agents = orchestration.get("executed_agents", [])
-    configured_agents = orchestration.get("configured_agents", [])
+    executed_workers = orchestration.get("executed_workers", [])
     decision_trace = orchestration.get("decision_trace", [])
 
-    executed_agent_rows = "\n".join(
+    executed_worker_rows = "\n".join(
         "<tr>"
-        f"<td>{esc(agent.get('name'))}</td>"
-        f"<td>{esc(agent.get('sent'))}</td>"
-        f"<td>{esc(agent.get('runtime'))}</td>"
-        f"<td>{esc(agent.get('status'))}</td>"
-        f"<td>{esc(agent.get('model'))}</td>"
-        f"<td>{esc(agent.get('reasoning_effort'))}</td>"
-        f"<td>{esc(agent.get('decision_summary'))}</td>"
+        f"<td>{esc(worker.get('name'))}</td>"
+        f"<td>{esc(worker.get('runtime'))}</td>"
+        f"<td>{esc(worker.get('status'))}</td>"
+        f"<td>{esc(worker.get('decision_summary'))}</td>"
         "</tr>"
-        for agent in executed_agents
-    )
-    configured_agent_rows = "\n".join(
-        "<tr>"
-        f"<td>{esc(agent.get('name'))}</td>"
-        f"<td>{esc(agent.get('runtime'))}</td>"
-        f"<td>{esc(agent.get('model'))}</td>"
-        f"<td>{esc(agent.get('reasoning_effort'))}</td>"
-        f"<td>{esc(agent.get('max_parallel'))}</td>"
-        f"<td>{esc(agent.get('timeout_seconds'))}</td>"
-        f"<td>{esc(', '.join(agent.get('owns') or []))}</td>"
-        "</tr>"
-        for agent in configured_agents
+        for worker in executed_workers
     )
     trace_items = "\n".join(f"<li>{esc(item)}</li>" for item in decision_trace)
 
@@ -1516,7 +981,6 @@ def _render_html_report(report: dict[str, Any]) -> str:
   <div class="summary">
     <div class="metric"><b>Status</b>{esc(report.get("status"))}</div>
     <div class="metric"><b>Intent</b>{esc(summary.get("intent"))}</div>
-    <div class="metric"><b>Subagent Policy</b>{esc(summary.get("subagent_policy"))}</div>
     <div class="metric"><b>Interactive Elements</b>{esc(summary.get("interactive_elements"))}</div>
     <div class="metric"><b>Candidates</b>{esc(summary.get("candidates"))}</div>
     <div class="metric"><b>Validated</b>{esc(summary.get("validated"))}</div>
@@ -1533,9 +997,6 @@ def _render_html_report(report: dict[str, Any]) -> str:
   <div class="metric">
     <b>{esc(orchestrator.get("name"))}</b>
     Runtime: {esc(orchestrator.get("runtime"))}<br>
-    Configured planner model: {esc(orchestrator.get("model"))}<br>
-    Configured thinking level: {esc(orchestrator.get("reasoning_effort"))}<br>
-    Model used in this run: {esc(orchestrator.get("model_used_in_this_run"))}<br>
     {esc(orchestrator.get("decision_summary"))}
   </div>
   <p>{esc(orchestration.get("thinking_process_note"))}</p>
@@ -1543,20 +1004,12 @@ def _render_html_report(report: dict[str, Any]) -> str:
   <h2>Decision Trace</h2>
   <ol>{trace_items}</ol>
 
-  <h2>Executed Workers</h2>
+  <h2>Deterministic Workers</h2>
   <table>
     <thead>
-      <tr><th>Agent/Worker</th><th>Sent</th><th>Runtime</th><th>Status</th><th>Model</th><th>Thinking Level</th><th>Decision Summary</th></tr>
+      <tr><th>Worker</th><th>Runtime</th><th>Status</th><th>Decision Summary</th></tr>
     </thead>
-    <tbody>{executed_agent_rows}</tbody>
-  </table>
-
-  <h2>Configured Subagents</h2>
-  <table>
-    <thead>
-      <tr><th>Subagent</th><th>Runtime</th><th>Model</th><th>Thinking Level</th><th>Max Parallel</th><th>Timeout</th><th>Owns</th></tr>
-    </thead>
-    <tbody>{configured_agent_rows}</tbody>
+    <tbody>{executed_worker_rows}</tbody>
   </table>
 
   <h2>Screenshot</h2>

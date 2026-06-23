@@ -1625,3 +1625,27 @@ Checks:
 - `.venv\Scripts\python.exe -m pytest tests\test_bot_notifications.py -q` → 7 passed
 - `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
 - `git diff --check`
+
+## 2026-06-23 — Browser selector Codex subagent deletion slice
+
+Deleted:
+- optional Codex CLI selector-subagent execution path from `harness/selectors/browser_swarm.py`
+- orphaned selector subagent config from `.agents/config/browser_selector_swarm.yaml`
+- selector subagent CLI flags/pass-through from `harness/cli.py` and `tools/browser_selector_swarm.py`
+- subagent merge/policy/helper tests from `tests/test_browser_selector_swarm.py`
+- subagent-specific report fields from selector swarm JSON/HTML output
+
+Combined:
+- browser selector swarm now always uses deterministic candidate generation and Playwright validation
+- orchestration report now describes deterministic workers only
+
+Source of truth:
+- `harness/selectors/browser_swarm.py` owns deterministic browser selector swarm discovery and validation
+- `harness/cli.py` and `tools/browser_selector_swarm.py` expose the same deterministic swarm entry point
+
+Checks:
+- `.venv\Scripts\python.exe -m pytest tests\test_browser_selector_swarm.py -q` → 14 passed
+- `ruff check harness\selectors\browser_swarm.py harness\cli.py tools\browser_selector_swarm.py tests\test_browser_selector_swarm.py --select F401,F841,F541,ARG001 --output-format=concise`
+- `.venv\Scripts\python.exe -m compileall -q harness\selectors\browser_swarm.py harness\cli.py tools\browser_selector_swarm.py`
+- `.venv\Scripts\python.exe -m pytest tests\test_line_endings.py -q` → 1 passed
+- `git diff --check`
