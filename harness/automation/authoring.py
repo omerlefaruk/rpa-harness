@@ -12,7 +12,16 @@ from typing import Any, Protocol
 from harness.security import SECRET_REF_RE, is_sensitive_key
 
 CONTRACT_VERSION = "v1"
-ALLOWED_CAPABILITIES = frozenset({"read", "write"})
+ALLOWED_CAPABILITIES = frozenset(
+    {
+        "read",
+        "write",
+        "browser",
+        "api",
+        "excel",
+        "desktop",
+    }
+)
 ALLOWED_ACTION_CLASSES = frozenset({"R0", "R1", "R2", "R3", "R4"})
 WRITE_ACTION_CLASSES = frozenset({"R1", "R2", "R3", "R4"})
 WEAK_SELECTOR_STRATEGIES = frozenset({"css", "xpath", "coordinate"})
@@ -143,7 +152,15 @@ def validate_proposal(proposal: AutomationProposal) -> ProposalValidation:
                 errors.append("action missing explicit success check")
             if action.action_class not in ALLOWED_ACTION_CLASSES:
                 errors.append("invalid action class")
-            elif (action.capability == "write") != (action.action_class in WRITE_ACTION_CLASSES):
+            elif action.capability == "write" and action.action_class not in WRITE_ACTION_CLASSES:
+                errors.append("invalid action class")
+            elif action.capability == "read" and action.action_class in WRITE_ACTION_CLASSES:
+                errors.append("invalid action class")
+            elif (
+                action.capability not in {"read", "write"}
+                and action.action_class in WRITE_ACTION_CLASSES
+                and action.capability not in ALLOWED_CAPABILITIES
+            ):
                 errors.append("invalid action class")
             _validate_selector(action.selector, errors)
             _validate_secret_references(action.credential_names, action.inputs, errors)
