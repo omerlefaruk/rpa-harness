@@ -14,15 +14,8 @@ import os
 import sys
 from pathlib import Path
 
-from harness.config import HarnessConfig
-from harness.reporting.run_artifacts import (
-    live_tail,
-    print_run_logs,
-    print_run_manifest,
-    print_runs_list,
-    retry_run,
-    run_report_path,
-)
+# Legacy reporting imports are local to handlers so ActiveGraph automation
+# CLI commands work without harness.config present.
 
 
 def configure_console_encoding():
@@ -52,6 +45,10 @@ Examples:
     parser.add_argument(
         "--automation-register-proposal",
         help="Register a validated Automation Proposal JSON file",
+    )
+    parser.add_argument(
+        "--automation-validate-proposal",
+        help="Validate an Automation Proposal JSON file through the application interface",
     )
     parser.add_argument(
         "--automation-workspace", help="Workspace for ActiveGraph automation commands"
@@ -220,39 +217,6 @@ Examples:
     return parser.parse_args()
 
 
-def build_config(args) -> HarnessConfig:
-    config = HarnessConfig.from_yaml(args.config) if args.config else HarnessConfig.from_env()
-
-    if args.browser:
-        config.browser = args.browser
-    if args.browser_cdp:
-        config.browser_cdp_endpoint = args.browser_cdp
-    if args.headless:
-        config.headless = True
-    if args.slow_mo:
-        config.slow_mo = args.slow_mo
-    if args.no_vision:
-        config.enable_vision = False
-    if args.no_agent:
-        config.enable_agent = False
-    if args.vision_model:
-        config.vision_model = args.vision_model
-    if args.agent_model:
-        config.agent_model = args.agent_model
-    if args.agent_max_steps:
-        config.agent_max_steps = args.agent_max_steps
-    if args.copilot:
-        config.copilot_enabled = True
-    if args.copilot_question_mode:
-        config.copilot_question_mode = args.copilot_question_mode
-    if args.max_workers:
-        config.max_workers = args.max_workers
-    if args.log_level:
-        config.log_level = args.log_level
-
-    return config
-
-
 def load_local_env(paths=(".env", ".env.local")):
     original_keys = set(os.environ)
     loaded = {}
@@ -308,6 +272,36 @@ async def main():
         finally:
             app.close()
         return
+    if args.automation_validate_proposal:
+        import json
+
+        from harness.automation import (
+            AutomationApplication,
+            AutomationDefinition,
+            ProposalValidationError,
+            proposal_from_dict,
+        )
+
+        try:
+            proposal_data = json.loads(
+                Path(args.automation_validate_proposal).read_text(encoding="utf-8")
+            )
+            proposal = proposal_from_dict(proposal_data, AutomationDefinition)
+            validation = AutomationApplication.validate_proposal(proposal)
+            payload = {
+                "accepted": validation.accepted,
+                "errors": list(validation.errors),
+                "code": None if validation.accepted else "automation_proposal_invalid",
+            }
+            print(json.dumps(payload, indent=2, default=str))
+            if not validation.accepted:
+                sys.exit(2)
+        except (OSError, ValueError, ProposalValidationError, TypeError, KeyError) as exc:
+            code = getattr(exc, "code", "automation_proposal_input_invalid")
+            print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
+            sys.exit(2)
+        return
+
     if args.automation_register_proposal:
         import json
 
@@ -402,14 +396,13 @@ async def main():
             )
             sys.exit(2)
 
-        config = build_config(args)
         from harness.selectors.browser_swarm import run_browser_selector_swarm
 
         report = await run_browser_selector_swarm(
             args.browser_selector_swarm,
             output_dir=args.browser_selector_swarm_output,
-            browser_name=config.browser,
-            headless=config.headless,
+            browser_name=os.getenv("RPA_BROWSER", "chromium"),
+            headless=os.getenv("RPA_HEADLESS", "false").lower() == "true",
             wait_until=args.browser_selector_swarm_wait_until,
             max_candidates=args.browser_selector_swarm_max_candidates,
             intent=args.browser_selector_swarm_intent,
@@ -475,14 +468,20 @@ async def main():
         return
 
     if args.runs_list:
+        from harness.reporting.run_artifacts import print_runs_list
+
         print_runs_list(args.runs_dir)
         return
 
     if args.runs_show:
+        from harness.reporting.run_artifacts import print_run_manifest
+
         print_run_manifest(args.runs_show, runs_dir=args.runs_dir)
         return
 
     if args.logs_show:
+        from harness.reporting.run_artifacts import print_run_logs
+
         print_run_logs(
             args.logs_show,
             tail=args.logs_tail,
@@ -492,6 +491,8 @@ async def main():
         return
 
     if args.report_open:
+        from harness.reporting.run_artifacts import run_report_path
+
         print(run_report_path(args.report_open, runs_dir=args.runs_dir))
         return
 
@@ -544,7 +545,7 @@ async def main():
         from harness.copilot_session import advance_copilot_session
 
         with contextlib.redirect_stdout(sys.stderr):
-            result = await advance_copilot_session(args.copilot_advance, config=build_config(args))
+            result = await advance_copilot_session(args.copilot_advance)
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") in {"blocked", "failed"}:
             sys.exit(1)
@@ -560,7 +561,6 @@ async def main():
             result = await run_copilot_auto(
                 args.copilot_auto,
                 session_id=args.builder_session_id,
-                config=build_config(args),
             )
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") in {"blocked", "failed"}:
@@ -579,7 +579,6 @@ async def main():
                 workflow_path=args.copilot_try_workflow,
                 intent=args.copilot_try_intent,
                 session_id=args.builder_session_id,
-                config=build_config(args),
             )
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") in {"blocked", "failed"}:
@@ -629,12 +628,10 @@ async def main():
 
         from harness.autopilot import run_autopilot_build
 
-        config = build_config(args)
         with contextlib.redirect_stdout(sys.stderr):
             result = await run_autopilot_build(
                 args.autopilot_build,
                 workflow_path=args.autopilot_workflow,
-                config=config,
                 policy_path=args.autopilot_policy,
             )
         print(json.dumps(result, indent=2, default=str))
@@ -645,7 +642,9 @@ async def main():
     if args.retry_run:
         import json
 
-        result = await retry_run(args.retry_run, failed_records=args.failed_records, config=build_config(args))
+        from harness.reporting.run_artifacts import retry_run
+
+        result = await retry_run(args.retry_run, failed_records=args.failed_records)
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") != "passed":
             sys.exit(1)
@@ -719,6 +718,8 @@ async def main():
         return
 
     if args.live_tail:
+        from harness.reporting.run_artifacts import live_tail
+
         live_tail(args.live_tail, runs_dir=args.runs_dir)
         return
 
@@ -772,19 +773,17 @@ async def main():
     if args.preflight_yaml:
         import json
 
-        config = build_config(args)
         from harness.rpa.yaml_runner import YamlWorkflowRunner
 
-        result = await YamlWorkflowRunner(config).preflight(args.preflight_yaml)
+        result = await YamlWorkflowRunner().preflight(args.preflight_yaml)
         print(json.dumps(result, indent=2, default=str))
         if result.get("status") != "passed":
             sys.exit(1)
         return
 
     if args.run_yaml:
-        config = build_config(args)
         from harness.rpa.yaml_runner import YamlWorkflowRunner
-        runner = YamlWorkflowRunner(config)
+        runner = YamlWorkflowRunner()
         result = await runner.run(
             args.run_yaml,
             phase=args.phase,

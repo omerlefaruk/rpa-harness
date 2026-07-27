@@ -13,6 +13,18 @@ test("unknown MCP tools are rejected", () => {
   assert.throws(() => toolToCommand("shell", {}));
 });
 
+test("automation validation stays on an allowlisted application operation", () => {
+  assert.deepEqual(
+    toolToCommand("validate_automation_proposal", {
+      proposal_path: "proposals/inventory.json",
+    }),
+    {
+      command: "automation-validate-proposal",
+      args: ["proposals/inventory.json"],
+    },
+  );
+});
+
 test("automation registration stays on an allowlisted application operation", () => {
   assert.deepEqual(
     toolToCommand("register_automation_proposal", {
@@ -24,4 +36,10 @@ test("automation registration stays on an allowlisted application operation", ()
       args: ["proposals/inventory.json", ".rpa-automation"],
     },
   );
+});
+
+test("shell and raw driver escape hatches are not MCP tools", () => {
+  for (const name of ["shell", "exec", "run_python", "raw_driver", "playwright_click"]) {
+    assert.throws(() => toolToCommand(name, {}));
+  }
 });

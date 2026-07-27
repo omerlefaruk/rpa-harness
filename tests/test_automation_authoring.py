@@ -172,3 +172,53 @@ def test_proposal_budget_and_model_output_type_are_enforced():
         app.propose(intent(), discovery(), FakeModel(proposal()), ProposalBudget(max_model_calls=0))
     with pytest.raises(TypeError, match="AutomationProposal"):
         app.propose(intent(), discovery(), FakeModel({}))
+
+
+def test_cli_validate_and_register_share_application_error_codes(tmp_path):
+    import json
+    import subprocess
+    import sys
+    from dataclasses import asdict
+
+    good = proposal()
+    bad = proposal(intent=intent(unresolved_business_ambiguities=("which warehouse?",)))
+    good_path = tmp_path / "good.json"
+    bad_path = tmp_path / "bad.json"
+    good_path.write_text(json.dumps(asdict(good), default=str), encoding="utf-8")
+    bad_path.write_text(json.dumps(asdict(bad), default=str), encoding="utf-8")
+    workspace = tmp_path / "ws"
+
+    def run_cli(*args: str):
+        return subprocess.run(
+            [sys.executable, "-m", "harness.cli", *args],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    accepted = run_cli("--automation-validate-proposal", str(good_path))
+    rejected = run_cli("--automation-validate-proposal", str(bad_path))
+    assert accepted.returncode == 0, accepted.stderr
+    assert json.loads(accepted.stdout)["accepted"] is True
+    assert rejected.returncode == 2
+    assert json.loads(rejected.stdout)["code"] == "automation_proposal_invalid"
+
+    registered = run_cli(
+        "--automation-register-proposal",
+        str(good_path),
+        "--automation-workspace",
+        str(workspace),
+    )
+    assert registered.returncode == 0, registered.stderr
+    version = json.loads(registered.stdout)
+    assert version["version"] == 1
+    assert version["content_hash"]
+
+    failed_register = run_cli(
+        "--automation-register-proposal",
+        str(bad_path),
+        "--automation-workspace",
+        str(workspace),
+    )
+    assert failed_register.returncode == 2
+    assert json.loads(failed_register.stderr)["code"] == "automation_proposal_invalid"
