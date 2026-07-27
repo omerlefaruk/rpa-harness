@@ -12,8 +12,9 @@ from typing import Any, Protocol
 from harness.security import SECRET_REF_RE, is_sensitive_key
 
 CONTRACT_VERSION = "v1"
-ALLOWED_CAPABILITIES = frozenset({"read"})
-ALLOWED_ACTION_CLASSES = frozenset({"R0"})
+ALLOWED_CAPABILITIES = frozenset({"read", "write"})
+ALLOWED_ACTION_CLASSES = frozenset({"R0", "R1", "R2", "R3", "R4"})
+WRITE_ACTION_CLASSES = frozenset({"R1", "R2", "R3", "R4"})
 WEAK_SELECTOR_STRATEGIES = frozenset({"css", "xpath", "coordinate"})
 SECRET_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -129,19 +130,26 @@ def validate_proposal(proposal: AutomationProposal) -> ProposalValidation:
         errors.append("unresolved business ambiguity")
     if not definition.definition_id or not definition.name or not definition.success_check:
         errors.append("definition requires id, name, and explicit success check")
-    if not definition.read_only or definition.action_class not in ALLOWED_ACTION_CLASSES:
+    if definition.action_class not in ALLOWED_ACTION_CLASSES:
+        errors.append("invalid action class")
+    elif definition.read_only != (definition.action_class == "R0"):
         errors.append("invalid action class")
     capabilities = set(intent.required_capabilities)
     capabilities.update(proposal.discovery.observed_capabilities)
-    capabilities.add(definition.action_id)
-    for action in definition.actions:
-        capabilities.add(action.capability)
-        if not action.success_check:
-            errors.append("action missing explicit success check")
-        if action.action_class not in ALLOWED_ACTION_CLASSES:
-            errors.append("invalid action class")
-        _validate_selector(action.selector, errors)
-        _validate_secret_references(action.credential_names, action.inputs, errors)
+    if definition.actions:
+        for action in definition.actions:
+            capabilities.add(action.capability)
+            if not action.success_check:
+                errors.append("action missing explicit success check")
+            if action.action_class not in ALLOWED_ACTION_CLASSES:
+                errors.append("invalid action class")
+            elif (action.capability == "write") != (action.action_class in WRITE_ACTION_CLASSES):
+                errors.append("invalid action class")
+            _validate_selector(action.selector, errors)
+            _validate_secret_references(action.credential_names, action.inputs, errors)
+    else:
+        # Legacy single-action definitions encode the capability in action_id.
+        capabilities.add(definition.action_id)
     if not definition.actions and not definition.success_check:
         errors.append("action missing explicit success check")
     for selector in proposal.discovery.selectors:

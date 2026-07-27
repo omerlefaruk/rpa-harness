@@ -123,5 +123,6 @@ def test_first_party_pack_declares_the_read_only_lifecycle_surface():
         "verification_result",
         "evidence_reference",
     }
-    assert [item.name for item in pack.tools] == ["read_only_action"]
+    assert {item.name for item in pack.tools} >= {"read_only_action", "approval_gated_write"}
     assert [item.name for item in pack.behaviors] == ["start_read_only_run"]
+    assert "approval_grant" in {item.name for item in pack.object_types}

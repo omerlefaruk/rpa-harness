@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,6 +15,8 @@ from activegraph.core.event import Event
 from activegraph.store import EventStore, InMemoryEventStore, SQLiteEventStore
 
 from harness.automation.authoring import (
+    ALLOWED_ACTION_CLASSES,
+    WRITE_ACTION_CLASSES,
     AutomationAction,
     AutomationIntent,
     AutomationProposal,
@@ -29,11 +31,41 @@ from harness.automation.authoring import (
     content_hash,
     validate_proposal,
 )
-from harness.security import redact_value
+from harness.security import SECRET_REF_RE, SecretValue, redact_value
 
 
 class WorkspaceRuntimeActiveError(RuntimeError):
     """Raised when a workspace already has a write-capable runtime."""
+
+
+class ApprovalError(PermissionError):
+    """Raised when an Approval Grant is missing, stale, or scope-mismatched."""
+
+    code = "automation_approval_denied"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"{self.code}: {message}")
+
+
+class AuthorityError(PermissionError):
+    """Raised when action classification or governance gates fail closed."""
+
+    code = "automation_authority_denied"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"{self.code}: {message}")
+
+
+class DuplicateWriteError(RuntimeError):
+    """Raised when a write would violate at-most-once admission."""
+
+    code = "automation_duplicate_write"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"{self.code}: {message}")
 
 
 @dataclass(frozen=True)
@@ -45,6 +77,11 @@ class AutomationDefinition:
     action_class: str = "R0"
     read_only: bool = True
     actions: tuple[AutomationAction, ...] = ()
+    target_scope: str = ""
+    record_scope: str = ""
+    side_effect_scope: str = ""
+    idempotency_scope: str = ""
+    credential_names: tuple[str, ...] = ()
     schema_version: str = "v1"
 
 
@@ -70,6 +107,24 @@ class EvidenceReference:
 
 
 @dataclass(frozen=True)
+class ApprovalGrant:
+    grant_id: str
+    definition_id: str
+    definition_version: int
+    content_hash: str
+    target_scope: str
+    record_scope: str
+    side_effect_scope: str
+    actor: str
+    expires_at: str
+    action_id: str
+    governance_gate: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class RunSummary:
     run_id: str
     definition_id: str
@@ -77,6 +132,9 @@ class RunSummary:
     verification_results: tuple[dict[str, Any], ...]
     evidence_references: tuple[EvidenceReference, ...]
     failure_kind: str | None = None
+    definition_version: int | None = None
+    grant_id: str | None = None
+    blocked_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return redact_value(
@@ -87,12 +145,46 @@ class RunSummary:
                 "verification_results": list(self.verification_results),
                 "evidence_references": [asdict(item) for item in self.evidence_references],
                 "failure_kind": self.failure_kind,
+                "definition_version": self.definition_version,
+                "grant_id": self.grant_id,
+                "blocked_reason": self.blocked_reason,
             }
         )
 
 
 class ReadOnlyAdapter(Protocol):
     def __call__(self, definition: AutomationDefinition, run_id: str) -> ToolResult: ...
+
+
+class WriteAdapter(Protocol):
+    def __call__(
+        self,
+        definition: AutomationDefinition,
+        run_id: str,
+        *,
+        secrets: Mapping[str, SecretValue],
+        action: AutomationAction | None,
+    ) -> ToolResult: ...
+
+
+class SecretAdapter(Protocol):
+    def resolve(self, name_or_handle: str) -> SecretValue: ...
+
+
+class MappingSecretAdapter:
+    """Resolves named secrets only at the local execution edge."""
+
+    def __init__(self, secrets: Mapping[str, str]) -> None:
+        self._secrets = dict(secrets)
+
+    def resolve(self, name_or_handle: str) -> SecretValue:
+        name = name_or_handle
+        match = SECRET_REF_RE.fullmatch(name_or_handle)
+        if match:
+            name = match.group(1)
+        if name not in self._secrets:
+            raise KeyError(f"Unknown secret handle: {name}")
+        return SecretValue(name, self._secrets[name])
 
 
 class AutomationApplication:
@@ -193,24 +285,7 @@ class AutomationApplication:
             if event.type != "rpa.definition.version.registered":
                 continue
             value = event.payload["definition_version"]
-            definition = AutomationDefinition(
-                **{
-                    **value["definition"],
-                    "actions": tuple(
-                        AutomationAction(
-                            **{
-                                **action,
-                                "selector": (
-                                    None
-                                    if action["selector"] is None
-                                    else SelectorEvidence(**action["selector"])
-                                ),
-                            }
-                        )
-                        for action in value["definition"]["actions"]
-                    ),
-                }
-            )
+            definition = self._definition_from_payload(value["definition"])
             if definition.definition_id == definition_id:
                 versions.append(
                     DefinitionVersion(
@@ -223,6 +298,51 @@ class AutomationApplication:
                 )
         return tuple(versions)
 
+    def grant_approval(
+        self,
+        *,
+        definition_id: str,
+        version: int,
+        actor: str,
+        target_scope: str,
+        record_scope: str,
+        side_effect_scope: str,
+        expires_at: datetime | str,
+        action_id: str | None = None,
+        governance_gate: bool = False,
+    ) -> ApprovalGrant:
+        """Record an immutable Approval Grant bound to one Definition Version."""
+
+        self._require_writer()
+        definition_version = self._definition_version(definition_id, version)
+        if definition_version is None:
+            raise KeyError(f"Unknown definition version: {definition_id}@{version}")
+        definition = definition_version.definition
+        action_class = self._primary_action_class(definition)
+        if action_class not in ALLOWED_ACTION_CLASSES:
+            raise AuthorityError("missing or invalid action class")
+        if action_class == "R4" and not governance_gate:
+            raise AuthorityError("R4 requires a governance gate")
+        if action_class in WRITE_ACTION_CLASSES and action_class in {"R3", "R4"}:
+            if not target_scope or not record_scope or not side_effect_scope:
+                raise ApprovalError("write approvals require target, record, and side-effect scopes")
+        expiry = expires_at if isinstance(expires_at, str) else expires_at.astimezone(UTC).isoformat()
+        grant = ApprovalGrant(
+            grant_id=f"grant_{uuid4().hex}",
+            definition_id=definition_id,
+            definition_version=version,
+            content_hash=definition_version.content_hash,
+            target_scope=target_scope,
+            record_scope=record_scope,
+            side_effect_scope=side_effect_scope,
+            actor=actor,
+            expires_at=expiry,
+            action_id=action_id or definition.action_id,
+            governance_gate=governance_gate,
+        )
+        self._append("rpa.approval.granted", {"approval_grant": grant.to_dict()})
+        return grant
+
     def execute_read_only(
         self,
         definition_id: str,
@@ -234,13 +354,22 @@ class AutomationApplication:
         if definition is None:
             raise KeyError(f"Unknown automation definition: {definition_id}")
         if not definition.read_only or definition.action_class != "R0":
-            raise ValueError("Only R0 read-only definitions are admitted by this slice")
+            raise AuthorityError("Only R0 read-only definitions are admitted by execute_read_only")
 
         run_id = f"run_{uuid4().hex}"
-        self._append("rpa.run.started", {"run_id": run_id, "definition_id": definition_id})
+        self._append(
+            "rpa.run.started",
+            {"run_id": run_id, "definition_id": definition_id, "read_only": True},
+        )
         self._append(
             "rpa.action.attempted",
-            {"run_id": run_id, "action_id": definition.action_id, "read_only": True},
+            {
+                "run_id": run_id,
+                "action_id": definition.action_id,
+                "read_only": True,
+                "action_class": definition.action_class,
+                "idempotency_scope": definition.idempotency_scope or definition.action_id,
+            },
         )
         try:
             tool_result = adapter(definition, run_id)
@@ -258,31 +387,128 @@ class AutomationApplication:
                 evidence={"error": str(exc)},
             )
 
-        self._append(
-            "rpa.verification.recorded",
-            {
-                "run_id": run_id,
-                "passed": verification.passed,
-                "message": verification.message,
-                "failure_kind": verification.failure_kind,
-                "evidence": verification.evidence,
-            },
-        )
-        reference = self._record_evidence(run_id, tool_result, verification)
-        if verification.passed:
-            self._append(
-                "rpa.run.completed", {"run_id": run_id, "evidence_id": reference.evidence_id}
+        return self._finalize_run(run_id, tool_result, verification)
+
+    def execute_write(
+        self,
+        definition_id: str,
+        *,
+        version: int,
+        grant_id: str,
+        adapter: WriteAdapter,
+        verify: Callable[[ToolResult], VerificationResult],
+        actor: str,
+        secret_adapter: SecretAdapter | None = None,
+        target_scope: str | None = None,
+        record_scope: str | None = None,
+        side_effect_scope: str | None = None,
+        now: datetime | None = None,
+    ) -> RunSummary:
+        """Execute one approval-gated write with at-most-once admission and verification."""
+
+        self._require_writer()
+        definition_version = self._definition_version(definition_id, version)
+        if definition_version is None:
+            raise KeyError(f"Unknown definition version: {definition_id}@{version}")
+        definition = definition_version.definition
+        action_class = self._primary_action_class(definition)
+        if action_class not in ALLOWED_ACTION_CLASSES:
+            raise AuthorityError("missing or invalid action class")
+        if definition.read_only or action_class not in WRITE_ACTION_CLASSES:
+            raise AuthorityError("execute_write admits only write-capable action classes")
+        if action_class in {"R3", "R4"}:
+            grant = self._require_matching_grant(
+                grant_id=grant_id,
+                definition_version=definition_version,
+                actor=actor,
+                action_id=definition.action_id,
+                target_scope=target_scope or definition.target_scope,
+                record_scope=record_scope or definition.record_scope,
+                side_effect_scope=side_effect_scope or definition.side_effect_scope,
+                action_class=action_class,
+                now=now or datetime.now(UTC),
             )
         else:
+            # R1/R2 may run under automatic authority when scopes match the definition.
+            grant = self._approval_grant(grant_id)
+            if grant is not None:
+                grant = self._require_matching_grant(
+                    grant_id=grant_id,
+                    definition_version=definition_version,
+                    actor=actor,
+                    action_id=definition.action_id,
+                    target_scope=target_scope or definition.target_scope,
+                    record_scope=record_scope or definition.record_scope,
+                    side_effect_scope=side_effect_scope or definition.side_effect_scope,
+                    action_class=action_class,
+                    now=now or datetime.now(UTC),
+                )
+            else:
+                raise ApprovalError("approval grant is required for write execution")
+
+        action = self._primary_action(definition)
+        idempotency_scope = (
+            definition.idempotency_scope
+            or f"{definition.definition_id}:{version}:{definition.action_id}:{grant.record_scope}"
+        )
+        if self._write_already_admitted(definition.action_id, idempotency_scope):
+            raise DuplicateWriteError(
+                "write already admitted for run/action/idempotency scope"
+            )
+
+        run_id = f"run_{uuid4().hex}"
+        self._append(
+            "rpa.run.started",
+            {
+                "run_id": run_id,
+                "definition_id": definition_id,
+                "definition_version": version,
+                "content_hash": definition_version.content_hash,
+                "grant_id": grant.grant_id,
+                "read_only": False,
+                "action_class": action_class,
+            },
+        )
+        # Action Attempt must be accepted before external I/O begins.
+        self._append(
+            "rpa.action.attempted",
+            {
+                "run_id": run_id,
+                "action_id": definition.action_id,
+                "read_only": False,
+                "action_class": action_class,
+                "idempotency_scope": idempotency_scope,
+                "grant_id": grant.grant_id,
+            },
+        )
+        secrets = self._resolve_secrets(definition, action, secret_adapter)
+        try:
+            tool_result = adapter(definition, run_id, secrets=secrets, action=action)
             self._append(
-                "rpa.run.failed",
+                "rpa.action.returned",
                 {
                     "run_id": run_id,
-                    "failure_kind": verification.failure_kind or "verification_failed",
-                    "evidence_id": reference.evidence_id,
+                    "value": tool_result.value,
+                    "evidence": tool_result.evidence,
+                    "applied": True,
                 },
             )
-        return self.inspect_run(run_id)
+            verification = verify(tool_result)
+        except Exception as exc:
+            tool_result = ToolResult()
+            verification = VerificationResult(
+                passed=False,
+                message="Write adapter failed",
+                failure_kind="adapter_error",
+                evidence={"error": str(exc)},
+            )
+        return self._finalize_run(
+            run_id,
+            tool_result,
+            verification,
+            definition_version=version,
+            grant_id=grant.grant_id,
+        )
 
     def inspect_run(self, run_id: str) -> RunSummary:
         state = self._project_run(run_id)
@@ -295,6 +521,9 @@ class AutomationApplication:
             verification_results=tuple(state["verifications"]),
             evidence_references=tuple(state["evidence"]),
             failure_kind=state["failure_kind"],
+            definition_version=state.get("definition_version"),
+            grant_id=state.get("grant_id"),
+            blocked_reason=state.get("blocked_reason"),
         )
 
     def _open_workspace_store(self) -> EventStore:
@@ -335,13 +564,204 @@ class AutomationApplication:
         return event_id
 
     def _definition(self, definition_id: str) -> AutomationDefinition | None:
+        for version in reversed(self.definition_versions(definition_id)):
+            return version.definition
         for event in self._store.iter_events():
             if event.type != "rpa.definition.registered":
                 continue
             payload = event.payload["definition"]
             if payload["definition_id"] == definition_id:
-                return AutomationDefinition(**payload)
+                return self._definition_from_payload(payload)
         return None
+
+    def _definition_version(self, definition_id: str, version: int) -> DefinitionVersion | None:
+        for item in self.definition_versions(definition_id):
+            if item.version == version:
+                return item
+        return None
+
+    def _approval_grant(self, grant_id: str) -> ApprovalGrant | None:
+        for event in self._store.iter_events():
+            if event.type != "rpa.approval.granted":
+                continue
+            payload = event.payload["approval_grant"]
+            if payload["grant_id"] == grant_id:
+                return ApprovalGrant(**payload)
+        return None
+
+    def _require_matching_grant(
+        self,
+        *,
+        grant_id: str,
+        definition_version: DefinitionVersion,
+        actor: str,
+        action_id: str,
+        target_scope: str,
+        record_scope: str,
+        side_effect_scope: str,
+        action_class: str,
+        now: datetime,
+    ) -> ApprovalGrant:
+        grant = self._approval_grant(grant_id)
+        if grant is None:
+            raise ApprovalError("approval grant not found")
+        if grant.definition_id != definition_version.definition.definition_id:
+            raise ApprovalError("approval grant definition mismatch")
+        if grant.definition_version != definition_version.version:
+            raise ApprovalError("approval grant version mismatch")
+        if grant.content_hash != definition_version.content_hash:
+            raise ApprovalError("approval grant content hash mismatch")
+        if grant.actor != actor:
+            raise ApprovalError("approval grant actor mismatch")
+        if grant.action_id != action_id:
+            raise ApprovalError("approval grant action mismatch")
+        if grant.target_scope != target_scope:
+            raise ApprovalError("approval grant target scope mismatch")
+        if grant.record_scope != record_scope:
+            raise ApprovalError("approval grant record scope mismatch")
+        if grant.side_effect_scope != side_effect_scope:
+            raise ApprovalError("approval grant side-effect scope mismatch")
+        expires_at = datetime.fromisoformat(grant.expires_at)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if now >= expires_at:
+            raise ApprovalError("approval grant expired")
+        if action_class == "R4" and not grant.governance_gate:
+            raise AuthorityError("R4 requires a governance gate")
+        return grant
+
+    def _write_already_admitted(self, action_id: str, idempotency_scope: str) -> bool:
+        for event in self._store.iter_events():
+            if event.type != "rpa.action.attempted":
+                continue
+            payload = event.payload
+            if payload.get("read_only"):
+                continue
+            if (
+                payload.get("action_id") == action_id
+                and payload.get("idempotency_scope") == idempotency_scope
+            ):
+                return True
+        return False
+
+    def _resolve_secrets(
+        self,
+        definition: AutomationDefinition,
+        action: AutomationAction | None,
+        secret_adapter: SecretAdapter | None,
+    ) -> dict[str, SecretValue]:
+        names = list(definition.credential_names)
+        if action is not None:
+            names.extend(action.credential_names)
+            for value in action.inputs.values():
+                if isinstance(value, str):
+                    match = SECRET_REF_RE.fullmatch(value)
+                    if match:
+                        names.append(match.group(1))
+        unique = tuple(dict.fromkeys(names))
+        if not unique:
+            return {}
+        if secret_adapter is None:
+            raise AuthorityError("secret adapter is required for credential-backed writes")
+        resolved: dict[str, SecretValue] = {}
+        for name in unique:
+            secret = secret_adapter.resolve(name)
+            if not isinstance(secret, SecretValue):
+                raise AuthorityError("secret adapter must return SecretValue handles")
+            # Agent-facing surfaces never receive plaintext; only the edge keeps SecretValue.
+            resolved[name] = secret
+        return resolved
+
+    def _finalize_run(
+        self,
+        run_id: str,
+        tool_result: ToolResult,
+        verification: VerificationResult,
+        *,
+        definition_version: int | None = None,
+        grant_id: str | None = None,
+    ) -> RunSummary:
+        self._append(
+            "rpa.verification.recorded",
+            {
+                "run_id": run_id,
+                "passed": verification.passed,
+                "message": verification.message,
+                "failure_kind": verification.failure_kind,
+                "evidence": verification.evidence,
+            },
+        )
+        reference = self._record_evidence(run_id, tool_result, verification)
+        if verification.passed:
+            self._append(
+                "rpa.run.completed",
+                {
+                    "run_id": run_id,
+                    "evidence_id": reference.evidence_id,
+                    "definition_version": definition_version,
+                    "grant_id": grant_id,
+                },
+            )
+        else:
+            self._append(
+                "rpa.run.failed",
+                {
+                    "run_id": run_id,
+                    "failure_kind": verification.failure_kind or "verification_failed",
+                    "evidence_id": reference.evidence_id,
+                    "definition_version": definition_version,
+                    "grant_id": grant_id,
+                },
+            )
+        return self.inspect_run(run_id)
+
+    @staticmethod
+    def _primary_action(definition: AutomationDefinition) -> AutomationAction | None:
+        for action in definition.actions:
+            if action.action_id == definition.action_id:
+                return action
+        return definition.actions[0] if definition.actions else None
+
+    @staticmethod
+    def _primary_action_class(definition: AutomationDefinition) -> str:
+        action = None
+        for item in definition.actions:
+            if item.action_id == definition.action_id:
+                action = item
+                break
+        if action is None and definition.actions:
+            action = definition.actions[0]
+        if action is not None:
+            if not action.action_class:
+                raise AuthorityError("missing or invalid action class")
+            return action.action_class
+        if not definition.action_class:
+            raise AuthorityError("missing or invalid action class")
+        return definition.action_class
+
+    @staticmethod
+    def _definition_from_payload(payload: Mapping[str, Any]) -> AutomationDefinition:
+        value = dict(payload)
+        actions = value.get("actions", ())
+        value["actions"] = tuple(
+            action
+            if isinstance(action, AutomationAction)
+            else AutomationAction(
+                **{
+                    **action,
+                    "selector": (
+                        None
+                        if action.get("selector") is None
+                        else SelectorEvidence(**action["selector"])
+                    ),
+                    "credential_names": tuple(action.get("credential_names", ())),
+                    "inputs": dict(action.get("inputs", {})),
+                }
+            )
+            for action in actions
+        )
+        value["credential_names"] = tuple(value.get("credential_names", ()))
+        return AutomationDefinition(**value)
 
     @staticmethod
     def _validate_definition(definition: AutomationDefinition) -> None:
@@ -349,8 +769,13 @@ class AutomationApplication:
             raise ValueError(
                 "Automation definitions require an id, name, and explicit success check"
             )
-        if not definition.read_only or definition.action_class != "R0":
-            raise ValueError("The first slice accepts only read-only R0 definitions")
+        if definition.action_class not in ALLOWED_ACTION_CLASSES:
+            raise AuthorityError("missing or invalid action class")
+        if definition.read_only != (definition.action_class == "R0"):
+            raise AuthorityError("missing or invalid action class")
+        for action in definition.actions:
+            if action.action_class not in ALLOWED_ACTION_CLASSES:
+                raise AuthorityError("missing or invalid action class")
 
     @staticmethod
     def _validate_budget(budget: ProposalBudget) -> None:
@@ -399,6 +824,9 @@ class AutomationApplication:
                     "verifications": [],
                     "evidence": [],
                     "failure_kind": None,
+                    "definition_version": payload.get("definition_version"),
+                    "grant_id": payload.get("grant_id"),
+                    "blocked_reason": None,
                 }
             elif state is not None and payload.get("run_id") == run_id:
                 if event.type == "rpa.verification.recorded":
@@ -416,4 +844,8 @@ class AutomationApplication:
                 elif event.type == "rpa.run.failed":
                     state["status"] = "failed"
                     state["failure_kind"] = payload["failure_kind"]
+                elif event.type == "rpa.run.blocked":
+                    state["status"] = "blocked"
+                    state["blocked_reason"] = payload.get("reason")
+                    state["failure_kind"] = payload.get("failure_kind")
         return state

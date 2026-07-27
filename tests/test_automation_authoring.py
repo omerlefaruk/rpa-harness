@@ -108,7 +108,7 @@ def test_application_authors_with_fake_adapters_and_registers_immutable_versions
             proposal(intent=intent(unresolved_business_ambiguities=("which warehouse?",))),
             "ambiguity",
         ),
-        (proposal(intent=intent(required_capabilities=("write",))), "unknown capabilities"),
+        (proposal(intent=intent(required_capabilities=("shell",))), "unknown capabilities"),
         (
             proposal(
                 definition=AutomationDefinition(
@@ -117,6 +117,22 @@ def test_application_authors_with_fake_adapters_and_registers_immutable_versions
                     success_check="present",
                     actions=(
                         AutomationAction("bad", "read", "W1", "present"),
+                    ),
+                )
+            ),
+            "invalid action class",
+        ),
+        (
+            proposal(
+                definition=AutomationDefinition(
+                    definition_id="bad-write-class",
+                    name="Bad write",
+                    success_check="present",
+                    read_only=False,
+                    action_class="R0",
+                    action_id="write",
+                    actions=(
+                        AutomationAction("write", "write", "R0", "present"),
                     ),
                 )
             ),
