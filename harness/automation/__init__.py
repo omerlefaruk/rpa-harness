@@ -1,9 +1,14 @@
 """ActiveGraph-native automation application seam."""
 
 from harness.automation.application import (
+    ApprovalError,
+    ApprovalGrant,
+    AuthorityError,
     AutomationApplication,
     AutomationDefinition,
+    DuplicateWriteError,
     EvidenceReference,
+    MappingSecretAdapter,
     RunSummary,
     ToolResult,
     VerificationResult,
@@ -34,6 +39,9 @@ from harness.automation.workspace_runtime import (
 )
 
 __all__ = [
+    "ApprovalError",
+    "ApprovalGrant",
+    "AuthorityError",
     "AutomationApplication",
     "AutomationAction",
     "AutomationDefinition",
@@ -42,7 +50,9 @@ __all__ = [
     "DefinitionVersion",
     "DiscoveryAdapter",
     "DiscoveryEvidence",
+    "DuplicateWriteError",
     "EvidenceReference",
+    "MappingSecretAdapter",
     "RunSummary",
     "ProposalBudget",
     "ProposalModelAdapter",
