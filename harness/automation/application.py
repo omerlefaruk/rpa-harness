@@ -69,6 +69,27 @@ class DuplicateWriteError(RuntimeError):
         super().__init__(f"{self.code}: {message}")
 
 
+class AmbiguousWriteError(RuntimeError):
+    """Raised when a write adapter cannot prove applied-or-not-applied."""
+
+    code = "automation_write_unknown"
+
+    def __init__(self, message: str, *, evidence: Mapping[str, Any] | None = None) -> None:
+        self.message = message
+        self.evidence = dict(evidence or {})
+        super().__init__(f"{self.code}: {message}")
+
+
+class ReconciliationError(RuntimeError):
+    """Raised when reconciliation is invalid or still unresolved for unattended work."""
+
+    code = "automation_reconciliation_invalid"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"{self.code}: {message}")
+
+
 class BudgetExhaustedError(RuntimeError):
     """Raised when a run budget dimension is exhausted."""
 
@@ -140,6 +161,15 @@ class AutomationDefinition:
 class ToolResult:
     value: dict[str, Any] = field(default_factory=dict)
     evidence: dict[str, Any] = field(default_factory=dict)
+    # Write adapters set applied|unknown; reads leave None.
+    write_outcome: str | None = None
+
+
+@dataclass(frozen=True)
+class ReconciliationResult:
+    conclusion: str  # applied | not_applied | still_unknown
+    evidence: dict[str, Any] = field(default_factory=dict)
+    message: str = ""
 
 
 @dataclass(frozen=True)
@@ -761,30 +791,176 @@ class AutomationApplication:
         secrets = self._resolve_secrets(definition, action, secret_adapter)
         try:
             tool_result = adapter(definition, run_id, secrets=secrets, action=action)
-            self._append(
-                "rpa.action.returned",
-                {
-                    "run_id": run_id,
-                    "value": tool_result.value,
-                    "evidence": tool_result.evidence,
-                    "applied": True,
-                },
+        except AmbiguousWriteError as exc:
+            tool_result = ToolResult(
+                evidence=dict(exc.evidence),
+                write_outcome="unknown",
             )
-            verification = verify(tool_result)
         except Exception as exc:
-            tool_result = ToolResult()
-            verification = VerificationResult(
-                passed=False,
-                message="Write adapter failed",
-                failure_kind="adapter_error",
+            tool_result = ToolResult(
                 evidence={"error": str(exc)},
+                write_outcome="unknown"
+                if self._looks_like_transport_or_timeout(exc)
+                else "failed",
             )
+            if tool_result.write_outcome != "unknown":
+                verification = VerificationResult(
+                    passed=False,
+                    message="Write adapter failed",
+                    failure_kind="adapter_error",
+                    evidence={"error": str(exc)},
+                )
+                return self._finalize_run(
+                    run_id,
+                    tool_result,
+                    verification,
+                    definition_version=version,
+                    grant_id=grant.grant_id,
+                )
+
+        outcome = tool_result.write_outcome or "applied"
+        if outcome == "unknown":
+            return self._mark_needs_reconciliation(
+                run_id,
+                tool_result,
+                definition_version=version,
+                grant_id=grant.grant_id,
+                action_id=definition.action_id,
+                idempotency_scope=idempotency_scope,
+                reason="write outcome unknown; applied-or-not-applied not proven",
+            )
+
+        self._append(
+            "rpa.action.returned",
+            {
+                "run_id": run_id,
+                "value": tool_result.value,
+                "evidence": tool_result.evidence,
+                "applied": True,
+                "write_outcome": outcome,
+            },
+        )
+        verification = verify(tool_result)
         return self._finalize_run(
             run_id,
             tool_result,
             verification,
             definition_version=version,
             grant_id=grant.grant_id,
+        )
+
+    def reconcile(
+        self,
+        run_id: str,
+        *,
+        read_probe: Callable[[], ToolResult],
+        conclude: Callable[[ToolResult], ReconciliationResult],
+        verify: Callable[[ToolResult], VerificationResult] | None = None,
+    ) -> RunSummary:
+        """Resolve an ambiguous write using only read-only evidence."""
+
+        self._require_writer()
+        state = self._project_run(run_id)
+        if state is None:
+            raise KeyError(f"Unknown run: {run_id}")
+        if state["status"] != "needs_reconciliation":
+            raise ReconciliationError("run is not waiting for reconciliation")
+
+        try:
+            observed = read_probe()
+        except Exception as exc:
+            observed = ToolResult(evidence={"error": str(exc)}, write_outcome="unknown")
+        if not isinstance(observed, ToolResult):
+            raise TypeError("reconciliation read probe must return ToolResult")
+
+        result = conclude(observed)
+        if not isinstance(result, ReconciliationResult):
+            raise TypeError("conclude must return ReconciliationResult")
+        if result.conclusion not in {"applied", "not_applied", "still_unknown"}:
+            raise ReconciliationError("invalid reconciliation conclusion")
+
+        self._append(
+            "rpa.reconciliation.recorded",
+            {
+                "run_id": run_id,
+                "conclusion": result.conclusion,
+                "message": result.message,
+                "evidence": result.evidence,
+                "action_id": state.get("action_id"),
+                "idempotency_scope": state.get("idempotency_scope"),
+            },
+        )
+        reference = self._record_evidence(
+            run_id,
+            observed,
+            VerificationResult(
+                passed=result.conclusion == "applied",
+                message=result.message or result.conclusion,
+                failure_kind=None
+                if result.conclusion == "applied"
+                else "needs_reconciliation",
+                evidence=result.evidence,
+            ),
+        )
+
+        if result.conclusion == "still_unknown":
+            self._append(
+                "rpa.run.failed",
+                {
+                    "run_id": run_id,
+                    "failure_kind": "still_unknown",
+                    "evidence_id": reference.evidence_id,
+                    "status": "needs_reconciliation",
+                },
+            )
+            # Remain terminal for unattended execution.
+            self._append(
+                "rpa.run.needs_reconciliation",
+                {
+                    "run_id": run_id,
+                    "reason": "reconciliation still unknown",
+                    "terminal": True,
+                    "evidence_id": reference.evidence_id,
+                },
+            )
+            return self.inspect_run(run_id)
+
+        if result.conclusion == "not_applied":
+            self._append(
+                "rpa.reconciliation.not_applied",
+                {
+                    "run_id": run_id,
+                    "action_id": state.get("action_id"),
+                    "idempotency_scope": state.get("idempotency_scope"),
+                    "authorizes_retry": True,
+                    "evidence_id": reference.evidence_id,
+                },
+            )
+            self._append(
+                "rpa.run.failed",
+                {
+                    "run_id": run_id,
+                    "failure_kind": "not_applied",
+                    "evidence_id": reference.evidence_id,
+                },
+            )
+            return self.inspect_run(run_id)
+
+        # Applied: proceed to verification without another write.
+        if verify is None:
+            raise ReconciliationError("applied reconciliation requires verify callback")
+        synthetic = ToolResult(
+            value=observed.value or {"reconciled": "applied"},
+            evidence={**observed.evidence, **result.evidence},
+            write_outcome="applied",
+        )
+        verification = verify(synthetic)
+        return self._finalize_run(
+            run_id,
+            synthetic,
+            verification,
+            definition_version=state.get("definition_version"),
+            grant_id=state.get("grant_id"),
         )
 
     def inspect_run(self, run_id: str) -> RunSummary:
@@ -912,18 +1088,89 @@ class AutomationApplication:
         return grant
 
     def _write_already_admitted(self, action_id: str, idempotency_scope: str) -> bool:
+        """True when a write is still admitted and not cleared by not_applied reconciliation."""
+
+        admitted = False
         for event in self._store.iter_events():
-            if event.type != "rpa.action.attempted":
-                continue
             payload = event.payload
-            if payload.get("read_only"):
-                continue
-            if (
-                payload.get("action_id") == action_id
-                and payload.get("idempotency_scope") == idempotency_scope
-            ):
-                return True
-        return False
+            if event.type == "rpa.action.attempted":
+                if payload.get("read_only"):
+                    continue
+                if (
+                    payload.get("action_id") == action_id
+                    and payload.get("idempotency_scope") == idempotency_scope
+                ):
+                    admitted = True
+            elif event.type == "rpa.reconciliation.not_applied":
+                if (
+                    payload.get("action_id") == action_id
+                    and payload.get("idempotency_scope") == idempotency_scope
+                    and payload.get("authorizes_retry")
+                ):
+                    admitted = False
+        return admitted
+
+    def _mark_needs_reconciliation(
+        self,
+        run_id: str,
+        tool_result: ToolResult,
+        *,
+        definition_version: int | None,
+        grant_id: str | None,
+        action_id: str,
+        idempotency_scope: str,
+        reason: str,
+    ) -> RunSummary:
+        self._append(
+            "rpa.action.returned",
+            {
+                "run_id": run_id,
+                "value": tool_result.value,
+                "evidence": tool_result.evidence,
+                "applied": None,
+                "write_outcome": "unknown",
+            },
+        )
+        reference = self._record_evidence(
+            run_id,
+            tool_result,
+            VerificationResult(
+                passed=False,
+                message=reason,
+                failure_kind="needs_reconciliation",
+                evidence=tool_result.evidence,
+            ),
+        )
+        self._append(
+            "rpa.run.needs_reconciliation",
+            {
+                "run_id": run_id,
+                "reason": reason,
+                "evidence_id": reference.evidence_id,
+                "definition_version": definition_version,
+                "grant_id": grant_id,
+                "action_id": action_id,
+                "idempotency_scope": idempotency_scope,
+                "terminal": False,
+            },
+        )
+        return self.inspect_run(run_id)
+
+    @staticmethod
+    def _looks_like_transport_or_timeout(exc: Exception) -> bool:
+        text = f"{type(exc).__name__}: {exc}".lower()
+        markers = (
+            "timeout",
+            "timed out",
+            "transport",
+            "connection reset",
+            "connection aborted",
+            "broken pipe",
+            "process interrupted",
+            "malformed",
+            "incomplete response",
+        )
+        return any(marker in text for marker in markers)
 
     def _resolve_secrets(
         self,
@@ -1182,6 +1429,9 @@ class AutomationApplication:
                     "next_required": None,
                     "budget_usage": {},
                     "transition_fingerprints": [],
+                    "action_id": None,
+                    "idempotency_scope": None,
+                    "reconciliation": None,
                 }
             elif state is not None and payload.get("run_id") == run_id:
                 if event.type == "rpa.verification.recorded":
@@ -1197,7 +1447,9 @@ class AutomationApplication:
                 elif event.type == "rpa.run.completed":
                     state["status"] = "completed"
                 elif event.type == "rpa.run.failed":
-                    state["status"] = "failed"
+                    # still_unknown keeps needs_reconciliation terminal semantics via later event
+                    if payload.get("failure_kind") != "still_unknown":
+                        state["status"] = "failed"
                     state["failure_kind"] = payload["failure_kind"]
                 elif event.type == "rpa.run.blocked":
                     state["status"] = "blocked"
@@ -1206,6 +1458,21 @@ class AutomationApplication:
                     state["exhausted_budget"] = payload.get("exhausted_budget")
                     state["last_transition"] = payload.get("last_transition")
                     state["next_required"] = payload.get("next_required")
+                elif event.type == "rpa.run.needs_reconciliation":
+                    state["status"] = "needs_reconciliation"
+                    state["failure_kind"] = "needs_reconciliation"
+                    state["blocked_reason"] = payload.get("reason")
+                    state["action_id"] = payload.get("action_id") or state.get("action_id")
+                    state["idempotency_scope"] = payload.get("idempotency_scope") or state.get(
+                        "idempotency_scope"
+                    )
+                    if payload.get("terminal"):
+                        state["next_required"] = "human inspection; unattended execution stopped"
+                elif event.type == "rpa.action.attempted":
+                    state["action_id"] = payload.get("action_id")
+                    state["idempotency_scope"] = payload.get("idempotency_scope")
+                elif event.type == "rpa.reconciliation.recorded":
+                    state["reconciliation"] = payload.get("conclusion")
                 elif event.type == "rpa.transition.admitted":
                     state["budget_usage"] = dict(payload.get("budget_usage") or {})
                     state["last_transition"] = payload.get("fingerprint")
