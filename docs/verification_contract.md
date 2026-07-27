@@ -1,12 +1,14 @@
 # Verification Contract
 
-Every automation step must prove success. An action executing does not mean it succeeded.
+Every automation action must prove success. An action executing does not mean it succeeded.
+
+> **ActiveGraph lifecycle SoT:** Verification Results are recorded in the EventStore by `AutomationApplication`. Proposal admission fails closed without explicit success checks. Capability ports return `ToolResult` only; verification is application-owned. The historical YAML `success_check` tables below remain useful catalogs for check *types*; production runtime is ActiveGraph, not the retired YAML runner.
 
 ## Rule
 
-A step is successful only when ALL its `success_check` entries pass.
+An action/definition is successful only when its explicit verification / `success_check` criteria pass.
 
-Missing `success_check` fails validation unless the step is `type: no_op` and explicitly sets `allow_without_success_check: true`.
+Missing success checks fail validation unless the action is an explicitly allowed no-op.
 
 ## Supported Check Types
 

@@ -1,8 +1,10 @@
 # YAML Legacy Migration
 
-Legacy flat workflows still load through the runner, but new workflows should use the default phase-based schema.
+> **RETIRED AS PRODUCTION RUNTIME (2026-07-27).** The YAML runner and `--migrate-workflow` CLI path are removed from the product surface. This document is historical archive only. Migrate business intent into ActiveGraph Automation Proposals instead of phase YAML. See `docs/adr/ADR-0001-yaml-runtime-retired.md` and `.agents/skills/rpa-harness-automation-builder`.
 
-Migrate a legacy workflow:
+~~Historical note:~~ legacy flat workflows once migrated to phase-based schema via:
+
+Migrate a legacy workflow (historical command — no longer in CLI):
 
 ```bash
 python main.py --migrate-workflow workflows/examples/minimal_example.yaml --workflow-output workflows/examples/minimal_example.schema.yaml --migration-report migration_report.md

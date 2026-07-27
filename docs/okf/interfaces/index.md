@@ -2,4 +2,4 @@
 
 ## Concepts
 
-* [rpa-harness CLI](cli.md) - Command surface for validating, preflighting, running, reporting, and maintaining automation workflows.
+* [rpa-harness CLI](cli.md) - ActiveGraph-only command surface for workspace, proposal, approval, execute, inspect, reconcile, and repair operations.

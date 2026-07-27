@@ -62,20 +62,44 @@ def capability_op_from_dict(data: dict[str, Any]) -> CapabilityOp:
 
 
 def build_executor(port: str = "fake_browser") -> CapabilityExecutor:
-    """Default ports are deterministic fakes so agents can loop without real drivers.
+    """Build a CapabilityExecutor for the named port.
 
-    Production can later inject real Playwright/UIA ports with the same CapabilityOp
-    shape; MCP still never gets a raw driver tool.
+    Fake ports (default for agent loops / CI):
+      fake_browser, fake_api, fake_excel, fake_desktop
+
+    Real ports (production hosts; optional driver deps):
+      browser → SyncPlaywrightBrowserPort
+      api → HttpApiPort
+      excel → ExcelFilePort
+      desktop → DesktopUiaPort
+
+    MCP/CLI never expose raw drivers; they only select these named ports.
     """
 
-    if port in {"fake_browser", "browser"}:
+    if port == "fake_browser":
         return CapabilityExecutor(browser=FakeBrowser())
-    if port in {"fake_api", "api"}:
+    if port == "fake_api":
         return CapabilityExecutor(api=FakeApi())
-    if port in {"fake_excel", "excel"}:
+    if port == "fake_excel":
         return CapabilityExecutor(excel=FakeExcel())
-    if port in {"fake_desktop", "desktop"}:
+    if port == "fake_desktop":
         return CapabilityExecutor(desktop=FakeDesktop())
+    if port == "browser":
+        from harness.automation.ports import SyncPlaywrightBrowserPort
+
+        return CapabilityExecutor(browser=SyncPlaywrightBrowserPort())
+    if port == "api":
+        from harness.automation.ports import HttpApiPort
+
+        return CapabilityExecutor(api=HttpApiPort())
+    if port == "excel":
+        from harness.automation.ports import ExcelFilePort
+
+        return CapabilityExecutor(excel=ExcelFilePort())
+    if port == "desktop":
+        from harness.automation.ports import DesktopUiaPort
+
+        return CapabilityExecutor(desktop=DesktopUiaPort())
     raise ValueError(f"unsupported capability port: {port}")
 
 

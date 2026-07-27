@@ -77,4 +77,4 @@ Not exposed: `shell`, `exec`, `run_python`, raw driver clicks, YAML `run`/`valid
 }
 ```
 
-Default `port` values use deterministic fakes (`fake_browser`, `fake_api`, `fake_excel`, `fake_desktop`) so agents can complete loops in CI. Real drivers can share the same `op` schema later without adding MCP escape hatches.
+Default `port` values use deterministic fakes (`fake_browser`, `fake_api`, `fake_excel`, `fake_desktop`) so agents can complete loops in CI. Real adapters share the same `op` schema: `browser` (Playwright sync), `api` (httpx), `excel` (openpyxl), `desktop` (pywinauto UIA). MCP still never exposes raw drivers.

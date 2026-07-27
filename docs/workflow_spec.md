@@ -1,6 +1,8 @@
 # Workflow Specification
 
-A workflow is a YAML file describing an automation.
+> **RETIRED AS PRODUCTION RUNTIME (2026-07-27).** YAML is not the ActiveGraph product path. Production authoring uses Automation Proposal JSON via `AutomationApplication` / `--automation-*` CLI / MCP. This document is historical archive for import/reference only. See `docs/adr/ADR-0001-yaml-runtime-retired.md` and `docs/architecture.md`.
+
+A (legacy) workflow is a YAML file describing an automation.
 
 ## Required Top-Level Fields
 

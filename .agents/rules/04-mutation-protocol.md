@@ -5,9 +5,8 @@
 - `AGENTS.md`
 - `.agents/rules/`
 - `.agents/skills/`
-- `harness/core/`
-- `harness/orchestrator.py`
-- `harness/resilience/`
+- `harness/automation/` (lifecycle, EventStore binding, capability admission)
+- `harness/security.py`
 - `docs/credential_policy.md`
 - `docs/mutation_protocol.md`
 
@@ -23,6 +22,7 @@
 ## Self-Improvement Gate
 
 No self-improvement enters the harness unless:
+
 1. The failure is reproduced
 2. The root cause is stated
 3. A test is added or updated

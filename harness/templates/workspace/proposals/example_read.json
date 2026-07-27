@@ -1,0 +1,38 @@
+{
+  "proposal_id": "example-read-1",
+  "intent": {
+    "intent_id": "example-intent-read",
+    "name": "Read inventory count",
+    "objective": "Return the inventory count for operator inspection",
+    "required_capabilities": ["read"]
+  },
+  "discovery": {
+    "evidence_id": "example-discovery-1",
+    "selectors": [
+      {
+        "strategy": "role",
+        "locator": "inventory count",
+        "verified": true
+      }
+    ],
+    "observed_capabilities": ["read"]
+  },
+  "definition": {
+    "definition_id": "inventory-read",
+    "name": "Read inventory",
+    "success_check": "inventory count is present",
+    "actions": [
+      {
+        "action_id": "read-inventory",
+        "capability": "read",
+        "action_class": "R0",
+        "success_check": "inventory count is present",
+        "selector": {
+          "strategy": "role",
+          "locator": "inventory count",
+          "verified": true
+        }
+      }
+    ]
+  }
+}

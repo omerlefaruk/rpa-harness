@@ -1,16 +1,16 @@
-"""
-Pytest fixtures for RPA Harness.
-Provides Playwright driver, Windows UIA driver, API client,
-vision engine and agent instances.
-"""
+"""Pytest fixtures for RPA Harness drivers and helpers."""
+
+from __future__ import annotations
+
+import os
 
 import pytest
-import os
 
 
 @pytest.fixture
 def harness_config():
     from harness.config import HarnessConfig
+
     return HarnessConfig.from_env()
 
 
@@ -30,6 +30,7 @@ def windows_driver(harness_config):
     driver = WindowsUIDriver(config=harness_config)
     yield driver
     import asyncio
+
     asyncio.get_event_loop().run_until_complete(driver.close())
 
 
@@ -44,26 +45,10 @@ async def api_driver(harness_config):
 
 
 @pytest.fixture
-def vision_engine(harness_config):
-    from harness.ai.vision import VisionEngine
-
-    return VisionEngine(config=harness_config)
-
-
-@pytest.fixture
-def agent(harness_config, playwright_driver):
-    from harness.ai.agent import RPAAgent
-
-    return RPAAgent(
-        config=harness_config,
-        playwright_driver=playwright_driver,
-    )
-
-
-@pytest.fixture
 def excel_handler():
-    from harness.rpa.excel import ExcelHandler
     import tempfile
+
+    from harness.rpa.excel import ExcelHandler
 
     path = os.path.join(tempfile.gettempdir(), "test_rpa.xlsx")
     excel = ExcelHandler(path)

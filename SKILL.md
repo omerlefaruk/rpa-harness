@@ -1,86 +1,54 @@
 ---
 name: rpa-harness
 description: >
-  AI-powered RPA automation harness for Playwright browser automation,
-  Windows UIAutomation (desktop), API integrations, Excel-driven workflows,
-  agentic AI loop, and evidence artifacts.
-  Use when: automating web apps, desktop apps, writing test suites,
-  running UI validations, creating terminal YAML workflows, or inspecting run artifacts.
+  ActiveGraph-native RPA product for browser, desktop, API, and Excel capability ports
+  with EventStore lifecycle authority, MCP agent loop, and evidence exports.
+  Use when: authoring Automation Proposals, validating/registering definitions,
+  approval-gated writes, inspect/export evidence, reconcile, or repair forks.
 ---
 
-# RPA Harness
+# RPA Harness (product card)
 
-## When to Activate
+Thin entry skill for the **ActiveGraph-native** product. Canonical authoring procedures live in:
 
-- Browser automation (Playwright — clicks, form fills, navigation, data extraction)
-- Desktop automation (Windows UIAutomation — app launch, UI tree walking, element interaction)
-- API integration testing (REST, GraphQL via httpx)
-- RPA workflows (Excel-driven data processing with mismatch detection)
-- Agentic AI execution (natural language task → autonomous execution with tools)
-- Evidence-backed run inspection (timeline, manifest, reports, bundles, repair packets)
+**`.agents/skills/rpa-harness-automation-builder`**
 
-## Core Architecture
+Do not reintroduce YAML runner, DSL, or copilot loops. Enforcement stays in `harness.automation`; skills are playbooks only.
 
-```
-YAML workflow runtime
-├── validates workflow schema and rulebook fields
-├── runs explicit browser, desktop, API, Excel, and no-op actions
-├── verifies every executable step with success checks
-├── writes timeline.jsonl, run_manifest.json, report.html, evidence_bundle.json, and repair_packet.json
-└── supports repair, retry, preflight, audit, graph, and run-inspection commands
+## When to activate
 
-Drivers
-├── PlaywrightDriver   (browser: goto, click, fill, extract, screenshot)
-├── WindowsUIDriver    (desktop: launch_app, click, type_keys, dump_tree, screenshot)
-└── APIDriver          (REST: get, post, put, delete, graphql)
+- Draft / validate / register Automation Proposals
+- Grant approval and execute read or write via capability ports
+- Inspect runs and export evidence from EventStore
+- Reconcile ambiguous writes; propose / trial / promote repairs
+- Browser or desktop discovery (stable selectors; weak strategies last)
 
-AI-assisted surfaces
-├── Copilot/autopilot builder sessions for drafting and repairing YAML
-├── Selector swarm discovery for browser selectors
-├── Desktop AI assist for governed inspect/draft/repair flows
-└── Evidence-backed run inspection from local artifacts
+## Architecture (one glance)
+
+```text
+MCP / CLI --automation-*  →  AutomationApplication  →  EventStore
+                              ↓
+                         capability ports (ToolResult)
+                              ↓
+                         drivers as adapters
 ```
 
-## Quick Start
+## Quick commands
 
 ```bash
-# Install
-python -m pip install -e ".[test]"
-python -m playwright install chromium
-
-# Validate and run YAML
-python main.py --validate-yaml workflows/examples/default_schema_example.yaml
-python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
-python main.py --run-yaml workflows/examples/minimal_example.yaml
+python main.py --automation-list-operations
+python main.py --automation-init-workspace .rpa-automation
+python main.py --automation-validate-proposal proposal.json
+python main.py --automation-register-proposal proposal.json --automation-workspace .rpa-automation
+python main.py --automation-inspect RUN_ID --automation-workspace .rpa-automation
+npx rpa-harness-agent mcp
+python scripts/okf.py validate docs/okf
 ```
 
-## Writing YAML Workflows
+## Pointers
 
-```yaml
-id: my_workflow
-name: My Workflow
-version: "0.1.0"
-type: browser
-description: Open a page and verify it loaded.
-inputs:
-  target_url: "https://example.com"
-steps:
-  - id: open_page
-    description: Open target page.
-    action:
-      type: browser.goto
-      url: "${inputs.target_url}"
-    success_check:
-      - type: url_contains
-        value: "example.com"
-```
-
-## CLI Reference
-
-```bash
-python main.py --validate-yaml workflows/examples/default_schema_example.yaml
-python main.py --preflight-yaml workflows/examples/default_schema_example.yaml
-python main.py --run-yaml workflows/examples/minimal_example.yaml
-python main.py --runs-list
-python main.py --runs-show RUN_ID
-```
+- Selector ladders: `.agents/skills/selector-strategies`
+- Failure terminal states: `.agents/skills/error-recovery`
+- Domain glossary: `CONTEXT.md`
+- ADRs: `docs/adr/`
+- Agent rules: `AGENTS.md`

@@ -1,18 +1,21 @@
 # Evidence and Repair
 
-Repair starts with evidence, not guesses.
+> **ActiveGraph lifecycle SoT:** the EventStore is lifecycle authority. Use `inspect` / `export_evidence` first. Filesystem bundles and HTML reports are projections/exports, not a second source of truth.
 
-## Inspect these files
+Repair starts with evidence, not guesses. Prefer propose → trial (fork) → promote repair ops over patching live Definition Versions.
 
-- `run_manifest.json`
-- `timeline.jsonl`
-- `preflight.json`
-- `records.jsonl`
-- `evidence_bundle.json`
-- `selector_evidence.json`
-- `repair_packet.json`
-- `report.html`
-- screenshots, DOM snapshots, UIA snapshots, API previews, logs
+## Inspect these surfaces
+
+- EventStore projections via `--automation-inspect` / MCP `inspect_automation_run`
+- Evidence exports via `--automation-export-evidence`
+- `evidence_bundle.json` / selector evidence / screenshots when exported
+- `repair` proposal/trial records in the EventStore
+- `report.html` when an operator export is present
+- DOM / UIA / API artifacts where available
+
+### Historical YAML-era filenames (archive / export only)
+
+- `run_manifest.json`, `timeline.jsonl`, `preflight.json`, `records.jsonl`, `repair_packet.json`
 
 ## Harness bug vs workflow bug
 

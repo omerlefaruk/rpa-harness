@@ -3,28 +3,25 @@
 ## Before Committing
 
 ```bash
-# Syntax check
 python -m compileall -q harness scripts tools
-
-# Lint (if ruff installed)
+# if ruff installed:
 ruff check harness tests main.py
 ```
 
 ## Rules to Enforce
 
-1. **No hardcoded paths**: Use YAML inputs/config variables or environment variables
-2. **No hardcoded credentials**: Never commit `API_KEY`, `password`, `token`
-3. **Explicit success checks**: Every executable workflow step needs success checks unless it is an allowed no-op
-4. **Type hints**: Use `Optional[str]`, `dict`, `list` for public methods
-5. **No `print()` in harness/**: Use `HarnessLogger`
-6. **Never check in**: `reports/`, `runs/`, `screenshots/`, `data/*.xlsx`, `*.db`
+1. **No hardcoded credentials**: Never commit `API_KEY`, `password`, `token` values
+2. **Explicit verification**: Executable actions need success/verification checks unless allowed no-op
+3. **Type hints** on public methods
+4. **No `print()` in harness/**: Use structured logging helpers where available
+5. **Never check in**: generated reports, run exports, screenshots, local `data/*.sqlite` secrets stores
 
 ## Verification Checklist
 
-- [ ] YAML validates or audits with `main.py --validate-yaml` / `--audit-workflow`
-- [ ] Run artifacts capture timeline, manifest, report, and evidence paths
+- [ ] ActiveGraph proposal validates / registers through `AutomationApplication` or CLI
+- [ ] Evidence exports and inspect projections match EventStore terminal state
 - [ ] Secrets are redacted in logs, reports, prompts, and artifacts
-- [ ] Screenshots/evidence are captured on failure where relevant
-- [ ] Error messages include context (selector, URL, step name)
+- [ ] Screenshots/evidence captured on failure where relevant
+- [ ] Error context includes selector, target, action id when available
 - [ ] Tests pass: `python -m pytest -q`
-```
+- [ ] OKF (if touched): `python scripts/okf.py generate-indexes docs/okf` then `validate`

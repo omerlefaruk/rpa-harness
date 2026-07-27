@@ -2,9 +2,9 @@
 Verification system — contract definitions, checks, and verifier.
 """
 from harness.verification.contract import (
+    CheckResult,
     CheckType,
     SuccessCheck,
-    VerificationResult,
     preflight_workflow,
     validate_workflow,
     validate_workflow_report,
@@ -15,7 +15,7 @@ from harness.verification.checks import CheckRunner, run_all_checks
 __all__ = [
     "CheckType",
     "SuccessCheck",
-    "VerificationResult",
+    "CheckResult",
     "preflight_workflow",
     "validate_workflow",
     "validate_workflow_report",

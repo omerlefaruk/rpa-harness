@@ -316,23 +316,16 @@ def main(argv: list[str] | None = None) -> None:
             print("--automation-export-evidence requires --automation-workspace", file=sys.stderr)
             sys.exit(2)
         from harness.automation import AutomationApplication
+        from harness.automation.evidence import export_run_evidence, run_evidence_payload
 
         app = AutomationApplication(args.automation_workspace, read_only=True)
         try:
             summary = app.inspect_run(args.automation_export_evidence)
-            print(
-                json.dumps(
-                    {
-                        "run_id": summary.run_id,
-                        "status": summary.status,
-                        "evidence_references": [
-                            item.__dict__ for item in summary.evidence_references
-                        ],
-                    },
-                    indent=2,
-                    default=str,
-                )
-            )
+            evidence_dir = Path(args.automation_workspace) / "evidence"
+            path = export_run_evidence(summary, evidence_dir)
+            payload = run_evidence_payload(summary)
+            payload["export_path"] = str(path)
+            print(json.dumps(payload, indent=2, default=str))
         except KeyError as exc:
             print(json.dumps({"code": "unknown_run", "error": str(exc)}), file=sys.stderr)
             sys.exit(2)

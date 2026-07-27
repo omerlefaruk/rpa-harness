@@ -7,9 +7,10 @@ from pathlib import Path
 
 
 def init_workspace(target: Path) -> None:
+    """Copy ActiveGraph workspace template and create runtime folders."""
     target.mkdir(parents=True, exist_ok=True)
     _copy_tree(files("harness.templates.workspace"), target)
-    for folder in ("runs", "reports", "builder_sessions"):
+    for folder in ("data", "runs", "reports", "evidence", "proposals"):
         (target / folder).mkdir(exist_ok=True)
 
 

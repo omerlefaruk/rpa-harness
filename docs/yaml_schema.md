@@ -1,7 +1,8 @@
 # YAML Default Schema
 
-The default workflow schema is the phase-based YAML format with `schema_version: 2`.
-Old flat workflows are legacy inputs and can be migrated, but new authoring should use this structure.
+> **RETIRED AS PRODUCTION RUNTIME (2026-07-27).** YAML schema is not the ActiveGraph product path. New authoring uses Automation Proposals (JSON) admitted by `AutomationApplication`. Keep this page only as historical schema reference / import archive. See `docs/adr/ADR-0001-yaml-runtime-retired.md`.
+
+The (legacy) default workflow schema was the phase-based YAML format with `schema_version: 2`.
 
 Required concepts:
 

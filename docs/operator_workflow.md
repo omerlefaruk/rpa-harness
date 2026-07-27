@@ -1,29 +1,46 @@
-# Operator Workflow
+# Operator Workflow (ActiveGraph)
 
-YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
+Primary runtime is ActiveGraph via `AutomationApplication` and a per-workspace EventStore. Operators use terminal CLI flags and MCP tools; EventStore is lifecycle authority and evidence exports are projections.
 
-Recommended flow:
+## Recommended flow
 
 ```bash
-python main.py --migrate-workflow projects/current/workflows/legacy.yaml --workflow-output projects/current/workflows/main.yaml --migration-report migration_report.md
-python main.py --validate-yaml projects/current/workflows/main.yaml
-python main.py --preflight-yaml projects/current/workflows/main.yaml
-python main.py --workflow-graph projects/current/workflows/main.yaml --workflow-graph-output workflow_graph.json
-python main.py --run-yaml projects/current/workflows/main.yaml --phase login
-python main.py --live-tail RUN_ID
-python main.py --runs-list
-python main.py --runs-show RUN_ID
-python main.py --logs-show RUN_ID --logs-tail 50
-python main.py --report-open RUN_ID
+# 1. Workspace
+python main.py --automation-init-workspace .rpa-automation
+python main.py --automation-workspace-status --automation-workspace .rpa-automation
+
+# 2. Author / admit
+python main.py --automation-validate-proposal proposals/example_read.json
+python main.py --automation-register-proposal proposals/example_read.json --automation-workspace .rpa-automation
+
+# 3. Writes need an approval grant first
+python main.py --automation-grant-approval grant.json --automation-workspace .rpa-automation
+
+# 4. Execute
+python main.py --automation-execute-read request.json --automation-workspace .rpa-automation
+python main.py --automation-execute-write request.json --automation-workspace .rpa-automation
+
+# 5. Inspect and export
+python main.py --automation-inspect RUN_ID --automation-workspace .rpa-automation
+python main.py --automation-export-evidence RUN_ID --automation-workspace .rpa-automation
 ```
 
-Failure investigation:
+## Failure investigation
 
-1. Open `runs/<run_id>/report.html`.
-2. Inspect `timeline.jsonl` for failed phase and step.
-3. Open `evidence_bundle.json`.
-4. Open `repair_packet.json`.
-5. Check `records.jsonl` for safe retry status.
-6. Retry only records marked safe, using the CLI path.
+1. `inspect` the run for status, `failure_kind`, `blocked_reason`, `next_required`.
+2. `export_evidence` for evidence references and filesystem exports.
+3. Review selector evidence when the failure is locator-related.
+4. If status is `needs_reconciliation`, use **read-only** checks then `reconcile`.
+5. For selector/definition repair: `propose_repair` → `trial_repair` (fork) → `promote_repair` or reject. Never patch a live parent version.
 
-Run artifacts are the operator evidence surface and source of truth. Scan `runs/` with `--runs-list`, then inspect a run with `--runs-show`, `--logs-show`, and `--report-open`; do not maintain a separate database truth system.
+## Agent path
+
+```bash
+npx rpa-harness-agent mcp
+```
+
+Allowlisted MCP tools map 1:1 to the same application methods as the CLI flags. See `packages/rpa-harness-agent/README.md`.
+
+## Retired surfaces
+
+YAML validate/run/preflight, DSL, copilot, and autopilot CLI flags are removed. Historical schema notes under `docs/workflow_spec.md` / `docs/yaml_*.md` are archive context only.

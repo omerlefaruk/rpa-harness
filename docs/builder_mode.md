@@ -1,43 +1,36 @@
-# Builder Mode
+# Authoring Mode (ActiveGraph)
 
-Builder mode is for creating deterministic workflows from target discovery evidence. It should not guess selectors or business logic.
+> **Note:** Legacy “builder mode” (copilot sessions, YAML drafts under `builder_sessions/`) is retired. Authoring now means drafting **Automation Proposals** for `AutomationApplication`.
 
-## Builder loop
+## Authoring loop
 
-1. Task intake: goal, target, input files, outputs, secret names, risky actions, and success criteria.
-2. Target discovery: browser DOM/accessibility, API preview, desktop UIA/Win32, or legacy desktop evidence.
-3. Selector/action candidates: generate scored candidates with reasons.
-4. Workflow draft: phases, steps, actions, selectors, success checks, side effects, retry policy, and human gates.
-5. Safe dry-run: run non-destructive phases and pause before external writes.
-6. Risk review: mark weak selectors, unresolved checks, and business ambiguities.
-7. One-record test: run only after approval for risky actions.
-8. Promotion: keep deterministic YAML workflow and evidence.
+1. **Intent** — business objective, required capabilities, no unresolved ambiguity.
+2. **Discovery** — browser/desktop/API observations as evidence (not executable truth).
+3. **Proposal** — Intent + DiscoveryEvidence + Definition (model may draft JSON).
+4. **Validation** — deterministic `validate_proposal` (fail closed on weak unverified selectors, plaintext secrets, unknown capabilities, missing success checks).
+5. **Registration** — immutable Definition Version + content hash.
+6. **Approval** — grant for R3/R4 writes bound to version, hash, scopes, actor, expiry.
+7. **Execution** — capability port; Action Attempt before I/O; Verification Result after.
+8. **Repair** — fork trial only; promote new version or reject.
 
-## Builder artifacts
-
-Builder helpers write under `builder_sessions/`:
-
-- `task_spec.md`
-- `assumptions.md`
-- `questions.json`
-- `discovery_session.json`
-- `workflow_draft_report.md`
-- `unresolved_risks.md`
-- optional capture/discovery artifacts
+Canonical skill: `.agents/skills/rpa-harness-automation-builder`.
 
 ## Commands
 
 ```bash
-python main.py --build-start tasks/upload_invoices/task.md
-python main.py --capture-desktop "Legacy ERP" --capture-session-dir builder_sessions/<SESSION_ID>
-python main.py --discovery-validate-fixtures
-python main.py --browser-selector-swarm file://$PWD/workflows/capabilities/local_browser_form.html
+python main.py --automation-list-operations
+python main.py --automation-validate-proposal proposal.json
+python main.py --automation-register-proposal proposal.json --automation-workspace <ws>
+python main.py --automation-propose-repair request.json --automation-workspace <ws>
+python main.py --automation-trial-repair request.json --automation-workspace <ws>
+python main.py --automation-promote-repair request.json --automation-workspace <ws>
+npx rpa-harness-agent mcp
 ```
 
 ## Required behavior
 
-- Every generated step needs success checks.
-- Risky actions need approval/human gate or explicit policy.
-- External writes are non-retryable by default.
-- Weak legacy desktop steps must be marked weak and verified.
-- Discovery failures should produce blocked results, not hallucinated coordinates.
+- Every executable action needs explicit verification / success checks.
+- Risky writes need Approval Grants.
+- External writes are at-most-once per run/action/idempotency scope until not applied.
+- Weak selectors require verified=true (and policy/approval as coded).
+- Discovery failures should block admission — do not invent coordinates.

@@ -46,7 +46,14 @@ from harness.automation.capabilities import (
     FakeDesktop,
     FakeExcel,
 )
+from harness.automation.evidence import export_run_evidence, run_evidence_payload
 from harness.automation.pack import pack
+from harness.automation.ports import (
+    DesktopUiaPort,
+    ExcelFilePort,
+    HttpApiPort,
+    SyncPlaywrightBrowserPort,
+)
 from harness.automation.workspace_runtime import (
     RuntimeManifest,
     WorkspaceRuntimeError,
@@ -92,10 +99,16 @@ __all__ = [
     "ACTION_CLASSES",
     "CapabilityExecutor",
     "CapabilityOp",
+    "DesktopUiaPort",
+    "ExcelFilePort",
     "FakeApi",
     "FakeBrowser",
     "FakeDesktop",
     "FakeExcel",
+    "HttpApiPort",
+    "SyncPlaywrightBrowserPort",
+    "export_run_evidence",
+    "run_evidence_payload",
     "pack",
     "proposal_from_dict",
     "RuntimeManifest",

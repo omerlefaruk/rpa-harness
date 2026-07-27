@@ -1,33 +1,33 @@
 # Selector Strategy
 
+Executable ladders live in `harness.automation.capabilities` (`BROWSER_SELECTOR_PRIORITY`, `DESKTOP_SELECTOR_PRIORITY`). Skills and docs must match code.
+
 ## Browser selectors
 
 Prefer, in order:
 
-1. `data-testid`
-2. role/name
-3. label
-4. placeholder
-5. text
-6. stable id
-7. CSS
-8. XPath
+1. `role`
+2. `label`
+3. `test_id`
+4. `css`
+5. `xpath`
+6. `coordinate`
 
-Avoid absolute XPath when any stable selector exists. A selector candidate should explain its strategy, score, reason, match count, visibility/enabled state when available, and validation status.
+Weak strategies: `css`, `xpath`, `coordinate` (and desktop `image`). Weak fallbacks require `verified=true` (and approval when policy demands). Prefer role/label/test_id over CSS/XPath when stable alternatives exist.
 
 ## Desktop selectors
 
 Prefer, in order:
 
-1. automation ID
-2. name + control type
-3. class + control type
-4. tree path
-5. image anchor
-6. coordinate fallback
+1. `automation_id`
+2. `name`
+3. `class`
+4. `tree_path`
+5. `image`
+6. `coordinate`
 
-Coordinates must be last resort, marked weak, relative/calibrated when possible, and followed by success checks.
+Coordinates must be last resort, marked verified when required, relative/calibrated when possible, and followed by explicit verification.
 
 ## Repair
 
-Repair selectors from `selector_evidence.json`, screenshots, DOM/UIA snapshots, and failed verification. Do not auto-apply production repairs unless a candidate is validated and the operator or policy allows it.
+Repair selectors from failure evidence, EventStore projections, screenshots, and DOM/UIA snapshots. Use ActiveGraph repair ops: propose → trial (fork) → promote. Do not auto-apply production repairs without a successful trial and promote path.

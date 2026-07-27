@@ -1,21 +1,7 @@
 # Credential Rules
 
-## Core Rule
+Use secret **names** only in proposals, definitions, logs, prompts, and reports. Resolve secret values only at the local execution edge.
 
-Use secret names only. Never paste real credentials into prompts, code, workflows, logs, screenshots, or tests.
+Canonical policy: `docs/credential_policy.md`.
 
-## Sources
-
-Environment variables, `.env` (never committed), OS credential manager, external password manager CLI, CI secret store.
-
-## Redaction
-
-Before writing logs or reports, redact passwords, tokens, cookies, authorization headers, session ids, personal identifiers.
-
-## Screenshot Safety
-
-Store in local run folders. Do not upload automatically. Redact if necessary.
-
-## See Also
-
-`docs/credential_policy.md` — full policy
+Never paste real credentials into code, EventStore payloads, evidence exports, repair packets, or tests.

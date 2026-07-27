@@ -2,76 +2,76 @@
 
 ## Core principle
 
-`rpa-harness` is deterministic RPA automation with evidence. Do not introduce uncontrolled autonomy. AI may inspect, draft, repair, and explain workflows, but production execution must remain explicit, validated, and evidence-backed.
+`rpa-harness` is a **deterministic, evidence-backed ActiveGraph product**. AI may inspect, draft, repair, and explain automations, but production execution stays explicit, validated, and evidence-backed. Do not introduce uncontrolled autonomy or a parallel runtime.
+
+Primary runtime: `harness.automation.AutomationApplication` + EventStore (`data/automation-events.sqlite` per workspace). CLI is ActiveGraph-only (`--automation-*` flags). Canonical authoring skill: `.agents/skills/rpa-harness-automation-builder`. Agent MCP package: `packages/rpa-harness-agent/`.
 
 ## Before changing code
 
-- Inspect existing modules first.
-- Reuse or refactor existing code instead of creating parallel reporting, selector, workflow, or CLI systems.
+- Inspect existing modules first; reuse or refactor instead of parallel systems.
 - Keep changes small and tested.
-- Prefer JSON/JSONL/static HTML/local files over servers, databases, or visual platforms unless the repo already uses them for the exact purpose.
+- Prefer JSON/JSONL/static HTML/local files unless the repo already uses another store for that purpose.
 
 ## OKF knowledge bundle
 
 - `docs/okf` is the local Open Knowledge Format bundle for this repo.
-- When changing docs, workflow schema, CLI commands, skills, project layout, hooks, or agent/copilot policy, update the related OKF concept if the change affects durable repo knowledge.
+- When changing docs, CLI commands, skills, project layout, hooks, or agent policy, update the related OKF concept if durable repo knowledge changes.
 - Run `python scripts/okf.py generate-indexes docs/okf` after OKF concept edits.
 - Run `python scripts/okf.py validate docs/okf` before finishing OKF-related work.
 
 ## Safety
 
-- Every executable workflow step must have explicit success checks unless it is an explicitly allowed no-op.
+- Every executable action must have explicit success / verification checks unless it is an explicitly allowed no-op.
 - Action execution is not success.
 - Do not hardcode, log, report, store, or serialize secret values.
-- Use secret names in workflow definitions; resolve secret values only at the execution edge.
-- Redact before writing reports, logs, evidence bundles, repair packets, builder artifacts, or prompts.
+- Use secret names in proposals and definitions; resolve secret values only at the execution edge.
+- Redact before writing reports, logs, evidence exports, repair packets, or prompts.
 - Non-idempotent external writes must not be retried automatically.
 
 ## Protected areas
 
-Treat these as protected and modify only with explicit justification and tests:
+Modify only with explicit justification and tests:
 
-- core harness/orchestrator
-- credential policy
-- AGENTS rules
-- skills
+- `harness/automation/` lifecycle (AutomationApplication, EventStore binding, capability admission)
+- security / credential policy (`harness/security.py`, `docs/credential_policy.md`)
+- `AGENTS.md` and `.agents/rules/`
+- `.agents/skills/`
 
-## Selector policy
+## Selector policy (matches `harness.automation.capabilities`)
 
 Browser priority:
 
-`data-testid → role/name → label → placeholder → text → stable id → CSS → XPath`
+`role → label → test_id → css → xpath → coordinate`
 
 Desktop priority:
 
-`automation_id → name/control_type → class/control_type → tree path → image anchor → coordinate fallback`
+`automation_id → name → class → tree_path → image → coordinate`
 
-Coordinate fallback is last resort only. It must be relative/calibrated where possible, marked weak, and followed by explicit verification.
+Coordinate (and other weak strategies) are last resort only. They must be marked verified where required and followed by explicit verification.
 
 ## Evidence expectations
+
+EventStore is lifecycle authority. Filesystem outputs are projections/exports.
 
 Failures should produce or link:
 
 - `failure_kind`
-- `timeline.jsonl` event
-- `evidence_bundle.json`
+- EventStore events (inspect via automation inspect / export)
+- evidence export / `evidence_bundle` artifacts where available
 - screenshot / DOM / UIA / API artifacts where available
-- `selector_evidence.json` where selector repair is relevant
-- `repair_packet.json` or `repair_packet.md`
-- `report.html`
+- selector evidence where selector repair is relevant
+- repair proposal / trial / promote path (or reject)
+- operator-facing report HTML when exported
 
 Repair from evidence, not assumptions.
 
-## Agent skills
+## Pointers
 
-### Issue tracker
-
-Issues and implementation specifications are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Use the canonical `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` states. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-This is a single-context repository with a root `CONTEXT.md` and system decisions under `docs/adr/` when those files are needed. See `docs/agents/domain.md`.
+- Domain glossary: `CONTEXT.md`
+- Architecture decisions: `docs/adr/`
+- Issue tracker: `docs/agents/issue-tracker.md`
+- Triage labels: `docs/agents/triage-labels.md`
+- Domain docs convention: `docs/agents/domain.md`
+- Verification contract: `docs/verification_contract.md`
+- Credential policy: `docs/credential_policy.md`
+- Code vs skill boundary: `docs/research/code-vs-skill-boundary.md`

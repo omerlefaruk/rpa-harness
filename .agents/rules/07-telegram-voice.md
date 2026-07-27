@@ -20,9 +20,9 @@ Bots posting into Telegram topics should sound like coworkers, not system logs.
 
 ## Automatic Hooks
 
-- Ask in `questions` when a workflow cannot start because secrets, config, or action support is missing.
-- Post to `failures` when a record, YAML step, or critical agent step reaches a terminal failure.
-- Post to `rants` when retries, fallbacks, waits, or recovery actions are needed.
+- Ask in `questions` when an automation cannot start because secrets, config, approval, or capability support is missing.
+- Post to `failures` when a run reaches a terminal failure (`failed`, `blocked`, `rejected`).
+- Post to `rants` when reconcile, repair trial, or recovery steps are needed.
 - Do not post for every normal step; only post when the user would actually want to know.
 
 ## Safety

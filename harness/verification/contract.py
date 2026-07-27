@@ -73,7 +73,12 @@ class SuccessCheck:
 
 
 @dataclass
-class VerificationResult:
+class CheckResult:
+    """Outcome of a single workflow success check (check-runner internal).
+
+    Lifecycle verification SoT is harness.automation.models.VerificationResult.
+    """
+
     passed: bool
     check_type: CheckType
     expected: Any

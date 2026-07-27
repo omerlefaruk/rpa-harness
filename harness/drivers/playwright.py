@@ -294,19 +294,16 @@ class PlaywrightDriver(AbstractBaseDriver):
                 self.page = next(iter(self._tabs.values()))
 
     async def ai_action(self, instruction: str, use_vision: bool = True) -> Optional[Any]:
+        del use_vision
         self.logger.info(f"AI action: {instruction}")
-        if use_vision and self.config and self.config.enable_vision:
-            from harness.ai.vision import VisionEngine
-            screenshot_path = await self.screenshot(name="ai_vision_input.png")
-            vision = VisionEngine(config=self.config)
-            element = await vision.find_element(screenshot_path, instruction)
-            if element:
-                await self.click_at(*element.center)
-                return element
-        raise RuntimeError("ai_action requires vision. Set enable_vision=True and OPENAI_API_KEY.")
+        raise RuntimeError(
+            "ai_action is retired with the legacy vision agent. "
+            "Use AutomationApplication capability ports and repair proposals instead."
+        )
 
     async def _heal(self, broken_selector: str, action_fn: Callable[[str], Any]) -> Optional[str]:
         from harness.selectors.strategies import get_healing_ladder
+
         self.logger.info(f"Healing selector: {broken_selector}")
 
         ladder = get_healing_ladder(broken_selector)
@@ -317,16 +314,5 @@ class PlaywrightDriver(AbstractBaseDriver):
             except Exception:
                 continue
 
-        if self.config and self.config.enable_vision:
-            try:
-                screenshot = await self.screenshot(name="heal.png")
-                from harness.ai.vision import VisionEngine
-                vision = VisionEngine(config=self.config)
-                healed = await vision.generate_selector(screenshot, broken_selector)
-                if healed:
-                    await action_fn(healed)
-                    return healed
-            except Exception as e:
-                self.logger.warning(f"Vision heal failed: {e}")
-
+        # Vision-based heal retired with the legacy AI agent; ladder-only healing remains.
         return None

@@ -1,48 +1,72 @@
-# Architecture — RPA Harness
+# Architecture — ActiveGraph rpa-harness
 
 ## Overview
 
-Local-first AI-assisted RPA automation harness. Describe a task or provide step-by-step instructions, input files, and secret names → the system helps build, run, debug, repair, and improve automations.
+Local-first, **ActiveGraph-native** automation product. Operators and agents admit typed Automation Proposals, register immutable Definition Versions, execute through capability ports, and inspect EventStore projections. Action execution is not success; completion requires explicit Verification Results (and Approval Grants for R3/R4 writes).
 
-YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
+There is **no** YAML workflow runtime, DSL compiler, copilot/autopilot session runner, dashboard, React frontend, class workflow runtime, local subagent framework, Office/PDF layer, or job queue in the core product surface.
 
 ## Layers
 
-```
-.agents/          ← Agent governance (rules, skills)
-docs/             ← Contracts and policies
-harness/          ← Deterministic Python runner
-  core/           ← Session, step, result, evidence
-  drivers/        ← Playwright, Windows UIA, API
-  verification/   ← Success checks and contracts
-  resilience/     ← Errors and recovery helpers
-  selectors/      ← Priority ladder and repair helpers
-  rpa/            ← YAML runner, schema, ledger, Excel helpers
-  ai/             ← Agent loop, vision, planner, tools
-  reporting/      ← HTML, JSON, failure reports
-tools/            ← CLI utilities (inspect, analyze, patch)
-projects/         ← Real workflow projects: workflow YAML, config, tests, README
-runs/             ← Run artifacts per execution
-workflows/        ← Shared YAML examples and capability fixtures
-tests/            ← pytest test suite
-config/           ← Shared default config template
+```text
+You / AI
+  → packages/rpa-harness-agent (MCP allowlist)
+  → harness/cli.py  (--automation-* only)
+      → harness.automation.AutomationApplication
+          → ActiveGraph EventStore (data/automation-events.sqlite)
+          → capability ports → ToolResult only
+              → harness/drivers/*  (Playwright, Windows UIA, API adapters)
+      → harness/reporting/*  (evidence export / HTML helpers)
+.agents/          Agent rules + skills (playbooks; not enforcement)
+docs/okf/         Indexed durable knowledge
+docs/adr/         Architecture decisions
+CONTEXT.md        Domain glossary
+tests/            Contract and integration tests
 ```
 
-## Execution Flow
+## Lifecycle authority
 
+| Concern | Authority |
+| --- | --- |
+| Run status, attempts, verification, blocks | EventStore append-only events |
+| Definition Version immutability | Content-hash registration events |
+| Approval for writes | Approval Grant events bound to version/hash/scopes |
+| Filesystem JSON/HTML | Projections / exports **after** Evidence Reference events |
+
+## Execution flow
+
+```text
+Intent + DiscoveryEvidence + Definition  (proposal JSON)
+  → validate_proposal (fail closed)
+  → register_proposal → Definition Version
+  → grant_approval (R3/R4)
+  → execute_read / execute_write via capability port
+  → Verification Result + Evidence Reference
+  → inspect_run / export_evidence
+  → reconcile if needs_reconciliation
+  → repair fork: propose → trial → promote | reject
 ```
-User request → YAML workflow under projects/<project>/workflows/main.yaml
-  → python main.py --audit-workflow / --run-yaml
-  → deterministic step execution with verification
-  → success checks per step
-  → run artifacts under runs/<run_id>/
-  → operator inspects with --runs-list / --runs-show / --logs-show / --report-open
-```
 
-## Safety Boundaries
+## Capability ports and drivers
 
-- Runtime LLM: allowed for planning, diagnosis, summarization, selector healing, report analysis
-- Runtime LLM: NEVER directly executes destructive business actions without workflow approval gates
-- Core harness: protected, requires mutation protocol to edit
-- Credentials: never in code, logs, screenshots, or reports
-- Self-improvement: requires reproduced failure + root cause + passing tests
+Drivers never write lifecycle events. They implement ports that return `ToolResult`. `AutomationApplication` records Action Attempt **before** I/O and records verification after.
+
+Selector ladders (executable):
+
+- Browser: `role → label → test_id → css → xpath → coordinate`
+- Desktop: `automation_id → name → class → tree_path → image → coordinate`
+
+## Safety boundaries
+
+- Runtime models draft proposals only; admission is deterministic code
+- Models cannot raise budgets, change allowlists, force success, or auto-retry writes
+- Credentials: names only on agent surfaces; values only at local edge
+- Skills summarize procedure; they must never be the only place a safety rule exists
+
+## Related
+
+- `CONTEXT.md` — glossary
+- `docs/adr/ADR-0001-yaml-runtime-retired.md`
+- `docs/adr/ADR-0002-skills-are-not-enforcement.md`
+- `docs/adr/ADR-0003-eventstore-lifecycle-authority.md`
+- `docs/research/code-vs-skill-boundary.md`

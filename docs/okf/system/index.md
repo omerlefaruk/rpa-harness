@@ -2,4 +2,4 @@
 
 ## Concepts
 
-* [rpa-harness](rpa-harness.md) - Deterministic, evidence-backed automation harness for browser, desktop, API, Excel, and YAML workflows.
+* [rpa-harness](rpa-harness.md) - Deterministic ActiveGraph-native automation product with EventStore lifecycle authority and evidence exports.

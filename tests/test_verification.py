@@ -4,7 +4,7 @@ import json
 from harness.verification import (
     CheckType,
     SuccessCheck,
-    VerificationResult,
+    CheckResult,
     validate_workflow,
     validate_workflow_report,
     validate_workflow_step,

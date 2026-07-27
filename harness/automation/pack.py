@@ -1,4 +1,10 @@
-"""First-party ActiveGraph pack for the initial verified read-only slice."""
+"""First-party ActiveGraph pack declarations for the RPA lifecycle surface.
+
+Tools and behaviors in this module are pack **declarations** only. They describe
+object types, relations, and tool schemas for ActiveGraph; they do not execute
+RPA actions. The product host ``AutomationApplication`` is the only execution
+path: adapters injected by the host perform real work under lifecycle authority.
+"""
 
 from __future__ import annotations
 
@@ -76,26 +82,33 @@ class WriteActionOutput(BaseModel):
 
 @tool(
     name="read_only_action",
-    description="Run a declared R0 read-only action through the product adapter.",
+    description="Declared R0 read-only action schema (execution is host-owned).",
     input_schema=ReadOnlyActionInput,
     output_schema=ReadOnlyActionOutput,
     deterministic=False,
 )
 def read_only_action(args, ctx):
-    """Pack declaration only; adapters are injected by the application host."""
+    """Pack tool declaration only — not an executable runtime.
+
+    AutomationApplication adapters invoke real capability ports; this function
+    must never be called as a standalone driver.
+    """
 
     raise RuntimeError("read_only_action must be invoked by an AutomationApplication adapter")
 
 
 @tool(
     name="approval_gated_write",
-    description="Run a declared approval-gated write through the product adapter.",
+    description="Declared approval-gated write schema (execution is host-owned).",
     input_schema=WriteActionInput,
     output_schema=WriteActionOutput,
     deterministic=False,
 )
 def approval_gated_write(args, ctx):
-    """Pack declaration only; adapters are injected by the application host."""
+    """Pack tool declaration only — not an executable runtime.
+
+    Writes run only through AutomationApplication.execute_write with grants.
+    """
 
     raise RuntimeError("approval_gated_write must be invoked by an AutomationApplication adapter")
 

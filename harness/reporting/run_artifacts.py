@@ -9,7 +9,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from harness.config import HarnessConfig
 from harness.core.artifacts import (
     read_json as _read_json,
     read_jsonl as _read_jsonl,
@@ -28,7 +27,6 @@ __all__ = [
     "print_runs_list",
     "read_run_detail",
     "resolve_run_dir",
-    "retry_run",
     "run_report_path",
 ]
 
@@ -219,42 +217,6 @@ def live_tail(run: str, runs_dir: str = "runs"):
                 return
         seen = len(lines)
         time.sleep(0.5)
-
-
-async def retry_run(
-    run: str,
-    *,
-    failed_records: bool = False,
-    config: HarnessConfig | None = None,
-) -> dict:
-    from harness.rpa.yaml_runner import YamlWorkflowRunner
-
-    run_dir = resolve_run_dir(run)
-    manifest_path = run_dir / "run_manifest.json"
-    if not manifest_path.exists():
-        return {"status": "blocked", "reason": "run_manifest.json not found", "run_dir": str(run_dir)}
-    manifest = _read_json(manifest_path)
-    workflow_path = manifest.get("workflow_path")
-    if not workflow_path:
-        return {"status": "blocked", "reason": "manifest does not include workflow_path", "run_dir": str(run_dir)}
-    if not failed_records:
-        return {"status": "blocked", "reason": "Only --failed-records retry is supported safely."}
-    records = latest_records(run_dir / "records.jsonl")
-    failed = [
-        record for record in records.values()
-        if record.get("status") == "failed" and (record.get("safe_retry") or {}).get("status") == "yes"
-    ]
-    if not failed:
-        return {"status": "blocked", "reason": "No safe failed records to retry.", "run_dir": str(run_dir)}
-    results = []
-    runner = YamlWorkflowRunner(config or HarnessConfig.from_env())
-    for record in failed:
-        results.append(await runner.run(workflow_path, only_record=str(record.get("record_id"))))
-    return {
-        "status": "passed" if all(item.get("status") == "passed" for item in results) else "failed",
-        "retried_records": [record.get("record_id") for record in failed],
-        "results": results,
-    }
 
 
 def latest_records(path: Path) -> dict[str, dict]:

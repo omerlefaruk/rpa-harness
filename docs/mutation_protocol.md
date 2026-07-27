@@ -2,14 +2,15 @@
 
 Controls how the agent may improve the harness, skills, and rules.
 
+> **ActiveGraph note:** lifecycle authority is `harness.automation.AutomationApplication` + EventStore. Do not reintroduce YAML/copilot/DSL runtimes under mutation “improvements.”
+
 ## Protected Areas
 
 - `AGENTS.md`
 - `.agents/rules/`
 - `.agents/skills/`
-- `harness/core/`
-- `harness/orchestrator.py`
-- `harness/resilience/`
+- `harness/automation/` (lifecycle, EventStore binding, capability admission)
+- `harness/security.py`
 - `docs/credential_policy.md`
 - `docs/mutation_protocol.md`
 

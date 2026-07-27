@@ -2,5 +2,5 @@
 
 ## Concepts
 
-* [ActiveGraph automation](activegraph-automation.md) - Event-sourced R0 automation with governed proposal registration, verified completion, and evidence references.
-* [YAML workflow runner](workflow-runner.md) - Runtime that validates, preflights, executes, verifies, and reports deterministic YAML workflow steps.
+* [ActiveGraph automation](activegraph-automation.md) - Event-sourced automation lifecycle — proposal, approval, execute, verify, reconcile, repair, and evidence export.
+* [YAML workflow runner (retired)](workflow-runner.md) - Historical note — YAML runtime is retired; production uses ActiveGraph AutomationApplication.

@@ -1,156 +1,89 @@
 {
   "schema_version": 1,
   "commands": {
-    "autopilot_build": {
+    "automation_list_operations": {
+      "command": ["python", "main.py", "--automation-list-operations"],
+      "output": "json",
+      "purpose": "List versioned ActiveGraph MCP/CLI operation contracts."
+    },
+    "automation_init_workspace": {
       "command": [
         "python",
         "main.py",
-        "--autopilot-build",
-        "<task.md>",
-        "--autopilot-workflow",
-        "<workflow.yaml>"
+        "--automation-init-workspace",
+        "<workspace_path>"
       ],
       "output": "json",
-      "purpose": "Agent-facing validate, preflight, run, and report loop for a workflow task.",
-      "success_status": "passed",
-      "artifacts": [
-        "builder_session",
-        "run_dir",
-        "report",
-        "timeline.jsonl",
-        "report.html"
-      ]
+      "purpose": "Initialize an ActiveGraph automation workspace."
     },
-    "okf_validate": {
-      "command": ["python", "scripts/okf.py", "validate", "docs/okf"],
-      "output": "json",
-      "purpose": "Validate the local Open Knowledge Format bundle before finishing docs, schema, CLI, skill, hook, or agent policy changes.",
-      "success_status": "passed",
-      "artifacts": ["docs/okf/index.md", "docs/okf/log.md"]
-    },
-    "okf_generate_indexes": {
-      "command": ["python", "scripts/okf.py", "generate-indexes", "docs/okf"],
-      "output": "json",
-      "purpose": "Regenerate OKF directory indexes from concept frontmatter after editing docs/okf concepts.",
-      "success_status": "passed",
-      "artifacts": ["docs/okf/index.md"]
-    },
-    "copilot_build": {
+    "automation_workspace_status": {
       "command": [
         "python",
         "main.py",
-        "--copilot-build",
-        "<task.md>",
-        "--builder-session-id",
-        "<session_id>"
+        "--automation-workspace-status",
+        "--automation-workspace",
+        "<workspace_path>"
       ],
       "output": "json",
-      "purpose": "Start a phase-by-phase copilot automation build and ask the intake question.",
-      "success_status": "waiting",
-      "artifacts": [
-        "builder_session",
-        "copilot_state.json",
-        "questions.jsonl",
-        "answers.jsonl"
-      ]
+      "purpose": "Show pinned ActiveGraph workspace runtime status."
     },
-    "copilot_session": {
-      "command": ["python", "main.py", "--copilot-session", "<session_id>"],
-      "output": "json",
-      "purpose": "Read copilot session state, questions, answers, artifacts, and linked run evidence."
-    },
-    "copilot_answer": {
+    "automation_validate_proposal": {
       "command": [
         "python",
         "main.py",
-        "--copilot-answer",
-        "<session_id>",
-        "--copilot-question-id",
-        "<question_id>",
-        "--copilot-response",
-        "<answer>"
+        "--automation-validate-proposal",
+        "<proposal.json>"
       ],
       "output": "json",
-      "purpose": "Answer the active copilot question and continue or stop the session."
+      "purpose": "Validate an Automation Proposal JSON file."
     },
-    "copilot_advance": {
-      "command": ["python", "main.py", "--copilot-advance", "<session_id>"],
-      "output": "json",
-      "purpose": "Advance the copilot session through discovery, validation, preflight, safe run, and review."
-    },
-    "copilot_auto": {
+    "automation_register_proposal": {
       "command": [
         "python",
         "main.py",
-        "--copilot-auto",
-        "<task.md>",
-        "--builder-session-id",
-        "<session_id>"
+        "--automation-register-proposal",
+        "<proposal.json>",
+        "--automation-workspace",
+        "<workspace_path>"
       ],
       "output": "json",
-      "purpose": "Agent-owned one-shot automation builder loop. Starts the session, auto-confirms intake from the prompt, runs safe phases, and stops only at a question or review gate.",
-      "success_status": "waiting",
-      "artifacts": [
-        "builder_session",
-        "copilot_state.json",
-        "questions.jsonl",
-        "answers.jsonl",
-        "run_dir",
-        "report"
-      ]
+      "purpose": "Register a validated proposal as an immutable Definition Version."
     },
-    "copilot_try_url": {
+    "automation_execute_read": {
       "command": [
         "python",
         "main.py",
-        "--copilot-try-url",
-        "<url>",
-        "--copilot-try-workflow",
-        "<workflow.yaml>",
-        "--builder-session-id",
-        "<session_id>"
+        "--automation-execute-read",
+        "<request.json>",
+        "--automation-workspace",
+        "<workspace_path>"
       ],
       "output": "json",
-      "purpose": "Fast URL iteration path. Creates a task, reuses discovery cache when safe, validates, preflights, runs, and writes one copilot report.",
-      "success_status": "waiting",
-      "artifacts": [
-        "builder_session",
-        "copilot_state.json",
-        "copilot_report.json",
-        "copilot_report.md",
-        "run_dir",
-        "report"
-      ]
+      "purpose": "Execute a read-only definition via a capability port."
     },
-    "validate_yaml": {
-      "command": ["python", "main.py", "--validate-yaml", "<workflow.yaml>"],
-      "output": "text",
-      "purpose": "Validate workflow schema and success checks before execution."
-    },
-    "preflight_yaml": {
-      "command": ["python", "main.py", "--preflight-yaml", "<workflow.yaml>"],
+    "automation_inspect": {
+      "command": [
+        "python",
+        "main.py",
+        "--automation-inspect",
+        "<run_id>",
+        "--automation-workspace",
+        "<workspace_path>"
+      ],
       "output": "json",
-      "purpose": "Run preflight checks without executing workflow actions."
+      "purpose": "Project Run summary from the EventStore."
     },
-    "run_yaml": {
-      "command": ["python", "main.py", "--run-yaml", "<workflow.yaml>"],
-      "output": "text",
-      "purpose": "Execute a deterministic workflow and produce run artifacts."
-    },
-    "browser_selector_swarm": {
-      "command": ["python", "main.py", "--browser-selector-swarm", "<url>"],
+    "automation_export_evidence": {
+      "command": [
+        "python",
+        "main.py",
+        "--automation-export-evidence",
+        "<run_id>",
+        "--automation-workspace",
+        "<workspace_path>"
+      ],
       "output": "json",
-      "purpose": "Discover and validate browser selectors from page evidence."
-    },
-    "repair_selector": {
-      "command": ["python", "main.py", "--repair-selector", "<run_dir>"],
-      "output": "json",
-      "purpose": "Create or apply selector repair from failure evidence."
-    },
-    "retry_failed_records": {
-      "command": ["python", "main.py", "--retry-run", "<run_id>", "--failed-records"],
-      "output": "json",
-      "purpose": "Retry only failed records marked safe to retry."
+      "purpose": "Export evidence references for a run."
     }
   }
 }
