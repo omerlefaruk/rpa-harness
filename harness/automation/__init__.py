@@ -37,6 +37,15 @@ from harness.automation.authoring import (
     SelectorEvidence,
     proposal_from_dict,
 )
+from harness.automation.capabilities import (
+    ACTION_CLASSES,
+    CapabilityExecutor,
+    CapabilityOp,
+    FakeApi,
+    FakeBrowser,
+    FakeDesktop,
+    FakeExcel,
+)
 from harness.automation.pack import pack
 from harness.automation.workspace_runtime import (
     RuntimeManifest,
@@ -80,6 +89,13 @@ __all__ = [
     "ToolResult",
     "VerificationResult",
     "WorkspaceRuntimeActiveError",
+    "ACTION_CLASSES",
+    "CapabilityExecutor",
+    "CapabilityOp",
+    "FakeApi",
+    "FakeBrowser",
+    "FakeDesktop",
+    "FakeExcel",
     "pack",
     "proposal_from_dict",
     "RuntimeManifest",
