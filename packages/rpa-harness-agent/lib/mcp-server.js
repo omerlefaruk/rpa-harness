@@ -10,8 +10,13 @@ const TOOLS = [
   ["show_run", "runs-show", "run_id"],
   ["open_report", "report-open", "run_id"],
   ["repair_selector", "repair-selector", "run_dir"],
+  ["list_automation_operations", "automation-list-operations"],
   ["validate_automation_proposal", "automation-validate-proposal", "proposal_path"],
   ["register_automation_proposal", "automation-register-proposal", "proposal_path", "workspace"],
+  ["inspect_automation_run", "automation-inspect", "run_id", "workspace"],
+  ["export_automation_evidence", "automation-export-evidence", "run_id", "workspace"],
+  ["grant_automation_approval", "automation-grant-approval", "grant_path", "workspace"],
+  ["workspace_status", "automation-workspace-status", "workspace"],
 ];
 
 export function toolToCommand(tool, input = {}) {
