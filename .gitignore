@@ -40,3 +40,7 @@ venv/
 # Local agent/tool state
 .atl/
 .superpowers/
+
+.cache/
+.agents/feedback/
+
