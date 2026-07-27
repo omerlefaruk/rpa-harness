@@ -2,13 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { toolToCommand } from "../lib/mcp-server.js";
 
-test("run_workflow maps to the allowlisted run command", () => {
-  assert.deepEqual(toolToCommand("run_workflow", { workflow_path: "workflows/example.yaml" }), {
-    command: "run",
-    args: ["workflows/example.yaml"],
-  });
-});
-
 test("unknown MCP tools are rejected", () => {
   assert.throws(() => toolToCommand("shell", {}));
 });
@@ -39,7 +32,15 @@ test("automation registration stays on an allowlisted application operation", ()
 });
 
 test("shell and raw driver escape hatches are not MCP tools", () => {
-  for (const name of ["shell", "exec", "run_python", "raw_driver", "playwright_click"]) {
+  for (const name of [
+    "shell",
+    "exec",
+    "run_python",
+    "raw_driver",
+    "playwright_click",
+    "run_workflow",
+    "validate_workflow",
+  ]) {
     assert.throws(() => toolToCommand(name, {}));
   }
 });

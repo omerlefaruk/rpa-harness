@@ -3,13 +3,6 @@ import { spawnSync } from "node:child_process";
 import { buildHarnessArgs } from "./commands.js";
 
 const TOOLS = [
-  ["validate_workflow", "validate", "workflow_path"],
-  ["preflight_workflow", "preflight", "workflow_path"],
-  ["run_workflow", "run", "workflow_path"],
-  ["list_runs", "runs-list"],
-  ["show_run", "runs-show", "run_id"],
-  ["open_report", "report-open", "run_id"],
-  ["repair_selector", "repair-selector", "run_dir"],
   ["list_automation_operations", "automation-list-operations"],
   ["validate_automation_proposal", "automation-validate-proposal", "proposal_path"],
   ["register_automation_proposal", "automation-register-proposal", "proposal_path", "workspace"],
