@@ -90,6 +90,16 @@ class ReconciliationError(RuntimeError):
         super().__init__(f"{self.code}: {message}")
 
 
+class RepairError(RuntimeError):
+    """Raised when a repair trial or promotion is rejected."""
+
+    code = "automation_repair_rejected"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"{self.code}: {message}")
+
+
 class BudgetExhaustedError(RuntimeError):
     """Raised when a run budget dimension is exhausted."""
 
@@ -170,6 +180,68 @@ class ReconciliationResult:
     conclusion: str  # applied | not_applied | still_unknown
     evidence: dict[str, Any] = field(default_factory=dict)
     message: str = ""
+
+
+BROWSER_SELECTOR_PRIORITY = ("role", "label", "test_id", "css", "xpath", "coordinate")
+DESKTOP_SELECTOR_PRIORITY = (
+    "automation_id",
+    "name",
+    "class",
+    "tree_path",
+    "image",
+    "coordinate",
+)
+WEAK_REPAIR_STRATEGIES = frozenset({"css", "xpath", "coordinate", "image"})
+
+
+@dataclass(frozen=True)
+class RepairProposal:
+    repair_id: str
+    parent_definition_id: str
+    parent_version: int
+    parent_content_hash: str
+    failure_run_id: str
+    failure_kind: str
+    discovery: DiscoveryEvidence
+    proposed_definition: AutomationDefinition
+    rationale: str = ""
+    surface: str = "browser"  # browser | desktop
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "repair_id": self.repair_id,
+            "parent_definition_id": self.parent_definition_id,
+            "parent_version": self.parent_version,
+            "parent_content_hash": self.parent_content_hash,
+            "failure_run_id": self.failure_run_id,
+            "failure_kind": self.failure_kind,
+            "discovery": asdict(self.discovery),
+            "proposed_definition": asdict(self.proposed_definition),
+            "rationale": self.rationale,
+            "surface": self.surface,
+        }
+
+
+@dataclass(frozen=True)
+class RepairTrialResult:
+    trial_id: str
+    repair_id: str
+    status: str
+    verification: dict[str, Any]
+    evidence_references: tuple[EvidenceReference, ...]
+    parent_diff: dict[str, Any]
+    failure_kind: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "trial_id": self.trial_id,
+            "repair_id": self.repair_id,
+            "status": self.status,
+            "verification": self.verification,
+            "evidence_references": [asdict(item) for item in self.evidence_references],
+            "parent_diff": self.parent_diff,
+            "failure_kind": self.failure_kind,
+        }
 
 
 @dataclass(frozen=True)
@@ -849,6 +921,263 @@ class AutomationApplication:
             grant_id=grant.grant_id,
         )
 
+    def propose_repair(
+        self,
+        *,
+        parent_definition_id: str,
+        parent_version: int,
+        failure_run_id: str,
+        failure_kind: str,
+        discovery: DiscoveryEvidence,
+        proposed_definition: AutomationDefinition,
+        rationale: str = "",
+        surface: str = "browser",
+    ) -> RepairProposal:
+        """Record a Repair Proposal bound to parent failure evidence; does not mutate parent."""
+
+        self._require_writer()
+        parent = self._definition_version(parent_definition_id, parent_version)
+        if parent is None:
+            raise KeyError(f"Unknown definition version: {parent_definition_id}@{parent_version}")
+        failure = self._project_run(failure_run_id)
+        if failure is None:
+            raise KeyError(f"Unknown failure run: {failure_run_id}")
+        self._validate_repair_selectors(proposed_definition, discovery, surface)
+        proposal = RepairProposal(
+            repair_id=f"repair_{uuid4().hex}",
+            parent_definition_id=parent_definition_id,
+            parent_version=parent_version,
+            parent_content_hash=parent.content_hash,
+            failure_run_id=failure_run_id,
+            failure_kind=failure_kind,
+            discovery=discovery,
+            proposed_definition=proposed_definition,
+            rationale=rationale,
+            surface=surface,
+        )
+        self._append("rpa.repair.proposed", {"repair_proposal": proposal.to_dict()})
+        return proposal
+
+    def trial_repair(
+        self,
+        repair_id: str,
+        *,
+        adapter: ReadOnlyAdapter | WriteAdapter,
+        verify: Callable[[ToolResult], VerificationResult],
+        budget: RunBudget | None = None,
+        replay_cache: Mapping[str, ToolResult] | None = None,
+        secret_adapter: SecretAdapter | None = None,
+        actor: str | None = None,
+        grant_id: str | None = None,
+    ) -> RepairTrialResult:
+        """Execute a bounded repair trial in an isolated fork without promoting the parent."""
+
+        self._require_writer()
+        proposal = self._repair_proposal(repair_id)
+        if proposal is None:
+            raise KeyError(f"Unknown repair proposal: {repair_id}")
+        parent = self._definition_version(
+            proposal.parent_definition_id, proposal.parent_version
+        )
+        if parent is None:
+            raise RepairError("parent definition missing for trial")
+        if parent.content_hash != proposal.parent_content_hash:
+            raise RepairError("stale parent conflict: content hash changed")
+        trial_budget = budget or RunBudget(
+            max_model_proposals=1,
+            max_tool_calls=3,
+            max_action_attempts=2,
+            max_verification_attempts=2,
+            max_repair_trials=1,
+        )
+        self._validate_run_budget(trial_budget)
+        prior_trials = self._repair_trial_count(repair_id)
+        trial_id = f"trial_{uuid4().hex}"
+        self._append(
+            "rpa.repair.trial.started",
+            {
+                "trial_id": trial_id,
+                "repair_id": repair_id,
+                "budget": trial_budget.to_dict(),
+                "parent_definition_id": proposal.parent_definition_id,
+                "parent_version": proposal.parent_version,
+            },
+        )
+        if prior_trials >= trial_budget.max_repair_trials:
+            result = RepairTrialResult(
+                trial_id=trial_id,
+                repair_id=repair_id,
+                status="failed",
+                verification={
+                    "passed": False,
+                    "message": f"repair trial budget exhausted ({prior_trials})",
+                },
+                evidence_references=(),
+                parent_diff=self._repair_diff(parent.definition, proposal.proposed_definition),
+                failure_kind="budget_exhausted",
+            )
+            self._append("rpa.repair.trial.finished", {"trial": result.to_dict()})
+            return result
+        # Fork identity is the trial_id; parent graph remains untouched.
+        self.admit_transition(
+            self._ensure_trial_run(trial_id, proposal, trial_budget),
+            behavior="repair_trial",
+            subject=repair_id,
+            input_state={"trial_id": trial_id, "parent": proposal.parent_content_hash},
+            budget_dimension="repair_trials",
+            run_budget=trial_budget,
+        )
+
+        definition = proposal.proposed_definition
+        if definition.action_class in WRITE_ACTION_CLASSES:
+            if grant_id is None or actor is None:
+                raise RepairError("write repair trial requires grant_id and actor within parent scope")
+            grant = self._approval_grant(grant_id)
+            if grant is None:
+                raise RepairError("trial tools cannot exceed parent Approval Grant scope")
+            if (
+                grant.definition_id != proposal.parent_definition_id
+                or grant.definition_version != proposal.parent_version
+            ):
+                raise RepairError("trial tools cannot exceed parent Approval Grant scope")
+
+        cache_key = f"{repair_id}:{proposal.parent_content_hash}"
+        try:
+            if replay_cache is not None and cache_key in replay_cache:
+                tool_result = replay_cache[cache_key]
+                self._append(
+                    "rpa.repair.trial.replayed",
+                    {"trial_id": trial_id, "repair_id": repair_id, "cache_key": cache_key},
+                )
+            elif definition.read_only or definition.action_class == "R0":
+                tool_result = adapter(definition, trial_id)  # type: ignore[call-arg]
+            else:
+                secrets = self._resolve_secrets(definition, self._primary_action(definition), secret_adapter)
+                tool_result = adapter(  # type: ignore[call-arg]
+                    definition, trial_id, secrets=secrets, action=self._primary_action(definition)
+                )
+            verification = verify(tool_result)
+        except Exception as exc:
+            tool_result = ToolResult(evidence={"error": str(exc)})
+            verification = VerificationResult(
+                passed=False,
+                message="repair trial failed",
+                failure_kind="trial_error",
+                evidence={"error": str(exc)},
+            )
+
+        evidence_id = f"evidence_{uuid4().hex}"
+        uri = f"evidence/repair/{trial_id}.json"
+        reference = EvidenceReference(evidence_id=evidence_id, uri=uri, kind="repair_trial")
+        self._append(
+            "rpa.evidence.referenced",
+            {"run_id": trial_id, "evidence": asdict(reference)},
+        )
+        if self._workspace is not None:
+            path = self._workspace / uri
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                json.dumps(
+                    redact_value(
+                        {
+                            "trial_id": trial_id,
+                            "tool_evidence": tool_result.evidence,
+                            "verification": asdict(verification),
+                        }
+                    ),
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        status = "passed" if verification.passed else "failed"
+        result = RepairTrialResult(
+            trial_id=trial_id,
+            repair_id=repair_id,
+            status=status,
+            verification={
+                "passed": verification.passed,
+                "message": verification.message,
+                "failure_kind": verification.failure_kind,
+            },
+            evidence_references=(reference,),
+            parent_diff=self._repair_diff(parent.definition, definition),
+            failure_kind=None if verification.passed else (verification.failure_kind or "trial_failed"),
+        )
+        self._append("rpa.repair.trial.finished", {"trial": result.to_dict()})
+        return result
+
+    def promote_repair(self, repair_id: str, *, trial_id: str) -> DefinitionVersion:
+        """Promote a successful repair trial into a new immutable Definition Version."""
+
+        self._require_writer()
+        proposal = self._repair_proposal(repair_id)
+        if proposal is None:
+            raise KeyError(f"Unknown repair proposal: {repair_id}")
+        trial = self._repair_trial(trial_id)
+        if trial is None or trial["repair_id"] != repair_id:
+            raise RepairError("trial not found for repair")
+        if trial["status"] != "passed" or not trial["verification"].get("passed"):
+            raise RepairError("promotion requires passing verification")
+        parent = self._definition_version(
+            proposal.parent_definition_id, proposal.parent_version
+        )
+        if parent is None:
+            raise RepairError("parent missing")
+        if parent.content_hash != proposal.parent_content_hash:
+            raise RepairError("stale parent conflict: content hash changed")
+        current_versions = self.definition_versions(proposal.parent_definition_id)
+        latest = current_versions[-1] if current_versions else None
+        if latest is not None and latest.version != proposal.parent_version:
+            if latest.content_hash != proposal.parent_content_hash:
+                raise RepairError("stale parent conflict: newer non-matching version exists")
+        # No unresolved ambiguity on discovery.
+        if any(
+            selector.strategy in WEAK_REPAIR_STRATEGIES and not selector.verified
+            for selector in proposal.discovery.selectors
+        ):
+            raise RepairError("unresolved selector ambiguity")
+        version = DefinitionVersion(
+            definition=proposal.proposed_definition,
+            version=len(current_versions) + 1,
+            content_hash=content_hash(proposal.proposed_definition),
+            proposal_id=proposal.repair_id,
+        )
+        self._append(
+            "rpa.definition.version.registered",
+            {"definition_version": asdict(version)},
+        )
+        self._append(
+            "rpa.repair.promoted",
+            {
+                "repair_id": repair_id,
+                "trial_id": trial_id,
+                "definition_version": version.version,
+                "content_hash": version.content_hash,
+                "parent_version": proposal.parent_version,
+            },
+        )
+        return version
+
+    def reject_repair(self, repair_id: str, *, reason: str, trial_id: str | None = None) -> None:
+        self._require_writer()
+        proposal = self._repair_proposal(repair_id)
+        if proposal is None:
+            raise KeyError(f"Unknown repair proposal: {repair_id}")
+        parent_before = self.definition_versions(proposal.parent_definition_id)
+        self._append(
+            "rpa.repair.rejected",
+            {
+                "repair_id": repair_id,
+                "trial_id": trial_id,
+                "reason": reason,
+                "parent_definition_id": proposal.parent_definition_id,
+                "parent_version": proposal.parent_version,
+            },
+        )
+        parent_after = self.definition_versions(proposal.parent_definition_id)
+        if parent_before != parent_after:
+            raise RepairError("rejection mutated parent definition versions")
+
     def reconcile(
         self,
         run_id: str,
@@ -1155,6 +1484,105 @@ class AutomationApplication:
             },
         )
         return self.inspect_run(run_id)
+
+    def _repair_proposal(self, repair_id: str) -> RepairProposal | None:
+        for event in self._store.iter_events():
+            if event.type != "rpa.repair.proposed":
+                continue
+            payload = event.payload["repair_proposal"]
+            if payload["repair_id"] != repair_id:
+                continue
+            discovery_value = payload["discovery"]
+            definition = self._definition_from_payload(payload["proposed_definition"])
+            return RepairProposal(
+                repair_id=payload["repair_id"],
+                parent_definition_id=payload["parent_definition_id"],
+                parent_version=payload["parent_version"],
+                parent_content_hash=payload["parent_content_hash"],
+                failure_run_id=payload["failure_run_id"],
+                failure_kind=payload["failure_kind"],
+                discovery=DiscoveryEvidence(
+                    evidence_id=discovery_value["evidence_id"],
+                    selectors=tuple(
+                        SelectorEvidence(**item) for item in discovery_value.get("selectors", ())
+                    ),
+                    observed_capabilities=tuple(
+                        discovery_value.get("observed_capabilities", ())
+                    ),
+                    schema_version=discovery_value.get("schema_version", "v1"),
+                ),
+                proposed_definition=definition,
+                rationale=payload.get("rationale", ""),
+                surface=payload.get("surface", "browser"),
+            )
+        return None
+
+    def _repair_trial(self, trial_id: str) -> dict[str, Any] | None:
+        for event in self._store.iter_events():
+            if event.type != "rpa.repair.trial.finished":
+                continue
+            trial = event.payload["trial"]
+            if trial["trial_id"] == trial_id:
+                return trial
+        return None
+
+    def _repair_trial_count(self, repair_id: str) -> int:
+        count = 0
+        for event in self._store.iter_events():
+            if event.type != "rpa.repair.trial.finished":
+                continue
+            if event.payload.get("trial", {}).get("repair_id") == repair_id:
+                count += 1
+        return count
+
+    def _ensure_trial_run(
+        self, trial_id: str, proposal: RepairProposal, budget: RunBudget
+    ) -> str:
+        self._append(
+            "rpa.run.started",
+            {
+                "run_id": trial_id,
+                "definition_id": proposal.parent_definition_id,
+                "read_only": proposal.proposed_definition.read_only,
+                "budget": budget.to_dict(),
+                "repair_id": proposal.repair_id,
+                "fork": True,
+            },
+        )
+        return trial_id
+
+    @staticmethod
+    def _repair_diff(
+        parent: AutomationDefinition, proposed: AutomationDefinition
+    ) -> dict[str, Any]:
+        return {
+            "parent": asdict(parent),
+            "proposed": asdict(proposed),
+            "content_hash_parent": content_hash(parent),
+            "content_hash_proposed": content_hash(proposed),
+        }
+
+    def _validate_repair_selectors(
+        self,
+        definition: AutomationDefinition,
+        discovery: DiscoveryEvidence,
+        surface: str,
+    ) -> None:
+        priority = (
+            BROWSER_SELECTOR_PRIORITY if surface == "browser" else DESKTOP_SELECTOR_PRIORITY
+        )
+        for selector in discovery.selectors:
+            if selector.strategy not in priority:
+                raise RepairError(f"selector strategy not in {surface} priority ladder")
+            if selector.strategy in WEAK_REPAIR_STRATEGIES and not selector.verified:
+                raise RepairError("rejected weak selector: unverified weak strategy")
+        for action in definition.actions:
+            if action.selector is None:
+                continue
+            if action.selector.strategy not in priority:
+                raise RepairError(f"selector strategy not in {surface} priority ladder")
+            if action.selector.strategy in WEAK_REPAIR_STRATEGIES and not action.selector.verified:
+                raise RepairError("rejected weak selector: unverified weak strategy")
 
     @staticmethod
     def _looks_like_transport_or_timeout(exc: Exception) -> bool:
