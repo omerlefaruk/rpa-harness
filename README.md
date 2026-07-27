@@ -30,18 +30,6 @@ python main.py --logs-show <RUN_ID> --logs-tail 50
 python main.py --report-open <RUN_ID>
 ```
 
-## OKF knowledge bundle
-
-Repo knowledge is published as an OKF v0.1 bundle under `docs/okf`:
-
-```bash
-python scripts/okf.py validate docs/okf
-python scripts/okf.py generate-indexes docs/okf
-git config core.hooksPath .githooks
-```
-
-The pre-commit hook validates the OKF bundle and runs `tests/test_okf_bundle.py`.
-
 ## Generated run artifacts
 
 A run directory may contain:

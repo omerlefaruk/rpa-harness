@@ -123,7 +123,6 @@ git commit -m "refactor: delete dashboard surfaces"
 - Modify: `harness/__init__.py`
 - Modify: `harness/cli.py`
 - Modify: `README.md`
-- Modify: `docs/okf/*`
 
 - [ ] **Step 1: Remove class-runtime CLI flags**
 
@@ -338,12 +337,11 @@ git commit -m "refactor: use run artifacts instead of observability db"
 
 ---
 
-## Phase 6: Docs and OKF cleanup
+## Phase 6: Docs cleanup
 
 **Files:**
 - Delete: `docs/superpowers/plans/`
 - Modify: `README.md`
-- Modify: `docs/okf/*`
 - Modify: docs that still mention dashboard, Python class runtime, SQLite observability, subagents, Office/PDF, or JobQueue.
 
 - [ ] **Step 1: Delete historical plan docs**
@@ -363,16 +361,7 @@ Run artifacts are the source of truth.
 No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
 ```
 
-- [ ] **Step 3: Refresh OKF indexes**
-
-```powershell
-python scripts/okf.py generate-indexes docs/okf
-python scripts/okf.py validate docs/okf
-```
-
-Expected: OKF validation passes.
-
-- [ ] **Step 4: Run final checks**
+- [ ] **Step 3: Run final checks**
 
 ```powershell
 python -m pytest -q

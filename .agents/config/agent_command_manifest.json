@@ -21,20 +21,6 @@
         "report.html"
       ]
     },
-    "okf_validate": {
-      "command": ["python", "scripts/okf.py", "validate", "docs/okf"],
-      "output": "json",
-      "purpose": "Validate the local Open Knowledge Format bundle before finishing docs, schema, CLI, skill, hook, or agent policy changes.",
-      "success_status": "passed",
-      "artifacts": ["docs/okf/index.md", "docs/okf/log.md"]
-    },
-    "okf_generate_indexes": {
-      "command": ["python", "scripts/okf.py", "generate-indexes", "docs/okf"],
-      "output": "json",
-      "purpose": "Regenerate OKF directory indexes from concept frontmatter after editing docs/okf concepts.",
-      "success_status": "passed",
-      "artifacts": ["docs/okf/index.md"]
-    },
     "copilot_build": {
       "command": [
         "python",

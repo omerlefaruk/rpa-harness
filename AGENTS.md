@@ -11,13 +11,6 @@
 - Keep changes small and tested.
 - Prefer JSON/JSONL/static HTML/local files over servers, databases, or visual platforms unless the repo already uses them for the exact purpose.
 
-## OKF knowledge bundle
-
-- `docs/okf` is the local Open Knowledge Format bundle for this repo.
-- When changing docs, workflow schema, CLI commands, skills, project layout, hooks, or agent/copilot policy, update the related OKF concept if the change affects durable repo knowledge.
-- Run `python scripts/okf.py generate-indexes docs/okf` after OKF concept edits.
-- Run `python scripts/okf.py validate docs/okf` before finishing OKF-related work.
-
 ## Safety
 
 - Every executable workflow step must have explicit success checks unless it is an explicitly allowed no-op.

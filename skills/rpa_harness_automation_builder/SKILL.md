@@ -92,13 +92,4 @@ Autopilot mode is for already-authored deterministic workflow execution. Read
 then use `--autopilot-build` to validate, preflight, run, and return JSON
 artifacts without manual CLI work.
 
-OKF maintenance is required when durable repo knowledge changes, especially
-docs, workflow schema, CLI commands, skills, hooks, project layout, or
-agent/copilot policy. Update `docs/okf`, then run:
-
-```bash
-python scripts/okf.py generate-indexes docs/okf
-python scripts/okf.py validate docs/okf
-```
-
 Do not claim production-ready unless dry-run or one-record evidence supports it.

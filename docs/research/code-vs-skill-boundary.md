@@ -17,7 +17,6 @@ What must stay in executable code, and what can become (or stay as) agent `SKILL
 | **Docs (human contracts)** | verification, credentials, selectors, evidence/repair, mutation, workflow_spec — single prose canon per topic |
 | **Rules (thin agent constraints)** | `.agents/rules/*` — short non-negotiables + **pointers** to docs; no full catalog copies |
 | **Skills (agent playbooks)** | How to author, inspect, discover, draft, preflight, repair, and use CLI/MCP—**procedure only** |
-| **OKF** | Indexed mirrors of durable system knowledge; not a third independent policy |
 
 **Hard rule:** A skill may *summarize* a contract. It must never be the only place a safety rule exists. When prose and code disagree, **code wins** until docs/skills are fixed.
 
@@ -68,7 +67,7 @@ What must stay in executable code, and what can become (or stay as) agent `SKILL
 | Skill | Disposition | Notes |
 | --- | --- | --- |
 | `.agents/skills/rpa-harness-automation-builder` | **CANONICAL builder skill** | Full author/inspect/repair loop |
-| `skills/rpa_harness_automation_builder` | **DELETE or thin redirect** after merge | Near-duplicate; OKF may cite it—update citations |
+| `skills/rpa_harness_automation_builder` | **DELETE or thin redirect** after merge | Near-duplicate of `.agents/skills` builder skill |
 | `search-to-rpa-workflow` | **MERGE** intake phase into builder *or* keep as short intake-only skill | Large overlap with builder |
 | `playwright-automation` | **KEEP** | Recon-then-action + scripts; drop divergent selector ladder (link `docs/selector_strategy.md`) |
 | `windows-ui-automation` | **KEEP** | Discover→act + scripts; link legacy desktop strategy for weak UIA |
@@ -88,7 +87,6 @@ What must stay in executable code, and what can become (or stay as) agent `SKILL
 | `desktop-ai-assist` | `desktop/ai_controller.py` modes | Controller I/O and gates |
 | `credential-hygiene-authors` | credential_policy (thin skill) | `security.py` |
 | `mcp-operator-surface` | MCP tool list, no-shell rule | Allowlist implementation |
-| `okf-maintenance` | OKF docs + commands (one place) | `scripts/okf.py` |
 | optional `dsl-authoring` | README DSL section | `dsl.py` compiler |
 
 ### Rules — disposition
@@ -126,11 +124,10 @@ What must stay in executable code, and what can become (or stay as) agent `SKILL
 1. **Builder skill doubled** — `.agents/skills/...` vs `skills/`  
 2. **Browser selector ladder** — AGENTS, docs, 3 skills, `planner.py` prompt, `strategies.py` (code is scoring truth)  
 3. **Desktop ladder** — AGENTS, docs, skills, desktop AI strings; deep form in `legacy_desktop_strategy.md`  
-4. **Evidence list** — AGENTS, builder skills, evidence doc, OKF, README  
+4. **Evidence list** — AGENTS, builder skills, evidence doc, README  
 5. **Verification check catalog** — rule 03 ≈ verification_contract (doc wins; code enums win for enforcement)  
 6. **Error taxonomies disagree** — error-recovery skill vs rulebook routes vs `analyze_failure` vs failure_report  
 7. **Credentials / mutation** — full text in rules + docs; rules should point  
-8. **OKF maintenance** — repeated in AGENTS + both builder skills  
 
 ---
 
@@ -141,12 +138,11 @@ Enforcement          → harness/ code + .agents/config/*
 Human contract       → docs/<topic>.md
 Agent non-negotiable → .agents/rules/* (short) + AGENTS.md (thin root)
 Agent playbook       → .agents/skills/<name>/SKILL.md  (+ scripts if needed)
-System index         → docs/okf/* (mirrors; regenerate indexes)
 Product card         → root SKILL.md + README.md
 ```
 
 **Canonical skill root:** `.agents/skills/` (agent home).  
-**Deprecate:** parallel long-form skill under `skills/` once redirects/OKF updated.
+**Deprecate:** parallel long-form skill under `skills/` once redirects updated.
 
 ---
 
@@ -165,7 +161,7 @@ Skills work may run **in parallel** on markdown/rules only. Touching protected h
 ## 7. Suggested workstream tickets (for map update)
 
 1. **Decide skill surface ownership** (grill or accept this doc): canonical roots, rules-as-pointers, config stays code.  
-2. **Consolidate skills:** merge dual builder skills; align/fold selector-strategies; rewrite error-recovery against code taxonomy; fix OKF citations.  
+2. **Consolidate skills:** merge dual builder skills; align/fold selector-strategies; rewrite error-recovery against code taxonomy.  
 3. **Extract missing playbooks:** evidence-and-repair, rulebook-readiness, failure-to-repair, swarm+approve, desktop-ai-assist, thin MCP skill.  
 4. **Align embedded prompts:** planner/agent/vision selector and safety strings match `docs/selector_strategy.md` + verification contract (shared constant optional).  
 5. **Thin rules + AGENTS:** remove full duplicated catalogs; link docs; keep non-negotiables.  

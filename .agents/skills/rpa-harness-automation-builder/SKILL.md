@@ -97,17 +97,6 @@ Autopilot must still validate, preflight, execute, and inspect report artifacts.
 If policy blocks external writes, submit actions, or coordinate fallback, return
 the blocked JSON result instead of improvising.
 
-## OKF maintenance
-
-When durable repo knowledge changes, especially docs, workflow schema, CLI
-commands, skills, hooks, project layout, or agent/copilot policy, update
-`docs/okf`, then run:
-
-```bash
-python scripts/okf.py generate-indexes docs/okf
-python scripts/okf.py validate docs/okf
-```
-
 ## Never do
 
 - Do not hardcode or expose secret values.

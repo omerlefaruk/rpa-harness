@@ -80,14 +80,13 @@ Which current modules, contracts, tests, artifacts, CLI/MCP surfaces, and docume
 | --- | --- |
 | `packages/rpa-harness-agent/` | npm launcher (`roi-harness`): init, MCP, thin CLI |
 | `tools/` | Offline analyze/propose/inspect/UIA dump/benchmark utilities |
-| `scripts/okf.py` | OKF index generate/validate |
 | `scripts/check_product_release.py` | Release gate checks |
 | `projects/*` | Real YAML product workflows |
 | `workflows/` | Shared examples and capability fixtures |
 | `tests/` | pytest product seams |
 | `main.py` | Shim → `harness.cli:run` |
 | `runs/` | Historical run artifact tree (SoT today) |
-| `docs/` + `docs/okf/` | Contracts + knowledge bundle |
+| `docs/` | Contracts and architecture docs |
 | `data/rpa_memory.db` | Local SQLite memory/legacy — **not** AG EventStore |
 | `DESIGN.md` | Unrelated UI brand tokens — not product architecture |
 
@@ -141,15 +140,15 @@ These map cleanly onto AG tools/behaviors/policies/sinks/product layer.
 
 | Conflict | Where | Why it fights destination |
 | --- | --- | --- |
-| **YAML-as-only-runtime** | architecture, OKF system/runtime/cli docs | Contradicts YAML = migration/import only |
+| **YAML-as-only-runtime** | architecture and CLI docs | Contradicts YAML = migration/import only |
 | **Run artifacts as SoT** | same docs + runner writes | Dual authority vs AG event log |
 | **Parallel orchestrators** | YAML runner vs `ai/agent` vs autopilot/copilot | Multiple lifecycle controllers |
 | **Direct I/O in runner** | `yaml_runner` execute paths | Violates AG determinism (I/O only in tools) |
 | **Secrets from env only** | runner secret load → `os.environ` | Destination: WCM product edge |
 | **No R0–R4 action_class** | side_effect, autopilot external-write sets | Parallel authority model |
 | **Retry of external writes** | recovery + retry-run | Must align with tool cache-on-replay + non-idempotent policy |
-| **CLI as primary agent surface** | OKF CLI concept | Destination: MCP primary |
-| **“No SQLite observability DB”** | architecture/OKF mantra | Wording must not ban EventStore (no *dashboard* DB ≠ no runtime log) |
+| **CLI as primary agent surface** | CLI docs | Destination: MCP primary |
+| **“No SQLite observability DB”** | architecture mantra | Wording must not ban EventStore (no *dashboard* DB ≠ no runtime log) |
 | **Ghost modules** | `orchestrator` pyc-only | Do not revive |
 | **Second tool authority** | `harness/ai/tools.py` | Must unify with AG tools |
 
@@ -246,7 +245,6 @@ Constraints: relative paths only; redacts `sk-*` in MCP text; **no shell tool**.
 | Artifact hygiene | `test_artifact_hygiene.py` | Sink writers |
 | Rulebook | `test_rulebook_audit.py` | Policy metadata |
 | Autopilot / copilot | related tests | Approvals + authority |
-| OKF | `test_okf_bundle.py` | Update concepts with runtime |
 | MCP / npm | `packages/rpa-harness-agent/test/*` | Expand carefully |
 | Desktop smoke | `tests/integration/test_windows_desktop_smoke.py` | Product tools |
 
@@ -254,7 +252,7 @@ Optional/peripheral for AG core: Telegram, benchmark, DSL, line endings, planner
 
 ---
 
-## 8. Docs / OKF
+## 8. Docs
 
 ### Durable (KEEP / lightly update)
 
@@ -272,10 +270,7 @@ Optional/peripheral for AG core: Telegram, benchmark, DSL, line endings, planner
 - `docs/architecture.md` — YAML-only; artifact SoT; “no SQLite observability DB”
 - `docs/workflow_spec.md`, `docs/yaml_schema.md` — YAML as canonical definition
 - `docs/yaml_migration.md` — needs AG import-path story
-- `docs/okf/system/rpa-harness.md`, `runtime/workflow-runner.md`, `interfaces/cli.md`
 - `docs/operator_workflow.md`, builder/copilot docs tied only to YAML CLI
-
-OKF process (`scripts/okf.py`) remains valid; concept content must shift with the runtime.
 
 ---
 
@@ -302,7 +297,7 @@ OKF process (`scripts/okf.py`) remains valid; concept content must shift with th
 | Resume ledger JSONL | **ADAPT** | Graph + events; avoid third SoT |
 | Product workspace init | **KEEP** | Install root for workspace SQLite + packs |
 | orchestrator pyc-only | **DELETE** | Ghost |
-| Architecture/OKF YAML-only wording | **REPLACE** | Align docs with destination |
+| Architecture YAML-only wording | **REPLACE** | Align docs with destination |
 
 ---
 
