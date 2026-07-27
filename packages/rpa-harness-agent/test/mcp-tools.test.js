@@ -43,3 +43,27 @@ test("shell and raw driver escape hatches are not MCP tools", () => {
     assert.throws(() => toolToCommand(name, {}));
   }
 });
+
+test("operation catalog and inspect tools stay allowlisted", () => {
+  assert.deepEqual(toolToCommand("list_automation_operations", {}), {
+    command: "automation-list-operations",
+    args: [],
+  });
+  assert.deepEqual(
+    toolToCommand("inspect_automation_run", {
+      run_id: "run_1",
+      workspace: ".rpa-automation",
+    }),
+    {
+      command: "automation-inspect",
+      args: ["run_1", ".rpa-automation"],
+    },
+  );
+  assert.deepEqual(
+    toolToCommand("workspace_status", { workspace: ".rpa-automation" }),
+    {
+      command: "automation-workspace-status",
+      args: [".rpa-automation"],
+    },
+  );
+});

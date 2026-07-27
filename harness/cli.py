@@ -71,6 +71,23 @@ Examples:
         "--automation-release-source",
         help="Immutable release source pin for workspace install/upgrade",
     )
+    parser.add_argument(
+        "--automation-list-operations",
+        action="store_true",
+        help="List versioned ActiveGraph MCP/CLI operation contracts",
+    )
+    parser.add_argument(
+        "--automation-grant-approval",
+        help="JSON file with grant_approval fields for a Definition Version",
+    )
+    parser.add_argument(
+        "--automation-export-evidence",
+        help="Export evidence references for a run id",
+    )
+    parser.add_argument(
+        "--automation-reject-repair",
+        help="JSON file describing a repair rejection {repair_id, reason}",
+    )
     parser.add_argument("--browser", choices=["chromium", "firefox", "webkit"])
     parser.add_argument("--browser-cdp", help="Attach to an existing Chromium CDP endpoint, for example http://127.0.0.1:9222")
     parser.add_argument("--headless", action="store_true")
@@ -263,6 +280,21 @@ def _strip_env_quotes(value: str) -> str:
 async def main():
     configure_console_encoding()
     args = parse_args()
+    if args.automation_list_operations:
+        import json
+
+        from harness.automation.operations import CATALOG_VERSION, list_operations
+
+        print(
+            json.dumps(
+                {
+                    "catalog_version": CATALOG_VERSION,
+                    "operations": [item.to_dict() for item in list_operations()],
+                },
+                indent=2,
+            )
+        )
+        return
     if args.automation_init_workspace:
         import json
 
@@ -413,6 +445,82 @@ async def main():
                 app.close()
         except (OSError, ValueError, ProposalValidationError) as exc:
             code = getattr(exc, "code", "automation_proposal_input_invalid")
+            print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
+            sys.exit(2)
+        return
+    if args.automation_grant_approval:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-grant-approval requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import ApprovalError, AuthorityError, AutomationApplication
+
+        try:
+            payload = json.loads(Path(args.automation_grant_approval).read_text(encoding="utf-8"))
+            app = AutomationApplication(args.automation_workspace)
+            try:
+                grant = app.grant_approval(**payload)
+                print(json.dumps(grant.to_dict(), indent=2, default=str))
+            finally:
+                app.close()
+        except (OSError, ValueError, TypeError, KeyError, ApprovalError, AuthorityError) as exc:
+            code = getattr(exc, "code", "automation_approval_input_invalid")
+            print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
+            sys.exit(2)
+        return
+    if args.automation_export_evidence:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-export-evidence requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import AutomationApplication
+
+        app = AutomationApplication(args.automation_workspace, read_only=True)
+        try:
+            summary = app.inspect_run(args.automation_export_evidence)
+            print(
+                json.dumps(
+                    {
+                        "run_id": summary.run_id,
+                        "status": summary.status,
+                        "evidence_references": [
+                            item.__dict__ for item in summary.evidence_references
+                        ],
+                    },
+                    indent=2,
+                    default=str,
+                )
+            )
+        except KeyError as exc:
+            print(json.dumps({"code": "unknown_run", "error": str(exc)}), file=sys.stderr)
+            sys.exit(2)
+        finally:
+            app.close()
+        return
+    if args.automation_reject_repair:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-reject-repair requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import AutomationApplication, RepairError
+
+        try:
+            payload = json.loads(Path(args.automation_reject_repair).read_text(encoding="utf-8"))
+            app = AutomationApplication(args.automation_workspace)
+            try:
+                app.reject_repair(
+                    payload["repair_id"],
+                    reason=payload["reason"],
+                    trial_id=payload.get("trial_id"),
+                )
+                print(json.dumps({"rejected": True, "repair_id": payload["repair_id"]}, indent=2))
+            finally:
+                app.close()
+        except (OSError, ValueError, TypeError, KeyError, RepairError) as exc:
+            code = getattr(exc, "code", "automation_repair_input_invalid")
             print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
             sys.exit(2)
         return
