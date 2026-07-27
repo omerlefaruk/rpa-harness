@@ -53,6 +53,24 @@ Examples:
     parser.add_argument(
         "--automation-workspace", help="Workspace for ActiveGraph automation commands"
     )
+    parser.add_argument(
+        "--automation-workspace-status",
+        action="store_true",
+        help="Show pinned ActiveGraph workspace runtime status",
+    )
+    parser.add_argument(
+        "--automation-workspace-upgrade",
+        help="Upgrade workspace runtime to a product version (immutable release pin)",
+    )
+    parser.add_argument(
+        "--automation-workspace-rollback",
+        action="store_true",
+        help="Roll back workspace runtime to the previous pinned version",
+    )
+    parser.add_argument(
+        "--automation-release-source",
+        help="Immutable release source pin for workspace install/upgrade",
+    )
     parser.add_argument("--browser", choices=["chromium", "firefox", "webkit"])
     parser.add_argument("--browser-cdp", help="Attach to an existing Chromium CDP endpoint, for example http://127.0.0.1:9222")
     parser.add_argument("--headless", action="store_true")
@@ -246,13 +264,81 @@ async def main():
     configure_console_encoding()
     args = parse_args()
     if args.automation_init_workspace:
-        from harness.automation import AutomationApplication
+        import json
 
-        AutomationApplication.initialize_workspace(args.automation_init_workspace)
+        from harness.automation import WorkspaceRuntimeManager
+
+        manager = WorkspaceRuntimeManager(args.automation_init_workspace)
+        if args.automation_release_source:
+            status = manager.initialize(release_source=args.automation_release_source)
+        else:
+            status = manager.initialize()
+        print(json.dumps(status.to_dict(), indent=2, default=str))
+        return
+    if args.automation_workspace_status:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-workspace-status requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import WorkspaceRuntimeManager
+
         print(
-            "Initialized ActiveGraph automation workspace at "
-            f"{Path(args.automation_init_workspace).resolve()}"
+            json.dumps(
+                WorkspaceRuntimeManager(args.automation_workspace).status().to_dict(),
+                indent=2,
+                default=str,
+            )
         )
+        return
+    if args.automation_workspace_upgrade:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-workspace-upgrade requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import WorkspaceRuntimeError, WorkspaceRuntimeManager, default_manifest
+
+        manager = WorkspaceRuntimeManager(args.automation_workspace)
+        target = default_manifest(
+            product_version=args.automation_workspace_upgrade,
+            release_source=args.automation_release_source
+            or f"pypi:rpa-harness=={args.automation_workspace_upgrade}",
+        )
+        try:
+            status = manager.upgrade(target)
+        except WorkspaceRuntimeError as exc:
+            print(
+                json.dumps(
+                    {
+                        "error": str(exc),
+                        "operator_action": getattr(
+                            exc,
+                            "operator_action",
+                            "retry upgrade; active runtime unchanged",
+                        ),
+                    },
+                    indent=2,
+                ),
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        print(json.dumps(status.to_dict(), indent=2, default=str))
+        return
+    if args.automation_workspace_rollback:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-workspace-rollback requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import WorkspaceRuntimeError, WorkspaceRuntimeManager
+
+        try:
+            status = WorkspaceRuntimeManager(args.automation_workspace).rollback()
+        except WorkspaceRuntimeError as exc:
+            print(json.dumps({"error": str(exc)}, indent=2), file=sys.stderr)
+            sys.exit(2)
+        print(json.dumps(status.to_dict(), indent=2, default=str))
         return
     if args.automation_inspect:
         import json

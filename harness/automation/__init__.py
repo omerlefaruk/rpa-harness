@@ -24,6 +24,14 @@ from harness.automation.authoring import (
     proposal_from_dict,
 )
 from harness.automation.pack import pack
+from harness.automation.workspace_runtime import (
+    RuntimeManifest,
+    WorkspaceRuntimeError,
+    WorkspaceRuntimeIncompatibleError,
+    WorkspaceRuntimeManager,
+    WorkspaceStatus,
+    default_manifest,
+)
 
 __all__ = [
     "AutomationApplication",
@@ -46,4 +54,10 @@ __all__ = [
     "WorkspaceRuntimeActiveError",
     "pack",
     "proposal_from_dict",
+    "RuntimeManifest",
+    "WorkspaceRuntimeError",
+    "WorkspaceRuntimeIncompatibleError",
+    "WorkspaceRuntimeManager",
+    "WorkspaceStatus",
+    "default_manifest",
 ]

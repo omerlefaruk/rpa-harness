@@ -119,6 +119,10 @@ class AutomationApplication:
 
     @classmethod
     def initialize_workspace(cls, workspace: str | Path) -> None:
+        from harness.automation.workspace_runtime import WorkspaceRuntimeManager
+
+        # Pinned runtime install first; operator dirs are preserved across upgrades.
+        WorkspaceRuntimeManager(workspace).initialize()
         app = cls(workspace)
         app.close()
 
