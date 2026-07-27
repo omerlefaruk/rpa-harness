@@ -1,117 +1,56 @@
-# rpa-harness Automation Builder Skill
+---
+name: rpa-harness-automation-builder
+description: Canonical ActiveGraph-native automation authoring skill for rpa-harness.
+---
 
-Use this skill when creating, inspecting, repairing, or improving an automation with rpa-harness.
+# ActiveGraph automation authoring
 
-## Core principle
+This is the **only** canonical skill for authoring automations in rpa-harness.
+Procedures live here. Verification, authority, redaction, retry, reconciliation,
+repair admission, and tool allowlists are **executable** in
+`harness.automation` — do not re-implement them in prompts.
 
-Do not guess automation behavior. Build deterministic workflows from target inspection, explicit success checks, redacted evidence, and operator-approved risky actions.
+## Lifecycle (application seam)
 
-## Standard flow
+Use `AutomationApplication` only:
 
-1. Understand the task, target, inputs, outputs, secrets, risky actions, and success criteria.
-2. Inspect the target before selecting actions or selectors.
-3. Generate selector/action candidates with scores and evidence.
-4. Draft workflow phases and steps.
-5. Add success checks to every step.
-6. Mark side effects, retryability, idempotency, weak selectors, and human gates.
-7. Run preflight and safe dry-runs.
-8. Pause before external writes.
-9. Read evidence bundles, timeline, records, report, and repair packets when debugging.
-10. Repair from evidence, not assumptions.
+1. **Intent** — business objective, required capabilities, no unresolved ambiguity.
+2. **Discovery evidence** — selectors and observations (evidence, not truth).
+3. **Proposal** — model may draft; compiler/`validate_proposal` is deterministic.
+4. **Validation** — fail closed on invalid class, plaintext secrets, weak unverified selectors.
+5. **Registration** — immutable Definition Version + content hash.
+6. **Approval** — grant bound to version, hash, scopes, actor, expiry (R3/R4).
+7. **Execution** — read-only or approval-gated write; Action Attempt before I/O.
+8. **Verification** — explicit post-action Verification Result + Evidence Reference.
+9. **Inspection** — `inspect_run` for status, budgets, blocked_reason, next_required.
+10. **Reconciliation** — unknown writes → `needs_reconciliation`; read-only only.
+11. **Repair** — fork trial, promote new version or reject; never patch live parent.
+12. **Promotion** — new Definition Version preserves previous.
 
-## Browser selector priority
+## Non-negotiables
 
-1. data-testid
-2. role/name
-3. label
-4. placeholder
-5. text
-6. stable id
-7. CSS
-8. XPath
+- EventStore is lifecycle authority; filesystem outputs are projections/exports.
+- R0–R4 action classes are immutable; missing/invalid fail closed.
+- Secrets: names/handles only at agent surfaces; plaintext only at local edge.
+- Writes: at-most-once per run/action/idempotency scope until not_applied.
+- Models cannot raise budgets, change allowlists, force success, or retry writes.
+- MCP/CLI adapters call application methods only — no shell/raw driver tools.
 
-## Desktop selector priority
+## Thin guidance pointers
 
-1. automation_id
-2. name/control_type
-3. class/control_type
-4. tree path
-5. image anchor
-6. coordinate fallback
+- Selectors: `.agents/skills/selector-strategies/SKILL.md` (priority ladders match executables).
+- Browser recon: `.agents/skills/playwright-automation/SKILL.md` (discovery only).
+- Desktop recon: `.agents/skills/windows-ui-automation/SKILL.md` (discovery only).
+- Failures: `.agents/skills/error-recovery/SKILL.md` (maps to terminal states).
+- Excel rows: `.agents/skills/excel-workflows/SKILL.md` (capability port, not YAML).
 
-## Legacy desktop fallback
+## Operator commands
 
-For old desktop apps with weak/no UIA, try Win32, menus, keyboard navigation, clipboard, import/export, image anchors, OCR verification, then calibrated relative coordinates as the last resort.
-
-## Evidence to inspect
-
-- run_manifest.json
-- timeline.jsonl
-- records.jsonl
-- evidence_bundle.json
-- screenshot/DOM/UIA/API artifacts
-- selector_evidence.json
-- repair_packet.json or repair_packet.md
-- report.html
-
-## Autopilot mode
-
-When the user wants no manual CLI work, the user should not be asked to run
-commands. The orchestrator agent should create or update a task file, then call
-the one-shot copilot command itself:
-
-```bash
-python main.py --copilot-auto task.md --builder-session-id SESSION
-```
-
-`--copilot-auto` auto-confirms intake from the prompt, runs discovery,
-validation, preflight, and safe execution, then stops only at a real question or
-the final review gate. Ask the user in chat for the active `next_question`, then
-answer it with:
-
-```bash
-python main.py --copilot-answer SESSION --copilot-question-id QUESTION --copilot-response ANSWER
-python main.py --copilot-auto SESSION
-```
-
-For fast browser URL iterations, prefer:
-
-```bash
-python main.py --copilot-try-url https://example.test --copilot-try-workflow workflow.yaml --builder-session-id SESSION
-```
-
-This creates the task file, reuses cached selector discovery when available,
-asks policy questions before discovery, runs validation/preflight/execution, and
-writes `copilot_report.json` plus `copilot_report.md`.
-
-For already-authored deterministic workflow tasks, the older JSON-returning
-autopilot command is still available:
-
-```bash
-python main.py --autopilot-build task.md --autopilot-workflow workflow.yaml
-```
-
-Use `.agents/config/autopilot.yaml` as the policy gate and
-`.agents/config/agent_command_manifest.json` as the approved command list.
-Autopilot must still validate, preflight, execute, and inspect report artifacts.
-If policy blocks external writes, submit actions, or coordinate fallback, return
-the blocked JSON result instead of improvising.
-
-## OKF maintenance
-
-When durable repo knowledge changes, especially docs, workflow schema, CLI
-commands, skills, hooks, project layout, or agent/copilot policy, update
-`docs/okf`, then run:
-
-```bash
+```text
+python -m harness.cli --automation-list-operations
+python -m harness.cli --automation-validate-proposal proposal.json
+python -m harness.cli --automation-register-proposal proposal.json --automation-workspace <ws>
+python -m harness.cli --automation-inspect <run_id> --automation-workspace <ws>
 python scripts/okf.py generate-indexes docs/okf
 python scripts/okf.py validate docs/okf
 ```
-
-## Never do
-
-- Do not hardcode or expose secret values.
-- Do not generate action-only steps.
-- Do not auto-submit, delete, pay, upload, or send without approval/policy.
-- Do not auto-retry non-idempotent external writes.
-- Do not use coordinates when DOM/UIA/API/keyboard/menu strategies are available.

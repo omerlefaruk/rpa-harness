@@ -1,47 +1,21 @@
 ---
 name: error-recovery
-description: >
-  RPA error handling patterns. Domain exception hierarchy,
-  retry strategies, fallback patterns, error classification.
-  Use when handling errors in RPA workflows or implementing
-  resilient automation with retry and recovery.
-hooks: "preflight, compliance, validation, reporting"
+description: Maps operator recovery to ActiveGraph terminal states and repair/reconcile.
 ---
 
-# Error Recovery
+# Failure and recovery
 
-## Exception Hierarchy
+Executable terminal states: `completed`, `failed`, `blocked`,
+`needs_reconciliation`, `rejected`, `cancelled`.
 
-| Exception | Code | Category |
-|-----------|------|----------|
-| TimeoutError | TIMEOUT | TRANSIENT |
-| ElementNotFoundError | ELEMENT_NOT_FOUND | TRANSIENT |
-| ElementStaleError | ELEMENT_STALE | TRANSIENT |
-| ConnectionTimeoutError | CONNECTION_TIMEOUT | TRANSIENT |
-| NetworkError | NETWORK_ERROR | TRANSIENT |
-| SelectorInvalidError | SELECTOR_INVALID | PERMANENT |
-| AuthenticationError | AUTHENTICATION_ERROR | PERMANENT |
-| FileNotFoundError_ | FILE_NOT_FOUND | PERMANENT |
+| Symptom | State | Next |
+| --- | --- | --- |
+| Verification failed | `failed` | Inspect evidence; repair trial if selector |
+| Budget/spiral | `blocked` | Human or external state change (`next_required`) |
+| Unknown write | `needs_reconciliation` | Read-only reconcile only |
+| Still unknown | terminal unattended | Human inspection |
+| Weak/unverified selector | rejected at proposal | Strengthen selector |
+| Stale parent on promote | repair rejected | Re-base repair on latest version |
 
-## Recovery Strategies
-
-| Strategy | When to Use |
-|----------|-------------|
-| RETRY | Transient errors (timeout, stale, network) |
-| SKIP | Non-critical operations |
-| FALLBACK | Alternative value/path available |
-| ABORT | Critical error, cannot continue |
-| ESCALATE | Max retries exceeded |
-
-## Usage
-
-```python
-from harness.resilience import retry_with_backoff, CircuitBreaker
-
-await retry_with_backoff(
-    lambda: driver.click("#unstable"),
-    max_attempts=3,
-    base_delay_ms=1000,
-    jitter=True,
-)
-```
+Do not invent retries for non-idempotent writes. Canonical lifecycle:
+`rpa-harness-automation-builder`.

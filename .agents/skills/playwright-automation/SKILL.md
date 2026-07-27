@@ -1,35 +1,15 @@
 ---
 name: playwright-automation
-description: >
-  Playwright browser automation for RPA. Reconnaissance-then-action pattern:
-  navigate to page, wait for stability, inspect DOM, discover selectors,
-  then execute actions. Use when automating web apps, finding selectors,
-  testing forms, or extracting data from web pages.
-hooks: "preflight, compliance, validation, reporting"
+description: Browser discovery guidance for ActiveGraph browser capability ports.
 ---
 
-# Playwright Automation
+# Browser discovery
 
-## Reconnaissance-Then-Action Pattern
+Recon-only guidance. Execution uses typed browser ops (`navigate`, `inspect`,
+`extract`, `fill`, `click`, `wait`, `download`, `screenshot`) via
+`CapabilityExecutor` and the application seam.
 
-1. **Navigate + wait**: Always wait for `networkidle` before inspection
-2. **Discover selectors**: Screenshot + `page.content()` to find stable selectors
-3. **Execute actions**: Use discovered selectors with auto-healing fallback
+Scripts under `scripts/` may help capture discovery evidence. They are not
+lifecycle authority and must not be exposed as MCP tools.
 
-## Selector Priority Ladder
-
-```
-data-testid > aria-label > name > id > :has-text() > CSS class
-```
-
-## Anti-Patterns
-
-- Don't use `nth-child`, `:first`, dynamic IDs
-- Don't hardcode `time.sleep()` — use `wait_for_selector()` or `wait_for_load_state()`
-- Don't ignore auto-healing — enable `auto_heal_selectors: true`
-
-## Scripts
-
-- `scripts/discover_selectors.py` — Navigate + screenshot + extract all interactive elements
-- `scripts/snapshot_dom.py` — Capture full DOM for analysis
-- `scripts/wait_for_stable.py` — Wait for network idle + no DOM mutations
+Canonical authoring: `rpa-harness-automation-builder`.

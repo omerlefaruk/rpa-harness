@@ -1,30 +1,30 @@
 ---
 name: selector-strategies
-description: >
-  CSS/XPath selector best practices for web automation.
-  Priority ladder, dynamic element handling, anti-patterns.
-  Use when writing selectors, handling dynamic content,
-  or debugging selector failures.
-hooks: "preflight, compliance, reporting"
+description: Selector priority ladders matching ActiveGraph capability executables.
 ---
 
-# Selector Strategies
+# Selector strategies
 
-## Priority Order
+Executable priority is enforced in `harness.automation.capabilities` and repair
+validation. This skill is guidance only.
 
-| Attribute | Stability | Notes |
-|-----------|-----------|-------|
-| `data-testid` | ★★★★★ | Made for testing |
-| `aria-label` | ★★★★☆ | Accessibility, rarely changes |
-| `name` | ★★★★☆ | Form inputs, stable |
-| `id` | ★★★☆☆ | Can be dynamic |
-| `class` | ★★☆☆☆ | Changes with CSS refactors |
+## Browser
 
-## Anti-Patterns
+1. role
+2. label
+3. test_id
+4. css (weak — requires verified=true + approval for writes)
+5. xpath (weak)
+6. coordinate (weak)
 
-```
-NEVER: div:nth-child(3)     # Brittle
-NEVER: .button:first         # Order-dependent
-NEVER: #react-root-12345     # Dynamic ID
-NEVER: [class*="active"]     # Too broad
-```
+## Desktop
+
+1. automation_id
+2. name
+3. class
+4. tree_path
+5. image (weak)
+6. coordinate (weak)
+
+Weak strategies without verification fail closed at proposal/repair admission.
+Canonical authoring: `rpa-harness-automation-builder`.
