@@ -73,16 +73,6 @@ YAML runtime, DSL, copilot, and autopilot entrypoints are **retired**. Historica
 Browser: `role → label → test_id → css → xpath → coordinate`  
 Desktop: `automation_id → name → class → tree_path → image → coordinate`
 
-## OKF knowledge bundle
-
-Repo knowledge is published as an OKF v0.1 bundle under `docs/okf`:
-
-```bash
-python scripts/okf.py validate docs/okf
-python scripts/okf.py generate-indexes docs/okf
-git config core.hooksPath .githooks
-```
-
 ## Safety
 
 - Secret **names** only in proposals, definitions, logs, and reports; values resolve at the execution edge.

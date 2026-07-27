@@ -42,7 +42,6 @@ python main.py --automation-validate-proposal proposal.json
 python main.py --automation-register-proposal proposal.json --automation-workspace .rpa-automation
 python main.py --automation-inspect RUN_ID --automation-workspace .rpa-automation
 npx rpa-harness-agent mcp
-python scripts/okf.py validate docs/okf
 ```
 
 ## Pointers

@@ -8,7 +8,7 @@ Agent roles and skills declare lifecycle hooks as procedure markers. Hooks do no
 |---|---|
 | `preflight` | Read AGENTS.md and relevant rules, confirm scope, identify constraints |
 | `compliance` | Enforce boundaries, no secrets, no hardcoded values, no parallel runtime |
-| `validation` | Run appropriate tests and validators (including OKF when docs change) |
+| `validation` | Run appropriate tests and validators |
 | `reporting` | Summarize changes, tests, risks, and open questions |
 | `failure` | Capture error context; prefer inspect/export evidence over assumptions |
 | `perf-scout` | Note performance opportunities (advisory) |

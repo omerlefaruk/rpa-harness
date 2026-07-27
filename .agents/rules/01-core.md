@@ -4,7 +4,7 @@
 
 1. **Research**: Read `AGENTS.md` / `CONTEXT.md`, inspect EventStore run summaries and evidence exports, then inspect current files.
 2. **Execute**: Implement the smallest change following existing ActiveGraph patterns. Use skill scripts for discovery when available.
-3. **Validate**: Run tests, verify correctness, check edge cases. For OKF edits: generate-indexes then validate.
+3. **Validate**: Run tests, verify correctness, and check edge cases.
 
 ## Non-Negotiables
 
@@ -27,7 +27,6 @@ packages/rpa-harness-agent/  # MCP/CLI agent launcher
 tests/                # pytest (ActiveGraph contracts + drivers)
 data/                 # Workspace EventStore SQLite (per workspace)
 .agents/              # Agent rules, skills, command manifest
-docs/okf/             # Indexed durable knowledge (OKF)
 docs/adr/             # Architecture decisions
 CONTEXT.md            # Domain glossary
 ```

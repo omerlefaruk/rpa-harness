@@ -58,7 +58,6 @@ Weak strategies require verification (and approval when coded policy demands).
 | --- | --- |
 | **MCP agent loop** | Allowlisted tools in `packages/rpa-harness-agent` mapping to application methods. |
 | **Canonical skill** | `.agents/skills/rpa-harness-automation-builder` — procedure only. |
-| **OKF** | `docs/okf` indexed durable knowledge; not a third policy engine. |
 
 ## Retired terms (do not use as product paths)
 

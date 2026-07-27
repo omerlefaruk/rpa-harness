@@ -63,6 +63,4 @@ python -m harness.cli --automation-register-proposal proposal.json --automation-
 python -m harness.cli --automation-execute-write request.json --automation-workspace <ws>
 python -m harness.cli --automation-inspect <run_id> --automation-workspace <ws>
 npx rpa-harness-agent mcp
-python scripts/okf.py generate-indexes docs/okf
-python scripts/okf.py validate docs/okf
 ```

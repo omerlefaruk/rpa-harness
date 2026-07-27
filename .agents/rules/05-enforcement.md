@@ -24,4 +24,3 @@ ruff check harness tests main.py
 - [ ] Screenshots/evidence captured on failure where relevant
 - [ ] Error context includes selector, target, action id when available
 - [ ] Tests pass: `python -m pytest -q`
-- [ ] OKF (if touched): `python scripts/okf.py generate-indexes docs/okf` then `validate`
