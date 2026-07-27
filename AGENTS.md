@@ -61,3 +61,17 @@ Failures should produce or link:
 - `report.html`
 
 Repair from evidence, not assumptions.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and implementation specifications are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the canonical `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` states. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository with a root `CONTEXT.md` and system decisions under `docs/adr/` when those files are needed. See `docs/agents/domain.md`.

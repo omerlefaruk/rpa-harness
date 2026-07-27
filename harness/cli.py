@@ -45,6 +45,17 @@ Examples:
     )
     parser.add_argument("--config", "-c", help="Path to YAML config file")
     parser.add_argument("--init-workspace", help="Initialize an agent-ready rpa-harness workspace")
+    parser.add_argument(
+        "--automation-init-workspace", help="Initialize an ActiveGraph automation workspace"
+    )
+    parser.add_argument("--automation-inspect", help="Inspect an ActiveGraph automation run")
+    parser.add_argument(
+        "--automation-register-proposal",
+        help="Register a validated Automation Proposal JSON file",
+    )
+    parser.add_argument(
+        "--automation-workspace", help="Workspace for ActiveGraph automation commands"
+    )
     parser.add_argument("--browser", choices=["chromium", "firefox", "webkit"])
     parser.add_argument("--browser-cdp", help="Attach to an existing Chromium CDP endpoint, for example http://127.0.0.1:9222")
     parser.add_argument("--headless", action="store_true")
@@ -270,6 +281,61 @@ def _strip_env_quotes(value: str) -> str:
 async def main():
     configure_console_encoding()
     args = parse_args()
+    if args.automation_init_workspace:
+        from harness.automation import AutomationApplication
+
+        AutomationApplication.initialize_workspace(args.automation_init_workspace)
+        print(
+            "Initialized ActiveGraph automation workspace at "
+            f"{Path(args.automation_init_workspace).resolve()}"
+        )
+        return
+    if args.automation_inspect:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-inspect requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import AutomationApplication
+
+        app = AutomationApplication(args.automation_workspace, read_only=True)
+        try:
+            print(
+                json.dumps(
+                    app.inspect_run(args.automation_inspect).to_dict(), indent=2, default=str
+                )
+            )
+        finally:
+            app.close()
+        return
+    if args.automation_register_proposal:
+        import json
+
+        if not args.automation_workspace:
+            print("--automation-register-proposal requires --automation-workspace", file=sys.stderr)
+            sys.exit(2)
+        from harness.automation import (
+            AutomationApplication,
+            AutomationDefinition,
+            ProposalValidationError,
+            proposal_from_dict,
+        )
+
+        try:
+            proposal_data = json.loads(
+                Path(args.automation_register_proposal).read_text(encoding="utf-8")
+            )
+            proposal = proposal_from_dict(proposal_data, AutomationDefinition)
+            app = AutomationApplication(args.automation_workspace)
+            try:
+                print(json.dumps(app.register_proposal(proposal).to_dict(), indent=2, default=str))
+            finally:
+                app.close()
+        except (OSError, ValueError, ProposalValidationError) as exc:
+            code = getattr(exc, "code", "automation_proposal_input_invalid")
+            print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
+            sys.exit(2)
+        return
     if args.init_workspace:
         from harness.product_init import init_workspace
 

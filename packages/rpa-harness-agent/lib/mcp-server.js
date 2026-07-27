@@ -10,13 +10,14 @@ const TOOLS = [
   ["show_run", "runs-show", "run_id"],
   ["open_report", "report-open", "run_id"],
   ["repair_selector", "repair-selector", "run_dir"],
+  ["register_automation_proposal", "automation-register-proposal", "proposal_path", "workspace"],
 ];
 
 export function toolToCommand(tool, input = {}) {
   const match = TOOLS.find(([name]) => name === tool);
   if (!match) throw new Error(`Unknown MCP tool: ${tool}`);
-  const [, command, field] = match;
-  return { command, args: field ? [input[field]] : [] };
+  const [, command, field, secondField] = match;
+  return { command, args: [field, secondField].filter(Boolean).map((name) => input[name]) };
 }
 
 export function startMcpServer(python) {
@@ -55,13 +56,16 @@ function handleLine(line, python) {
   send(request.id, { error: `Unsupported method: ${request.method}` });
 }
 
-function toolSchema([name, , field]) {
+function toolSchema([name, , field, secondField]) {
   return {
     name,
     inputSchema: {
       type: "object",
-      properties: field ? { [field]: { type: "string" } } : {},
-      required: field ? [field] : [],
+      properties: {
+        ...(field ? { [field]: { type: "string" } } : {}),
+        ...(secondField ? { [secondField]: { type: "string" } } : {}),
+      },
+      required: [field, secondField].filter(Boolean),
     },
   };
 }

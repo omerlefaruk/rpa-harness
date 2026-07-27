@@ -16,6 +16,10 @@ YAML workflows are the only supported runtime. Operators use terminal commands a
 
 When agents change docs, workflow schema, CLI commands, skills, or automation policy, they should update the relevant OKF concept, regenerate indexes, and validate the bundle.
 
+# Issue Planning
+
+GitHub Issues is the canonical specification and implementation-ticket tracker. Agent-ready work is identified by the `ready-for-agent` label and must have no open blockers or assignee. The repository's issue-tracker, triage-label, and domain-documentation conventions are defined under `docs/agents`.
+
 # Relationships
 
 * Governs the [rpa-harness system](/system/rpa-harness.md).
@@ -24,3 +28,6 @@ When agents change docs, workflow schema, CLI commands, skills, or automation po
 # Citations
 
 [1] [AGENTS rules](../../../AGENTS.md)
+[2] [Issue tracker conventions](../../agents/issue-tracker.md)
+[3] [Triage label conventions](../../agents/triage-labels.md)
+[4] [Domain documentation conventions](../../agents/domain.md)

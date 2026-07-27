@@ -8,9 +8,9 @@ timestamp: 2026-06-17T00:00:00Z
 
 # Commands
 
-The packaged CLI lives in `harness.cli` and remains available through the compatibility shim `main.py`. Operators and agents use it for YAML workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, and OKF maintenance. The old Python class discovery/run flags are not part of the CLI surface.
+The packaged CLI lives in `harness.cli` and remains available through the compatibility shim `main.py`. Operators and agents use it for YAML workflow validation, preflight, execution, reports, selector repair, copilot sessions, autopilot execution, ActiveGraph automation inspection, and OKF maintenance. The old Python class discovery/run flags are not part of the CLI surface.
 
-YAML workflows are the only supported runtime. Operators use terminal commands and run artifacts. Run artifacts are the source of truth. No dashboard, React frontend, SQLite observability DB, class workflow runtime, local subagent framework, Office/PDF layer, or job queue is part of the core.
+The ActiveGraph automation slice uses its SQLite EventStore as lifecycle authority. Filesystem evidence is an export written after its Evidence Reference event is accepted. This slice currently supports typed R0 read-only actions only; YAML commands remain a separate legacy surface.
 
 # Product launcher
 
@@ -30,12 +30,16 @@ python main.py --runs-list
 python main.py --runs-show RUN_ID
 python main.py --logs-show RUN_ID --logs-tail 50
 python main.py --report-open RUN_ID
+python main.py --automation-init-workspace .rpa-automation
+python main.py --automation-inspect RUN_ID --automation-workspace .rpa-automation
+python main.py --automation-register-proposal proposals/inventory.json --automation-workspace .rpa-automation
 python scripts/okf.py validate docs/okf
 ```
 
 # Relationships
 
 * Entry point for the [workflow runner](/runtime/workflow-runner.md).
+* Entry point for [ActiveGraph automation](/runtime/activegraph-automation.md).
 * Approved agent commands are listed in `.agents/config/agent_command_manifest.json`.
 
 # Citations

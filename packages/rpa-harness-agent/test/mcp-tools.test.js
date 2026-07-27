@@ -12,3 +12,16 @@ test("run_workflow maps to the allowlisted run command", () => {
 test("unknown MCP tools are rejected", () => {
   assert.throws(() => toolToCommand("shell", {}));
 });
+
+test("automation registration stays on an allowlisted application operation", () => {
+  assert.deepEqual(
+    toolToCommand("register_automation_proposal", {
+      proposal_path: "proposals/inventory.json",
+      workspace: ".rpa-automation",
+    }),
+    {
+      command: "automation-register-proposal",
+      args: ["proposals/inventory.json", ".rpa-automation"],
+    },
+  );
+});
