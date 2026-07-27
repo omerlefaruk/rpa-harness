@@ -36,6 +36,12 @@ OPERATION_CATALOG: dict[str, dict[str, Any]] = {
         "errors": ("automation_proposal_invalid", "automation_proposal_input_invalid"),
         "auth": "none",
     },
+    "propose": {
+        "inputs": ("workspace", "proposal"),
+        "outputs": ("proposal",),
+        "errors": ("automation_authority_denied", "automation_repeated_transition"),
+        "auth": "writer",
+    },
     "register_proposal": {
         "inputs": ("workspace", "proposal"),
         "outputs": ("definition_version",),
@@ -64,13 +70,21 @@ OPERATION_CATALOG: dict[str, dict[str, Any]] = {
         "auth": "reader",
     },
     "execute_read_only": {
-        "inputs": ("workspace", "definition_id"),
+        "inputs": ("workspace", "definition_id", "op", "port"),
         "outputs": ("run_summary",),
         "errors": ("unknown_definition", "automation_authority_denied"),
         "auth": "writer",
     },
     "execute_write": {
-        "inputs": ("workspace", "definition_id", "version", "grant_id", "actor"),
+        "inputs": (
+            "workspace",
+            "definition_id",
+            "version",
+            "grant_id",
+            "actor",
+            "op",
+            "port",
+        ),
         "outputs": ("run_summary",),
         "errors": (
             "automation_approval_denied",
@@ -86,13 +100,13 @@ OPERATION_CATALOG: dict[str, dict[str, Any]] = {
         "auth": "writer",
     },
     "propose_repair": {
-        "inputs": ("workspace", "repair_proposal"),
+        "inputs": ("workspace", "repair_request"),
         "outputs": ("repair_proposal",),
         "errors": ("automation_repair_rejected",),
         "auth": "writer",
     },
     "trial_repair": {
-        "inputs": ("workspace", "repair_id"),
+        "inputs": ("workspace", "repair_id", "op"),
         "outputs": ("trial",),
         "errors": ("automation_repair_rejected", "automation_budget_exhausted"),
         "auth": "writer",

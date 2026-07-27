@@ -1,37 +1,52 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { toolToCommand } from "../lib/mcp-server.js";
+import { toolToCommand, listMcpTools } from "../lib/mcp-server.js";
+import { buildHarnessArgs } from "../lib/commands.js";
 
-test("unknown MCP tools are rejected", () => {
-  assert.throws(() => toolToCommand("shell", {}));
+test("full agent-loop MCP tools are allowlisted", () => {
+  const tools = listMcpTools();
+  for (const name of [
+    "propose_automation",
+    "execute_automation_read",
+    "execute_automation_write",
+    "reconcile_automation_run",
+    "propose_automation_repair",
+    "trial_automation_repair",
+    "promote_automation_repair",
+    "inspect_automation_run",
+  ]) {
+    assert.ok(tools.includes(name), name);
+  }
 });
 
-test("automation validation stays on an allowlisted application operation", () => {
+test("execute write maps to CLI adapter", () => {
   assert.deepEqual(
-    toolToCommand("validate_automation_proposal", {
-      proposal_path: "proposals/inventory.json",
-    }),
-    {
-      command: "automation-validate-proposal",
-      args: ["proposals/inventory.json"],
-    },
-  );
-});
-
-test("automation registration stays on an allowlisted application operation", () => {
-  assert.deepEqual(
-    toolToCommand("register_automation_proposal", {
-      proposal_path: "proposals/inventory.json",
+    toolToCommand("execute_automation_write", {
+      request_path: "requests/write.json",
       workspace: ".rpa-automation",
     }),
     {
-      command: "automation-register-proposal",
-      args: ["proposals/inventory.json", ".rpa-automation"],
+      command: "automation-execute-write",
+      args: ["requests/write.json", ".rpa-automation"],
     },
+  );
+  assert.deepEqual(
+    buildHarnessArgs("automation-execute-write", [
+      "requests/write.json",
+      ".rpa-automation",
+    ]),
+    [
+      "-m",
+      "harness.cli",
+      "--automation-execute-write",
+      "requests/write.json",
+      "--automation-workspace",
+      ".rpa-automation",
+    ],
   );
 });
 
-test("shell and raw driver escape hatches are not MCP tools", () => {
+test("shell and yaml runner escape hatches are not MCP tools", () => {
   for (const name of [
     "shell",
     "exec",
@@ -45,26 +60,8 @@ test("shell and raw driver escape hatches are not MCP tools", () => {
   }
 });
 
-test("operation catalog and inspect tools stay allowlisted", () => {
-  assert.deepEqual(toolToCommand("list_automation_operations", {}), {
-    command: "automation-list-operations",
-    args: [],
-  });
-  assert.deepEqual(
-    toolToCommand("inspect_automation_run", {
-      run_id: "run_1",
-      workspace: ".rpa-automation",
-    }),
-    {
-      command: "automation-inspect",
-      args: ["run_1", ".rpa-automation"],
-    },
-  );
-  assert.deepEqual(
-    toolToCommand("workspace_status", { workspace: ".rpa-automation" }),
-    {
-      command: "automation-workspace-status",
-      args: [".rpa-automation"],
-    },
+test("path traversal is rejected", () => {
+  assert.throws(() =>
+    buildHarnessArgs("automation-execute-write", ["../x.json", ".ws"]),
   );
 });

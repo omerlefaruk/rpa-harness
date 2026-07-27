@@ -2,14 +2,31 @@ import readline from "node:readline";
 import { spawnSync } from "node:child_process";
 import { buildHarnessArgs } from "./commands.js";
 
+/**
+ * MCP tools for the full ActiveGraph agent loop.
+ * No shell, no raw driver, no YAML runner — only application operations.
+ *
+ * Typical agent sequence:
+ *   init_workspace → propose → validate → register → grant → execute_* → inspect
+ *   on unknown write: reconcile
+ *   on selector failure: propose_repair → trial_repair → promote_repair
+ */
 const TOOLS = [
   ["list_automation_operations", "automation-list-operations"],
+  ["init_workspace", "automation-init-workspace", "workspace"],
+  ["workspace_status", "automation-workspace-status", "workspace"],
+  ["propose_automation", "automation-propose", "request_path", "workspace"],
   ["validate_automation_proposal", "automation-validate-proposal", "proposal_path"],
   ["register_automation_proposal", "automation-register-proposal", "proposal_path", "workspace"],
+  ["grant_automation_approval", "automation-grant-approval", "grant_path", "workspace"],
+  ["execute_automation_read", "automation-execute-read", "request_path", "workspace"],
+  ["execute_automation_write", "automation-execute-write", "request_path", "workspace"],
+  ["reconcile_automation_run", "automation-reconcile", "request_path", "workspace"],
+  ["propose_automation_repair", "automation-propose-repair", "request_path", "workspace"],
+  ["trial_automation_repair", "automation-trial-repair", "request_path", "workspace"],
+  ["promote_automation_repair", "automation-promote-repair", "request_path", "workspace"],
   ["inspect_automation_run", "automation-inspect", "run_id", "workspace"],
   ["export_automation_evidence", "automation-export-evidence", "run_id", "workspace"],
-  ["grant_automation_approval", "automation-grant-approval", "grant_path", "workspace"],
-  ["workspace_status", "automation-workspace-status", "workspace"],
 ];
 
 export function toolToCommand(tool, input = {}) {
@@ -17,6 +34,10 @@ export function toolToCommand(tool, input = {}) {
   if (!match) throw new Error(`Unknown MCP tool: ${tool}`);
   const [, command, field, secondField] = match;
   return { command, args: [field, secondField].filter(Boolean).map((name) => input[name]) };
+}
+
+export function listMcpTools() {
+  return TOOLS.map(([name]) => name);
 }
 
 export function startMcpServer(python) {
@@ -30,7 +51,7 @@ function handleLine(line, python) {
     return send(request.id, {
       protocolVersion: "2024-11-05",
       capabilities: { tools: {} },
-      serverInfo: { name: "rpa-harness-agent", version: "0.1.0" },
+      serverInfo: { name: "rpa-harness-agent", version: "0.2.0" },
     });
   }
   if (request.method === "tools/list") {
@@ -58,6 +79,7 @@ function handleLine(line, python) {
 function toolSchema([name, , field, secondField]) {
   return {
     name,
+    description: `ActiveGraph automation operation: ${name}`,
     inputSchema: {
       type: "object",
       properties: {

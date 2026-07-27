@@ -44,13 +44,25 @@ Use `AutomationApplication` only:
 - Failures: `.agents/skills/error-recovery/SKILL.md` (maps to terminal states).
 - Excel rows: `.agents/skills/excel-workflows/SKILL.md` (capability port, not YAML).
 
-## Operator commands
+## AI agent loop (MCP or CLI)
+
+You (the model) write JSON files; you never get shell or raw drivers.
+
+1. Init workspace / status  
+2. Draft proposal JSON → `validate_automation_proposal` → `register_automation_proposal`  
+3. `grant_automation_approval` (R3/R4)  
+4. `execute_automation_read` or `execute_automation_write` (capability `op` + port)  
+5. `inspect_automation_run` / `export_automation_evidence`  
+6. If `needs_reconciliation` → `reconcile_automation_run`  
+7. If selector failed → propose / trial / promote repair  
 
 ```text
 python -m harness.cli --automation-list-operations
 python -m harness.cli --automation-validate-proposal proposal.json
 python -m harness.cli --automation-register-proposal proposal.json --automation-workspace <ws>
+python -m harness.cli --automation-execute-write request.json --automation-workspace <ws>
 python -m harness.cli --automation-inspect <run_id> --automation-workspace <ws>
+npx rpa-harness-agent mcp
 python scripts/okf.py generate-indexes docs/okf
 python scripts/okf.py validate docs/okf
 ```
