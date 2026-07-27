@@ -1,13 +1,7 @@
 import path from "node:path";
 
+// ActiveGraph-native allowlist only. YAML/shell/raw-driver commands are not exposed.
 const COMMANDS = {
-  validate: { flags: ["--validate-yaml"], args: 1 },
-  preflight: { flags: ["--preflight-yaml"], args: 1 },
-  run: { flags: ["--run-yaml"], args: 1 },
-  "runs-list": { flags: ["--runs-list"], args: 0 },
-  "runs-show": { flags: ["--runs-show"], args: 1 },
-  "report-open": { flags: ["--report-open"], args: 1 },
-  "repair-selector": { flags: ["--repair-selector"], args: 1 },
   "automation-list-operations": {
     flags: ["--automation-list-operations"],
     args: 0,
@@ -43,17 +37,11 @@ export function buildHarnessArgs(command, args = []) {
   if (!mapped) throw new Error(`Command is not allowlisted: ${command}`);
   if (args.length !== mapped.args) throw new Error(`Expected ${mapped.args} argument(s) for ${command}`);
   const safeArgs = args.map(safePathArg);
-  // Interleave each flag with its value so argparse receives --flag value pairs.
   const tokens = [];
   let argIndex = 0;
   for (const flag of mapped.flags) {
     tokens.push(flag);
-    // Boolean store_true flags consume no value.
-    if (
-      flag === "--automation-list-operations" ||
-      flag === "--automation-workspace-status" ||
-      flag === "--runs-list"
-    ) {
+    if (flag === "--automation-list-operations" || flag === "--automation-workspace-status") {
       continue;
     }
     if (argIndex < safeArgs.length) {
