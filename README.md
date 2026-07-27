@@ -62,11 +62,7 @@ You / AI
         → drivers as adapters
 ```
 
-YAML runtime, DSL, copilot, and autopilot entrypoints are **retired**. Historical YAML schema notes remain under `docs/` for archive/import context only.
-
-## Canonical agent skill
-
-`.agents/skills/rpa-harness-automation-builder` — Intent → Discovery → Proposal → Validation → Approval → Execution → Verification → Reconciliation → Repair → Promotion.
+YAML runtime, DSL, copilot, and autopilot entrypoints are **retired**.
 
 ## Selectors (executable priority)
 
@@ -78,17 +74,3 @@ Desktop: `automation_id → name → class → tree_path → image → coordinat
 - Secret **names** only in proposals, definitions, logs, and reports; values resolve at the execution edge.
 - Non-idempotent external writes are not auto-retried.
 - Weak selectors require verification (and approval when policy demands).
-- Skills are playbooks; code enforces safety. See `docs/research/code-vs-skill-boundary.md`.
-
-## Docs map
-
-| Doc | Purpose |
-| --- | --- |
-| `CONTEXT.md` | Domain glossary |
-| `docs/adr/` | Architecture decisions |
-| `docs/architecture.md` | ActiveGraph layers |
-| `docs/operator_workflow.md` | Operator lifecycle |
-| `docs/verification_contract.md` | Success checks |
-| `docs/credential_policy.md` | Secrets |
-| `docs/evidence_and_repair.md` | Evidence + repair |
-| `AGENTS.md` | Thin agent non-negotiables |

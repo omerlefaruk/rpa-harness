@@ -20,7 +20,6 @@ def iter_text_files(repo: Path):
             ".pytest_cache",
             ".pytest_tmp",
             "__pycache__",
-            "runs",
             "reports",
             "downloads",
             "screenshots",

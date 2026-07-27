@@ -26,7 +26,7 @@ jobs:
           python -m pip install -e ".[test]"
 
       - name: Compile
-        run: python -m compileall -q harness tests main.py conftest.py
+        run: python -m compileall -q harness tests main.py
 
       - name: Unit tests
         run: python -m pytest -q

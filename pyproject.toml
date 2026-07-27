@@ -52,9 +52,7 @@ include = ["harness*"]
 [tool.setuptools.package-data]
 "harness.templates.workspace" = [
     "README.md",
-    "workflows/*.yaml",
-    "config/*.yaml",
-    ".agents/config/*.json",
+    "proposals/*.json",
 ]
 
 [tool.ruff]

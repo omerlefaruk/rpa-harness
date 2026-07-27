@@ -1,7 +1,5 @@
-# Generated reports and run artifacts
+# Generated reports and artifacts
 reports/
-runs/*
-!runs/.gitkeep
 builder_sessions/
 screenshots/
 downloads/
