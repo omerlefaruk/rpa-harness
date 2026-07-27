@@ -74,7 +74,60 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--automation-reject-repair",
         help="JSON file describing a repair rejection {repair_id, reason}",
     )
+    parser.add_argument(
+        "--automation-propose",
+        help="JSON request {proposal: ...} — agent-authored proposal admission",
+    )
+    parser.add_argument(
+        "--automation-execute-read",
+        help="JSON request to execute a read-only definition via capability port",
+    )
+    parser.add_argument(
+        "--automation-execute-write",
+        help="JSON request to execute an approval-gated write via capability port",
+    )
+    parser.add_argument(
+        "--automation-reconcile",
+        help="JSON request to reconcile a needs_reconciliation run",
+    )
+    parser.add_argument(
+        "--automation-propose-repair",
+        help="JSON request to open a repair proposal from failure evidence",
+    )
+    parser.add_argument(
+        "--automation-trial-repair",
+        help="JSON request to trial a repair proposal in a fork",
+    )
+    parser.add_argument(
+        "--automation-promote-repair",
+        help="JSON request {repair_id, trial_id} to promote a successful trial",
+    )
     return parser.parse_args(argv)
+
+
+def _require_workspace(args: argparse.Namespace, flag: str) -> None:
+    if not args.automation_workspace:
+        print(f"{flag} requires --automation-workspace", file=sys.stderr)
+        sys.exit(2)
+
+
+def _run_workspace_json(args: argparse.Namespace, request_path: str, flag: str, handler) -> None:
+    """Load JSON request, open writer app, print structured result or domain error."""
+
+    _require_workspace(args, flag)
+    from harness.automation import AutomationApplication
+
+    try:
+        request = json.loads(Path(request_path).read_text(encoding="utf-8"))
+        app = AutomationApplication(args.automation_workspace)
+        try:
+            print(json.dumps(handler(app, request), indent=2, default=str))
+        finally:
+            app.close()
+    except Exception as exc:
+        code = getattr(exc, "code", "automation_operation_failed")
+        print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
+        sys.exit(2)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -309,6 +362,77 @@ def main(argv: list[str] | None = None) -> None:
             code = getattr(exc, "code", "automation_repair_input_invalid")
             print(json.dumps({"code": code, "error": str(exc)}), file=sys.stderr)
             sys.exit(2)
+        return
+
+    if args.automation_propose:
+        from harness.automation.agent_ops import propose_from_request
+
+        _run_workspace_json(
+            args, args.automation_propose, "--automation-propose", propose_from_request
+        )
+        return
+
+    if args.automation_execute_read:
+        from harness.automation.agent_ops import execute_read_only_request
+
+        _run_workspace_json(
+            args,
+            args.automation_execute_read,
+            "--automation-execute-read",
+            execute_read_only_request,
+        )
+        return
+
+    if args.automation_execute_write:
+        from harness.automation.agent_ops import execute_write_request
+
+        _run_workspace_json(
+            args,
+            args.automation_execute_write,
+            "--automation-execute-write",
+            execute_write_request,
+        )
+        return
+
+    if args.automation_reconcile:
+        from harness.automation.agent_ops import reconcile_request
+
+        _run_workspace_json(
+            args, args.automation_reconcile, "--automation-reconcile", reconcile_request
+        )
+        return
+
+    if args.automation_propose_repair:
+        from harness.automation.agent_ops import propose_repair_request
+
+        _run_workspace_json(
+            args,
+            args.automation_propose_repair,
+            "--automation-propose-repair",
+            propose_repair_request,
+        )
+        return
+
+    if args.automation_trial_repair:
+        from harness.automation.agent_ops import trial_repair_request
+
+        _run_workspace_json(
+            args,
+            args.automation_trial_repair,
+            "--automation-trial-repair",
+            trial_repair_request,
+        )
+        return
+
+    if args.automation_promote_repair:
+        from harness.automation.agent_ops import promote_repair_request
+
+        _run_workspace_json(
+            args,
+            args.automation_promote_repair,
+            "--automation-promote-repair",
+            promote_repair_request,
+        )
         return
 
     parse_args(["--help"])

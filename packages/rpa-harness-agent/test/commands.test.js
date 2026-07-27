@@ -11,7 +11,7 @@ test("automation validate maps to the application CLI adapter", () => {
   ]);
 });
 
-test("unknown command is rejected", () => {
+test("unknown and legacy yaml commands are rejected", () => {
   assert.throws(() => buildHarnessArgs("shell", ["rm", "-rf", "."]));
   assert.throws(() => buildHarnessArgs("validate", ["workflows/example.yaml"]));
   assert.throws(() => buildHarnessArgs("run", ["workflows/example.yaml"]));
