@@ -1,7 +1,0 @@
-autopilot:
-  allow_external_writes: false
-  allow_submit: false
-  allow_coordinate_fallback: false
-  require_success_checks: true
-  run_real_workflows: true
-  browser_cdp_endpoint: null
