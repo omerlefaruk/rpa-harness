@@ -1,6 +1,7 @@
 """ActiveGraph-native automation application seam."""
 
 from harness.automation.application import (
+    AmbiguousWriteError,
     ApprovalError,
     ApprovalGrant,
     AuthorityError,
@@ -10,6 +11,8 @@ from harness.automation.application import (
     DuplicateWriteError,
     EvidenceReference,
     MappingSecretAdapter,
+    ReconciliationError,
+    ReconciliationResult,
     RepeatedTransitionError,
     RunBudget,
     RunSummary,
@@ -42,6 +45,7 @@ from harness.automation.workspace_runtime import (
 )
 
 __all__ = [
+    "AmbiguousWriteError",
     "ApprovalError",
     "ApprovalGrant",
     "AuthorityError",
@@ -57,6 +61,8 @@ __all__ = [
     "DuplicateWriteError",
     "EvidenceReference",
     "MappingSecretAdapter",
+    "ReconciliationError",
+    "ReconciliationResult",
     "RepeatedTransitionError",
     "RunBudget",
     "RunSummary",
