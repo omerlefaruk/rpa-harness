@@ -10,6 +10,7 @@ const TOOLS = [
   ["show_run", "runs-show", "run_id"],
   ["open_report", "report-open", "run_id"],
   ["repair_selector", "repair-selector", "run_dir"],
+  ["validate_automation_proposal", "automation-validate-proposal", "proposal_path"],
   ["register_automation_proposal", "automation-register-proposal", "proposal_path", "workspace"],
 ];
 

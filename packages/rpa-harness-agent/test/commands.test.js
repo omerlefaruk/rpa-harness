@@ -18,3 +18,12 @@ test("unknown command is rejected", () => {
 test("path traversal is rejected", () => {
   assert.throws(() => buildHarnessArgs("validate", ["../outside.yaml"]));
 });
+
+test("automation validate maps to the application CLI adapter", () => {
+  assert.deepEqual(buildHarnessArgs("automation-validate-proposal", ["proposals/inventory.json"]), [
+    "-m",
+    "harness.cli",
+    "--automation-validate-proposal",
+    "proposals/inventory.json",
+  ]);
+});

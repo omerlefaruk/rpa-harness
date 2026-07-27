@@ -8,6 +8,10 @@ const COMMANDS = {
   "runs-show": { flags: ["--runs-show"], args: 1 },
   "report-open": { flags: ["--report-open"], args: 1 },
   "repair-selector": { flags: ["--repair-selector"], args: 1 },
+  "automation-validate-proposal": {
+    flags: ["--automation-validate-proposal"],
+    args: 1,
+  },
   "automation-register-proposal": {
     flags: ["--automation-register-proposal", "--automation-workspace"],
     args: 2,
