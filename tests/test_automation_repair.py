@@ -264,10 +264,12 @@ def test_replay_uses_cache_and_never_calls_adapter():
         calls["n"] += 1
         return ToolResult(value={"value": "ok"})
 
+    budget = RunBudget(max_repair_trials=2, max_tool_calls=3, max_action_attempts=2)
     first = app.trial_repair(
         repair.repair_id,
         adapter=adapter,
         verify=lambda result: VerificationResult(passed=True, message="ok"),
+        budget=budget,
     )
     assert calls["n"] == 1
     cache_key = f"{repair.repair_id}:{parent.content_hash}"
@@ -276,6 +278,7 @@ def test_replay_uses_cache_and_never_calls_adapter():
         adapter=adapter,
         verify=lambda result: VerificationResult(passed=True, message="ok"),
         replay_cache={cache_key: ToolResult(value={"value": "cached"})},
+        budget=budget,
     )
     assert calls["n"] == 1
     assert second.status == "passed"
