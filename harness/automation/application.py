@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from collections.abc import Callable, Mapping
@@ -66,6 +67,56 @@ class DuplicateWriteError(RuntimeError):
     def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(f"{self.code}: {message}")
+
+
+class BudgetExhaustedError(RuntimeError):
+    """Raised when a run budget dimension is exhausted."""
+
+    code = "automation_budget_exhausted"
+
+    def __init__(self, message: str, *, budget: str, last_transition: str | None = None) -> None:
+        self.message = message
+        self.budget = budget
+        self.last_transition = last_transition
+        super().__init__(f"{self.code}: {message}")
+
+
+class RepeatedTransitionError(RuntimeError):
+    """Raised when an equivalent autonomous transition repeats without state change."""
+
+    code = "automation_repeated_transition"
+
+    def __init__(self, message: str, *, fingerprint: str) -> None:
+        self.message = message
+        self.fingerprint = fingerprint
+        super().__init__(f"{self.code}: {message}")
+
+
+@dataclass(frozen=True)
+class RunBudget:
+    """Separate ceilings for autonomous proposal, tool, action, verification, and repair work."""
+
+    max_model_proposals: int = 3
+    max_tool_calls: int = 10
+    max_action_attempts: int = 5
+    max_verification_attempts: int = 5
+    max_repair_trials: int = 2
+
+    def to_dict(self) -> dict[str, int]:
+        return asdict(self)
+
+
+BUDGET_DIMENSIONS = (
+    "model_proposals",
+    "tool_calls",
+    "action_attempts",
+    "verification_attempts",
+    "repair_trials",
+)
+
+TERMINAL_RUN_STATUSES = frozenset(
+    {"completed", "failed", "blocked", "needs_reconciliation", "rejected", "cancelled"}
+)
 
 
 @dataclass(frozen=True)
@@ -135,6 +186,10 @@ class RunSummary:
     definition_version: int | None = None
     grant_id: str | None = None
     blocked_reason: str | None = None
+    exhausted_budget: str | None = None
+    last_transition: str | None = None
+    next_required: str | None = None
+    budget_usage: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return redact_value(
@@ -148,6 +203,10 @@ class RunSummary:
                 "definition_version": self.definition_version,
                 "grant_id": self.grant_id,
                 "blocked_reason": self.blocked_reason,
+                "exhausted_budget": self.exhausted_budget,
+                "last_transition": self.last_transition,
+                "next_required": self.next_required,
+                "budget_usage": dict(self.budget_usage),
             }
         )
 
@@ -241,12 +300,30 @@ class AutomationApplication:
         discovery: DiscoveryEvidence,
         model: ProposalModelAdapter,
         budget: ProposalBudget | None = None,
+        *,
+        run_id: str | None = None,
+        run_budget: RunBudget | None = None,
     ) -> AutomationProposal:
         budget = budget or ProposalBudget()
         self._validate_budget(budget)
+        if run_id is not None:
+            self.admit_transition(
+                run_id,
+                behavior="model_propose",
+                subject=intent.intent_id,
+                input_state={
+                    "objective": intent.objective,
+                    "capabilities": list(intent.required_capabilities),
+                    "discovery_id": discovery.evidence_id,
+                    "selectors": [asdict(item) for item in discovery.selectors],
+                },
+                budget_dimension="model_proposals",
+                run_budget=run_budget,
+            )
         proposal = model.propose(intent, discovery)
         if not isinstance(proposal, AutomationProposal):
             raise TypeError("Model adapter must return an AutomationProposal")
+        self._reject_model_authority_escape(proposal)
         return proposal
 
     def discover_and_propose(
@@ -255,10 +332,182 @@ class AutomationApplication:
         discovery_adapter: DiscoveryAdapter,
         model: ProposalModelAdapter,
         budget: ProposalBudget | None = None,
+        *,
+        run_id: str | None = None,
+        run_budget: RunBudget | None = None,
     ) -> AutomationProposal:
         budget = budget or ProposalBudget()
         self._validate_budget(budget)
-        return self.propose(intent, discovery_adapter.discover(intent), model, budget)
+        return self.propose(
+            intent,
+            discovery_adapter.discover(intent),
+            model,
+            budget,
+            run_id=run_id,
+            run_budget=run_budget,
+        )
+
+    def begin_run(
+        self,
+        definition_id: str,
+        *,
+        budget: RunBudget | None = None,
+        definition_version: int | None = None,
+        grant_id: str | None = None,
+        read_only: bool = True,
+    ) -> str:
+        """Start a run with explicit autonomous budgets for spiral control."""
+
+        self._require_writer()
+        definition = self._definition(definition_id)
+        if definition is None:
+            raise KeyError(f"Unknown automation definition: {definition_id}")
+        run_budget = budget or RunBudget()
+        self._validate_run_budget(run_budget)
+        run_id = f"run_{uuid4().hex}"
+        self._append(
+            "rpa.run.started",
+            {
+                "run_id": run_id,
+                "definition_id": definition_id,
+                "definition_version": definition_version,
+                "grant_id": grant_id,
+                "read_only": read_only,
+                "budget": run_budget.to_dict(),
+            },
+        )
+        return run_id
+
+    def admit_transition(
+        self,
+        run_id: str,
+        *,
+        behavior: str,
+        subject: str,
+        input_state: Mapping[str, Any],
+        budget_dimension: str,
+        run_budget: RunBudget | None = None,
+        state_changed: bool = False,
+    ) -> str:
+        """Admit one autonomous transition or block on repeat/budget exhaustion."""
+
+        self._require_writer()
+        state = self._project_run(run_id)
+        if state is None:
+            raise KeyError(f"Unknown run: {run_id}")
+        if state["status"] in TERMINAL_RUN_STATUSES:
+            raise RuntimeError(f"Run {run_id} is already terminal ({state['status']})")
+        if budget_dimension not in BUDGET_DIMENSIONS:
+            raise ValueError(f"Unknown budget dimension: {budget_dimension}")
+
+        budget = run_budget or self._run_budget(run_id) or RunBudget()
+        self._validate_run_budget(budget)
+        usage = dict(state.get("budget_usage") or {})
+        used = int(usage.get(budget_dimension, 0))
+        limit = int(budget.to_dict()[f"max_{budget_dimension}"])
+        if used >= limit:
+            reason = (
+                f"budget exhausted: {budget_dimension} "
+                f"(used={used}, max={limit}); last_transition={state.get('last_transition')}"
+            )
+            self._block_run(
+                run_id,
+                reason=reason,
+                exhausted_budget=budget_dimension,
+                last_transition=state.get("last_transition"),
+                next_required="human review or external deterministic state change",
+            )
+            raise BudgetExhaustedError(
+                reason,
+                budget=budget_dimension,
+                last_transition=state.get("last_transition"),
+            )
+
+        fingerprint = self.transition_fingerprint(behavior, subject, input_state)
+        prior = state.get("transition_fingerprints") or []
+        if fingerprint in prior and not state_changed:
+            reason = (
+                f"repeated transition blocked: behavior={behavior} subject={subject} "
+                f"fingerprint={fingerprint}; requires deterministic state change"
+            )
+            self._block_run(
+                run_id,
+                reason=reason,
+                exhausted_budget=None,
+                last_transition=fingerprint,
+                next_required="deterministic external or subject state change before retry",
+            )
+            raise RepeatedTransitionError(reason, fingerprint=fingerprint)
+
+        usage[budget_dimension] = used + 1
+        self._append(
+            "rpa.transition.admitted",
+            {
+                "run_id": run_id,
+                "behavior": behavior,
+                "subject": subject,
+                "fingerprint": fingerprint,
+                "budget_dimension": budget_dimension,
+                "budget_usage": usage,
+                "input_state_hash": self._input_state_hash(input_state),
+            },
+        )
+        return fingerprint
+
+    @staticmethod
+    def transition_fingerprint(
+        behavior: str, subject: str, input_state: Mapping[str, Any]
+    ) -> str:
+        material = {
+            "behavior": behavior,
+            "subject": subject,
+            "input_state_hash": AutomationApplication._input_state_hash(input_state),
+        }
+        canonical = json.dumps(material, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    def poll_until(
+        self,
+        run_id: str,
+        probe: Callable[[], Any],
+        *,
+        subject: str,
+        input_state: Mapping[str, Any] | None = None,
+        run_budget: RunBudget | None = None,
+        max_polls: int | None = None,
+    ) -> Any:
+        """Poll with budgets; persistent exceptions surface instead of being swallowed."""
+
+        attempts = 0
+        last_error: Exception | None = None
+        while True:
+            attempts += 1
+            if max_polls is not None and attempts > max_polls:
+                raise RuntimeError(f"poll limit exceeded for run {run_id}")
+            self.admit_transition(
+                run_id,
+                behavior="poll",
+                subject=subject,
+                input_state=input_state or {"attempt": attempts},
+                budget_dimension="tool_calls",
+                run_budget=run_budget,
+                state_changed=True,
+            )
+            try:
+                return probe()
+            except Exception as exc:  # surface persistent failures after budget pressure
+                last_error = exc
+                self._append(
+                    "rpa.poll.failed",
+                    {
+                        "run_id": run_id,
+                        "subject": subject,
+                        "error": str(exc),
+                        "attempt": attempts,
+                    },
+                )
+                # Do not swallow: after recording, re-raise so callers cannot ignore.
+                raise
 
     @staticmethod
     def validate_proposal(proposal: AutomationProposal) -> ProposalValidation:
@@ -348,6 +597,8 @@ class AutomationApplication:
         definition_id: str,
         adapter: ReadOnlyAdapter,
         verify: Callable[[ToolResult], VerificationResult],
+        *,
+        budget: RunBudget | None = None,
     ) -> RunSummary:
         self._require_writer()
         definition = self._definition(definition_id)
@@ -356,10 +607,22 @@ class AutomationApplication:
         if not definition.read_only or definition.action_class != "R0":
             raise AuthorityError("Only R0 read-only definitions are admitted by execute_read_only")
 
-        run_id = f"run_{uuid4().hex}"
-        self._append(
-            "rpa.run.started",
-            {"run_id": run_id, "definition_id": definition_id, "read_only": True},
+        run_id = self.begin_run(definition_id, budget=budget, read_only=True)
+        self.admit_transition(
+            run_id,
+            behavior="tool_call",
+            subject=definition.action_id,
+            input_state={"definition_id": definition_id, "read_only": True},
+            budget_dimension="tool_calls",
+            run_budget=budget,
+        )
+        self.admit_transition(
+            run_id,
+            behavior="action_attempt",
+            subject=definition.action_id,
+            input_state={"definition_id": definition_id, "read_only": True},
+            budget_dimension="action_attempts",
+            run_budget=budget,
         )
         self._append(
             "rpa.action.attempted",
@@ -377,7 +640,21 @@ class AutomationApplication:
                 "rpa.action.returned",
                 {"run_id": run_id, "value": tool_result.value, "evidence": tool_result.evidence},
             )
+            self.admit_transition(
+                run_id,
+                behavior="verification",
+                subject=definition.action_id,
+                input_state={
+                    "definition_id": definition_id,
+                    "value": tool_result.value,
+                    "evidence": tool_result.evidence,
+                },
+                budget_dimension="verification_attempts",
+                run_budget=budget,
+            )
             verification = verify(tool_result)
+        except (BudgetExhaustedError, RepeatedTransitionError):
+            raise
         except Exception as exc:
             tool_result = ToolResult()
             verification = VerificationResult(
@@ -524,6 +801,10 @@ class AutomationApplication:
             definition_version=state.get("definition_version"),
             grant_id=state.get("grant_id"),
             blocked_reason=state.get("blocked_reason"),
+            exhausted_budget=state.get("exhausted_budget"),
+            last_transition=state.get("last_transition"),
+            next_required=state.get("next_required"),
+            budget_usage=dict(state.get("budget_usage") or {}),
         )
 
     def _open_workspace_store(self) -> EventStore:
@@ -782,6 +1063,75 @@ class AutomationApplication:
         if budget.max_proposals < 1 or budget.max_model_calls < 1:
             raise ValueError("proposal and model-call budgets must permit exactly one proposal")
 
+    @staticmethod
+    def _validate_run_budget(budget: RunBudget) -> None:
+        values = budget.to_dict()
+        for key, value in values.items():
+            if int(value) < 1:
+                raise ValueError(f"run budget {key} must be at least 1")
+
+    @staticmethod
+    def _input_state_hash(input_state: Mapping[str, Any]) -> str:
+        canonical = json.dumps(input_state, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    def _run_budget(self, run_id: str) -> RunBudget | None:
+        for event in self._store.iter_events():
+            if event.type == "rpa.run.started" and event.payload.get("run_id") == run_id:
+                raw = event.payload.get("budget")
+                if raw:
+                    return RunBudget(**raw)
+        return None
+
+    def _block_run(
+        self,
+        run_id: str,
+        *,
+        reason: str,
+        exhausted_budget: str | None,
+        last_transition: str | None,
+        next_required: str,
+    ) -> None:
+        self._append(
+            "rpa.run.blocked",
+            {
+                "run_id": run_id,
+                "reason": reason,
+                "failure_kind": "budget_or_spiral",
+                "exhausted_budget": exhausted_budget,
+                "last_transition": last_transition,
+                "next_required": next_required,
+            },
+        )
+
+    @staticmethod
+    def _reject_model_authority_escape(proposal: AutomationProposal) -> None:
+        """Models cannot raise budgets, change allowlists, retry policy, or force success."""
+
+        forbidden = (
+            "budget",
+            "budgets",
+            "tool_allowlist",
+            "allowlist",
+            "retry",
+            "retries",
+            "force_success",
+            "mark_successful",
+        )
+        blob = json.dumps(asdict(proposal), sort_keys=True, default=str).lower()
+        for key in forbidden:
+            if f'"{key}"' in blob or f"'{key}'" in blob:
+                # Only reject when present as model-controlled metadata keys on inputs.
+                pass
+        for action in getattr(proposal.definition, "actions", ()) or ():
+            for key in action.inputs:
+                lowered = str(key).lower()
+                if lowered in forbidden or lowered.startswith("max_"):
+                    raise AuthorityError(
+                        "models cannot increase budgets, alter allowlists, invoke retries, "
+                        "or mark work successful"
+                    )
+
     def _record_evidence(
         self,
         run_id: str,
@@ -827,6 +1177,11 @@ class AutomationApplication:
                     "definition_version": payload.get("definition_version"),
                     "grant_id": payload.get("grant_id"),
                     "blocked_reason": None,
+                    "exhausted_budget": None,
+                    "last_transition": None,
+                    "next_required": None,
+                    "budget_usage": {},
+                    "transition_fingerprints": [],
                 }
             elif state is not None and payload.get("run_id") == run_id:
                 if event.type == "rpa.verification.recorded":
@@ -848,4 +1203,13 @@ class AutomationApplication:
                     state["status"] = "blocked"
                     state["blocked_reason"] = payload.get("reason")
                     state["failure_kind"] = payload.get("failure_kind")
+                    state["exhausted_budget"] = payload.get("exhausted_budget")
+                    state["last_transition"] = payload.get("last_transition")
+                    state["next_required"] = payload.get("next_required")
+                elif event.type == "rpa.transition.admitted":
+                    state["budget_usage"] = dict(payload.get("budget_usage") or {})
+                    state["last_transition"] = payload.get("fingerprint")
+                    fingerprints = list(state.get("transition_fingerprints") or [])
+                    fingerprints.append(payload["fingerprint"])
+                    state["transition_fingerprints"] = fingerprints
         return state
