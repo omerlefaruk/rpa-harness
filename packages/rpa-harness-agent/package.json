@@ -1,10 +1,10 @@
 {
-  "name": "roi-harness",
+  "name": "rpa-harness-agent",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "roi-harness": "bin/rpa-harness-agent.js"
+    "rpa-harness-agent": "bin/rpa-harness-agent.js"
   },
   "scripts": {
     "test": "node --test"

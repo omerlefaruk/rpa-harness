@@ -13,6 +13,7 @@ from harness.automation.application import (
     MappingSecretAdapter,
     ReconciliationError,
     ReconciliationResult,
+    ReplayDivergenceError,
     RepairError,
     RepairProposal,
     RepairTrialResult,
@@ -47,6 +48,25 @@ from harness.automation.capabilities import (
     FakeExcel,
 )
 from harness.automation.evidence import export_run_evidence, run_evidence_payload
+from harness.automation.evidence import EvidenceStore
+from harness.automation.interface import ApplicationResult, Command, Query
+from harness.automation.principals import Principal, PrincipalError
+from harness.automation.source_validation import (
+    ActionManifest,
+    SourceValidation,
+    SourceValidationError,
+    revision_identity,
+    validate_source,
+)
+from harness.automation.skills import FeatureSkill, discover_skills, get_skill
+from harness.automation.scheduler import (
+    ScheduledTaskRecord,
+    ScheduledTaskSpec,
+    SchedulerCapabilityError,
+    TaskSchedulerService,
+    WindowsTaskSchedulerAdapter,
+)
+from harness.automation.worker import PROTOCOL_VERSION, WorkerRequest, WorkerResponse
 from harness.automation.pack import pack
 from harness.automation.ports import (
     DesktopUiaPort,
@@ -80,6 +100,29 @@ __all__ = [
     "DuplicateWriteError",
     "EvidenceReference",
     "MappingSecretAdapter",
+    "ApplicationResult",
+    "Command",
+    "Query",
+    "Principal",
+    "PrincipalError",
+    "ReplayDivergenceError",
+    "EvidenceStore",
+    "ActionManifest",
+    "SourceValidation",
+    "SourceValidationError",
+    "revision_identity",
+    "validate_source",
+    "PROTOCOL_VERSION",
+    "WorkerRequest",
+    "WorkerResponse",
+    "FeatureSkill",
+    "discover_skills",
+    "get_skill",
+    "ScheduledTaskRecord",
+    "ScheduledTaskSpec",
+    "SchedulerCapabilityError",
+    "TaskSchedulerService",
+    "WindowsTaskSchedulerAdapter",
     "ReconciliationError",
     "ReconciliationResult",
     "RepairError",

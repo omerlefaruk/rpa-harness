@@ -1,7 +1,5 @@
-# Generated reports and run artifacts
+# Generated reports and artifacts
 reports/
-runs/*
-!runs/.gitkeep
 builder_sessions/
 screenshots/
 downloads/
@@ -23,7 +21,6 @@ data/*.sqlite-*
 playwright-report/
 test-results/
 .pytest_tmp/
-.pytest_tmp_okf/
 .pytest_cache/
 
 # Frontend generated output

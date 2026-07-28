@@ -8,6 +8,7 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from harness.security import REDACTED, SecretValue, redact_value
+from harness.automation.principals import Principal, PrincipalError, coerce_principal, require_operator
 
 
 class CredentialBackend(Protocol):
@@ -80,17 +81,19 @@ class CredentialService:
         self._backend = backend
         self.audit = audit if audit is not None else []
 
-    def create(self, name: str, plaintext: str, *, actor: str) -> dict[str, Any]:
+    def create(self, name: str, plaintext: str, *, actor: str, principal: Principal | str | None = None) -> dict[str, Any]:
+        require_operator(principal, "credential enrollment")
         handle = self._backend.create(name, plaintext)
         self._record("create", name, handle, actor, "ok")
         return {"name": name, "handle": handle, "secret": REDACTED}
 
-    def update(self, name: str, plaintext: str, *, actor: str) -> dict[str, Any]:
+    def update(self, name: str, plaintext: str, *, actor: str, principal: Principal | str | None = None) -> dict[str, Any]:
+        require_operator(principal, "credential enrollment")
         handle = self._backend.update(name, plaintext)
         self._record("update", name, handle, actor, "ok")
         return {"name": name, "handle": handle, "secret": REDACTED}
 
-    def resolve_handle(self, name_or_handle: str, *, actor: str) -> dict[str, Any]:
+    def resolve_handle(self, name_or_handle: str, *, actor: str, principal: Principal | str | None = None) -> dict[str, Any]:
         """Agent-facing resolve returns name/handle metadata only, never plaintext."""
 
         secret = self._backend.resolve(name_or_handle)
@@ -102,12 +105,39 @@ class CredentialService:
 
         return self._backend.resolve(name_or_handle)
 
-    def rotate(self, name: str, plaintext: str, *, actor: str) -> dict[str, Any]:
+    def resolve_for_execution(
+        self,
+        name_or_handle: str,
+        *,
+        revision_hash: str,
+        approved_revision_hash: str,
+        actor: str,
+        approved_actor: str,
+        declared_names: tuple[str, ...],
+        principal: Principal | str | None = None,
+    ) -> SecretValue:
+        """Release a credential only inside an approved worker boundary."""
+
+        if coerce_principal(principal).is_agent:
+            raise PrincipalError("agent principals cannot resolve execution credentials")
+        name = name_or_handle.removeprefix("cred://").split("/", 1)[0]
+        if revision_hash != approved_revision_hash:
+            raise PermissionError("credential approval is bound to a different revision")
+        if actor != approved_actor:
+            raise PermissionError("credential approval actor mismatch")
+        if name not in declared_names:
+            raise PermissionError("credential is outside the declared revision scope")
+        self._record("resolve_execution", name, name_or_handle, actor, "approved")
+        return self._backend.resolve(name_or_handle)
+
+    def rotate(self, name: str, plaintext: str, *, actor: str, principal: Principal | str | None = None) -> dict[str, Any]:
+        require_operator(principal, "credential rotation")
         handle = self._backend.rotate(name, plaintext)
         self._record("rotate", name, handle, actor, "ok")
         return {"name": name, "handle": handle, "secret": REDACTED}
 
-    def delete(self, name: str, *, actor: str) -> dict[str, Any]:
+    def delete(self, name: str, *, actor: str, principal: Principal | str | None = None) -> dict[str, Any]:
+        require_operator(principal, "credential deletion")
         self._backend.delete(name)
         self._record("delete", name, None, actor, "ok")
         return {"name": name, "deleted": True}

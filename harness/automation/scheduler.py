@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +11,10 @@ from typing import Any
 from uuid import uuid4
 
 from harness.security import redact_value
+
+
+class SchedulerCapabilityError(RuntimeError):
+    code = "scheduler_capability_unavailable"
 
 
 @dataclass(frozen=True)
@@ -23,6 +28,8 @@ class ScheduledTaskSpec:
     trigger: str
     enabled: bool = True
     actor: str = "scheduler"
+    credential_handles: tuple[str, ...] = ()
+    revision_content_hash: str = ""
 
     def cli_args(self) -> list[str]:
         # No secret values in scheduler arguments.
@@ -38,6 +45,25 @@ class ScheduledTaskSpec:
             "--automation-runtime-version",
             self.runtime_version,
         ]
+
+
+class WindowsTaskSchedulerAdapter:
+    """Boundary for the real Windows Task Scheduler integration."""
+
+    @staticmethod
+    def require_interactive_windows() -> None:
+        if not sys.platform.startswith("win"):
+            raise SchedulerCapabilityError(
+                "Windows Task Scheduler requires an interactive Windows host"
+            )
+
+    def register(self, spec: ScheduledTaskSpec) -> None:
+        self.require_interactive_windows()
+        raise NotImplementedError("Task Scheduler COM adapter is platform-owned")
+
+    def remove(self, task_name: str) -> None:
+        self.require_interactive_windows()
+        raise NotImplementedError("Task Scheduler COM adapter is platform-owned")
 
 
 @dataclass

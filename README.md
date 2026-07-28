@@ -13,7 +13,7 @@ It calls allowlisted MCP/CLI operations that all go through `harness.automation.
 npx rpa-harness-agent init my-workspace
 npx rpa-harness-agent mcp
 # alias also supported:
-npx roi-harness init my-workspace
+npx rpa-harness-agent init my-workspace
 ```
 
 The npm package under `packages/rpa-harness-agent/` is a thin launcher. The runtime is Python; agents connect over MCP with allowlisted tools only.
@@ -62,43 +62,15 @@ You / AI
         → drivers as adapters
 ```
 
-YAML runtime, DSL, copilot, and autopilot entrypoints are **retired**. Historical YAML schema notes remain under `docs/` for archive/import context only.
-
-## Canonical agent skill
-
-`.agents/skills/rpa-harness-automation-builder` — Intent → Discovery → Proposal → Validation → Approval → Execution → Verification → Reconciliation → Repair → Promotion.
+YAML runtime, DSL, copilot, and autopilot entrypoints are **retired**.
 
 ## Selectors (executable priority)
 
 Browser: `role → label → test_id → css → xpath → coordinate`  
 Desktop: `automation_id → name → class → tree_path → image → coordinate`
 
-## OKF knowledge bundle
-
-Repo knowledge is published as an OKF v0.1 bundle under `docs/okf`:
-
-```bash
-python scripts/okf.py validate docs/okf
-python scripts/okf.py generate-indexes docs/okf
-git config core.hooksPath .githooks
-```
-
 ## Safety
 
 - Secret **names** only in proposals, definitions, logs, and reports; values resolve at the execution edge.
 - Non-idempotent external writes are not auto-retried.
 - Weak selectors require verification (and approval when policy demands).
-- Skills are playbooks; code enforces safety. See `docs/research/code-vs-skill-boundary.md`.
-
-## Docs map
-
-| Doc | Purpose |
-| --- | --- |
-| `CONTEXT.md` | Domain glossary |
-| `docs/adr/` | Architecture decisions |
-| `docs/architecture.md` | ActiveGraph layers |
-| `docs/operator_workflow.md` | Operator lifecycle |
-| `docs/verification_contract.md` | Success checks |
-| `docs/credential_policy.md` | Secrets |
-| `docs/evidence_and_repair.md` | Evidence + repair |
-| `AGENTS.md` | Thin agent non-negotiables |

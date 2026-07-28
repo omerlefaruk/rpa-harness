@@ -36,6 +36,24 @@ OPERATION_CATALOG: dict[str, dict[str, Any]] = {
         "errors": ("automation_proposal_invalid", "automation_proposal_input_invalid"),
         "auth": "none",
     },
+    "validate_source": {
+        "inputs": ("source", "dependency_lock", "skill_hashes", "action_class"),
+        "outputs": ("accepted", "errors", "action_manifest", "source_hash"),
+        "errors": ("automation_source_invalid",),
+        "auth": "none",
+    },
+    "list_feature_skills": {
+        "inputs": (),
+        "outputs": ("skills",),
+        "errors": (),
+        "auth": "none",
+    },
+    "request_approval": {
+        "inputs": ("revision", "scope", "reason"),
+        "outputs": ("requested", "operator_review_required"),
+        "errors": ("automation_principal_denied",),
+        "auth": "agent_or_operator",
+    },
     "propose": {
         "inputs": ("workspace", "proposal"),
         "outputs": ("proposal",),

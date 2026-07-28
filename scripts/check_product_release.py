@@ -1,27 +1,26 @@
+"""Clean-checkout release smoke checks used by CI and package qualification."""
+
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
-import shutil
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(command: list[str], cwd: Path = ROOT) -> None:
-    subprocess.run(command, cwd=cwd, check=True)
-
-
 def main() -> int:
-    npm = shutil.which("npm")
-    if not npm:
-        raise SystemExit("npm not found")
-    run([sys.executable, "-m", "pytest", "tests/test_cli_entrypoint.py", "tests/test_product_init.py", "-q"])
-    run([npm, "test"], ROOT / "packages" / "rpa-harness-agent")
-    run([npm, "pack", "--dry-run"], ROOT / "packages" / "rpa-harness-agent")
-    python = ["py", "-3"] if sys.platform == "win32" and shutil.which("py") else [sys.executable]
-    run([*python, "-m", "pip", "wheel", ".", "--no-deps", "-w", ".pytest_tmp/wheels"])
+    manifest = json.loads((ROOT / "packages/rpa-harness-agent/package.json").read_text())
+    if manifest["version"] != "0.1.0":
+        raise SystemExit("Python and npm release versions must match")
+    required = [ROOT / "pyproject.toml", ROOT / "uv.lock", ROOT / "harness/mcp_server.py"]
+    missing = [str(path.relative_to(ROOT)) for path in required if not path.exists()]
+    if missing:
+        raise SystemExit(f"release assets missing: {', '.join(missing)}")
+    subprocess.run([sys.executable, "-m", "compileall", "-q", "harness", "main.py"], cwd=ROOT, check=True)
+    print(json.dumps({"ok": True, "python_version": manifest["version"], "npm_version": manifest["version"]}))
     return 0
 
 

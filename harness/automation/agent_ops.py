@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.automation.application import (
+    AuthorityError,
     AutomationApplication,
     AutomationDefinition,
     MappingSecretAdapter,
@@ -130,9 +131,13 @@ def default_verify(result: ToolResult) -> VerificationResult:
     )
 
 
-def execute_read_only_request(app: AutomationApplication, request: dict[str, Any]) -> dict[str, Any]:
+def execute_read_only_request(
+    app: AutomationApplication, request: dict[str, Any]
+) -> dict[str, Any]:
     definition_id = str(request["definition_id"])
     op = capability_op_from_dict(request["op"])
+    if not op.read_only or op.action_class != "R0":
+        raise AuthorityError("read-only transport accepts only bound R0 operations")
     executor = build_executor(str(request.get("port", "fake_browser")))
     if request.get("fixture_result") is not None:
         fixture = ToolResult(**request["fixture_result"])
@@ -140,10 +145,15 @@ def execute_read_only_request(app: AutomationApplication, request: dict[str, Any
         def adapter(_definition, _run_id):
             return fixture
 
-        summary = app.execute_read_only(definition_id, adapter, default_verify)
+        summary = app.execute_read_only(
+            definition_id, adapter, default_verify, operation_id=op.name
+        )
     else:
         summary = app.execute_read_only(
-            definition_id, executor.as_read_adapter(op), default_verify
+            definition_id,
+            executor.as_read_adapter(op),
+            default_verify,
+            operation_id=op.name,
         )
     return summary.to_dict()
 
@@ -154,6 +164,8 @@ def execute_write_request(app: AutomationApplication, request: dict[str, Any]) -
     grant_id = str(request["grant_id"])
     actor = str(request["actor"])
     op = capability_op_from_dict(request["op"])
+    if op.read_only or op.action_class == "R0":
+        raise AuthorityError("write transport accepts only write-capable operations")
     executor = build_executor(str(request.get("port", "fake_browser")))
     secrets = dict(request.get("secrets") or {})
     secret_adapter = MappingSecretAdapter(secrets) if secrets else None
@@ -173,6 +185,7 @@ def execute_write_request(app: AutomationApplication, request: dict[str, Any]) -
             verify=default_verify,
             actor=actor,
             secret_adapter=secret_adapter,
+            principal="agent",
         )
     else:
         summary = app.execute_write(
@@ -183,6 +196,7 @@ def execute_write_request(app: AutomationApplication, request: dict[str, Any]) -
             verify=default_verify,
             actor=actor,
             secret_adapter=secret_adapter,
+            principal="agent",
         )
     return summary.to_dict()
 
@@ -198,9 +212,7 @@ def reconcile_request(app: AutomationApplication, request: dict[str, Any]) -> di
         return ToolResult(value=observed_value, evidence=evidence)
 
     def conclude(_observed: ToolResult) -> ReconciliationResult:
-        return ReconciliationResult(
-            conclusion=conclusion, evidence=evidence, message=message
-        )
+        return ReconciliationResult(conclusion=conclusion, evidence=evidence, message=message)
 
     summary = app.reconcile(
         run_id,
@@ -279,9 +291,7 @@ def trial_repair_request(app: AutomationApplication, request: dict[str, Any]) ->
 
 
 def promote_repair_request(app: AutomationApplication, request: dict[str, Any]) -> dict[str, Any]:
-    version = app.promote_repair(
-        str(request["repair_id"]), trial_id=str(request["trial_id"])
-    )
+    version = app.promote_repair(str(request["repair_id"]), trial_id=str(request["trial_id"]))
     return version.to_dict()
 
 
@@ -291,9 +301,7 @@ def intent_from_dict(data: dict[str, Any]) -> AutomationIntent:
         name=str(data["name"]),
         objective=str(data["objective"]),
         required_capabilities=tuple(data.get("required_capabilities") or ()),
-        unresolved_business_ambiguities=tuple(
-            data.get("unresolved_business_ambiguities") or ()
-        ),
+        unresolved_business_ambiguities=tuple(data.get("unresolved_business_ambiguities") or ()),
         schema_version=str(data.get("schema_version", "v1")),
     )
 

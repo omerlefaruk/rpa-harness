@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 rpa-harness = "harness.cli:run"
+rpa-harness-mcp = "harness.mcp_server:serve"
 
 [project.entry-points."activegraph.packs"]
 rpa_automation = "harness.automation.pack:pack"
@@ -52,10 +53,9 @@ include = ["harness*"]
 [tool.setuptools.package-data]
 "harness.templates.workspace" = [
     "README.md",
-    "workflows/*.yaml",
-    "config/*.yaml",
-    ".agents/config/*.json",
+    "proposals/*.json",
 ]
+"harness.feature_skills" = ["**/*.md", "**/*.py"]
 
 [tool.ruff]
 line-length = 100
