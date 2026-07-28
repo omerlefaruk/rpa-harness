@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import runpy
 import sys
-import traceback
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-
-PROTOCOL_VERSION = "rpa-worker-v1"
+PROTOCOL_VERSION = "rpa-worker-v2"
 
 
 class WorkerProtocolError(RuntimeError):
@@ -27,6 +24,7 @@ class WorkerTimeoutError(WorkerProtocolError):
 class WorkerRequest:
     request_id: str
     snapshot_path: str
+    expected_source_hash: str
     payload: dict[str, Any] = None  # type: ignore[assignment]
     protocol_version: str = PROTOCOL_VERSION
 
@@ -39,6 +37,7 @@ class WorkerRequest:
             "protocol_version": self.protocol_version,
             "request_id": self.request_id,
             "snapshot_path": self.snapshot_path,
+            "expected_source_hash": self.expected_source_hash,
             "payload": self.payload,
         }
 
@@ -91,7 +90,16 @@ def execute_snapshot(request: WorkerRequest) -> WorkerResponse:
     if request.protocol_version != PROTOCOL_VERSION:
         raise WorkerProtocolError("worker protocol version mismatch")
     try:
-        namespace = runpy.run_path(request.snapshot_path, run_name="__rpa_worker__")
+        with open(request.snapshot_path, "rb") as source_file:  # noqa: PTH123
+            source_bytes = source_file.read()
+        actual_hash = hashlib.sha256(source_bytes).hexdigest()
+        if actual_hash != request.expected_source_hash:
+            raise WorkerProtocolError("snapshot content hash mismatch")
+        namespace = {
+            "__name__": "__rpa_worker__",
+            "__file__": request.snapshot_path,
+        }
+        exec(compile(source_bytes, request.snapshot_path, "exec"), namespace)  # noqa: S102
         entry = namespace.get("main") or namespace.get("run")
         if not callable(entry):
             raise WorkerProtocolError("snapshot must define callable main(payload)")
@@ -121,13 +129,21 @@ def _main() -> int:
             request = WorkerRequest(
                 request_id=str(raw["request_id"]),
                 snapshot_path=str(raw["snapshot_path"]),
+                expected_source_hash=str(raw["expected_source_hash"]),
                 payload=dict(raw.get("payload") or {}),
                 protocol_version=str(raw.get("protocol_version", "")),
             )
             response = execute_snapshot(request)
         except Exception as exc:
-            request_id = str(raw.get("request_id", "unknown")) if isinstance(raw, dict) else "unknown"
-            response = WorkerResponse(request_id, False, error_code=getattr(exc, "code", "automation_worker_protocol_error"), error=str(exc))
+            request_id = (
+                str(raw.get("request_id", "unknown")) if isinstance(raw, dict) else "unknown"
+            )
+            response = WorkerResponse(
+                request_id,
+                False,
+                error_code=getattr(exc, "code", "automation_worker_protocol_error"),
+                error=str(exc),
+            )
         sys.stdout.write(json.dumps(response.to_dict(), sort_keys=True) + "\n")
         sys.stdout.flush()
     return 0

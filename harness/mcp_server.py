@@ -8,38 +8,78 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-from harness.automation.principals import Principal
 from harness.automation.operations import CATALOG_VERSION, list_operations
 from harness.automation.skills import discover_skills
-
 
 SERVER_VERSION = "0.2.0"
 CLI_TOOL_ARGS: dict[str, tuple[str, ...]] = {
     "init_workspace": ("--automation-init-workspace", "workspace"),
-    "workspace_status": ("--automation-workspace-status", "workspace"),
-    "propose_automation": ("--automation-propose", "request_path", "workspace"),
+    "workspace_status": (
+        "--automation-workspace-status",
+        "--automation-workspace",
+        "workspace",
+    ),
+    "propose_automation": (
+        "--automation-propose",
+        "request_path",
+        "--automation-workspace",
+        "workspace",
+    ),
     "validate_automation_proposal": ("--automation-validate-proposal", "proposal_path"),
     "register_automation_proposal": (
         "--automation-register-proposal",
         "proposal_path",
+        "--automation-workspace",
         "workspace",
     ),
-    "execute_automation_read": ("--automation-execute-read", "request_path", "workspace"),
-    "execute_automation_write": ("--automation-execute-write", "request_path", "workspace"),
-    "reconcile_automation_run": ("--automation-reconcile", "request_path", "workspace"),
+    "execute_automation_read": (
+        "--automation-execute-read",
+        "request_path",
+        "--automation-workspace",
+        "workspace",
+    ),
+    "execute_automation_write": (
+        "--automation-execute-write",
+        "request_path",
+        "--automation-workspace",
+        "workspace",
+    ),
+    "reconcile_automation_run": (
+        "--automation-reconcile",
+        "request_path",
+        "--automation-workspace",
+        "workspace",
+    ),
     "propose_automation_repair": (
         "--automation-propose-repair",
         "request_path",
+        "--automation-workspace",
         "workspace",
     ),
-    "trial_automation_repair": ("--automation-trial-repair", "request_path", "workspace"),
+    "trial_automation_repair": (
+        "--automation-trial-repair",
+        "request_path",
+        "--automation-workspace",
+        "workspace",
+    ),
     "promote_automation_repair": (
         "--automation-promote-repair",
         "request_path",
+        "--automation-workspace",
         "workspace",
     ),
-    "inspect_automation_run": ("--automation-inspect", "run_id", "workspace"),
-    "export_automation_evidence": ("--automation-export-evidence", "run_id", "workspace"),
+    "inspect_automation_run": (
+        "--automation-inspect",
+        "run_id",
+        "--automation-workspace",
+        "workspace",
+    ),
+    "export_automation_evidence": (
+        "--automation-export-evidence",
+        "run_id",
+        "--automation-workspace",
+        "workspace",
+    ),
 }
 
 TOOL_NAMES = (
@@ -63,9 +103,12 @@ def resource_list() -> list[dict[str, Any]]:
     ]
 
 
-def handle_request(request: dict[str, Any], *, app_factory: Callable[[str, bool], Any] | None = None) -> dict[str, Any]:
+def handle_request(
+    request: dict[str, Any], *, app_factory: Callable[[str, bool], Any] | None = None
+) -> dict[str, Any]:
     method = request.get("method")
     request_id = request.get("id")
+    result: dict[str, Any]
     if method == "initialize":
         result = {
             "protocolVersion": "2024-11-05",
@@ -99,7 +142,10 @@ def handle_request(request: dict[str, Any], *, app_factory: Callable[[str, bool]
         if name not in TOOL_NAMES:
             raise ValueError(f"unknown MCP tool: {name}")
         if name == "list_automation_operations":
-            value = {"catalog_version": CATALOG_VERSION, "operations": [item.to_dict() for item in list_operations()]}
+            value = {
+                "catalog_version": CATALOG_VERSION,
+                "operations": [item.to_dict() for item in list_operations()],
+            }
             result = {"content": [{"type": "text", "text": json.dumps(value)}]}
         elif name == "request_approval":
             if app_factory is None:
@@ -110,17 +156,38 @@ def handle_request(request: dict[str, Any], *, app_factory: Callable[[str, bool]
                 value = app.execute_command("request_approval", arguments, principal="agent")
             finally:
                 app.close()
-            result = {"isError": not value.ok, "content": [{"type": "text", "text": json.dumps(value.to_dict())}]}
+            result = {
+                "isError": not value.ok,
+                "content": [{"type": "text", "text": json.dumps(value.to_dict())}],
+            }
         elif name == "list_feature_skills":
-            result = {"content": [{"type": "text", "text": json.dumps([skill.to_dict() for skill in discover_skills()])}]}
+            result = {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps([skill.to_dict() for skill in discover_skills()]),
+                    }
+                ]
+            }
         elif name == "read_feature_skill":
             from harness.automation.skills import get_skill
 
-            result = {"content": [{"type": "text", "text": get_skill(str(arguments["name"])).content}]}
+            result = {
+                "content": [{"type": "text", "text": get_skill(str(arguments["name"])).content}]
+            }
         elif name == "validate_source":
             from harness.automation.source_validation import validate_source
 
-            result = {"content": [{"type": "text", "text": json.dumps(validate_source(str(arguments.get("source", ""))).to_dict())}]}
+            result = {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            validate_source(str(arguments.get("source", ""))).to_dict()
+                        ),
+                    }
+                ]
+            }
         elif name in CLI_TOOL_ARGS:
             argv = _cli_args(name, arguments)
             completed = subprocess.run(
@@ -135,7 +202,9 @@ def handle_request(request: dict[str, Any], *, app_factory: Callable[[str, bool]
                 "content": [{"type": "text", "text": output or f"exit {completed.returncode}"}],
             }
         elif app_factory is None:
-            result = {"content": [{"type": "text", "text": "application factory is not configured"}]}
+            result = {
+                "content": [{"type": "text", "text": "application factory is not configured"}]
+            }
         else:
             workspace = str(arguments["workspace"])
             app = app_factory(workspace, True)
@@ -155,7 +224,12 @@ def handle_request(request: dict[str, Any], *, app_factory: Callable[[str, bool]
 def _tool_schema(name: str) -> dict[str, Any]:
     if name == "list_automation_operations":
         fields: tuple[str, ...] = ()
-    elif name in {"list_feature_skills", "read_feature_skill", "validate_source", "request_approval"}:
+    elif name in {
+        "list_feature_skills",
+        "read_feature_skill",
+        "validate_source",
+        "request_approval",
+    }:
         fields = {
             "list_feature_skills": (),
             "read_feature_skill": ("name",),
@@ -190,9 +264,18 @@ def serve() -> None:
     for line in sys.stdin:
         try:
             request = json.loads(line)
-            response = handle_request(request, app_factory=lambda workspace, read_only: AutomationApplication(workspace, read_only=read_only))
+            response = handle_request(
+                request,
+                app_factory=lambda workspace, read_only: AutomationApplication(
+                    workspace, read_only=read_only
+                ),
+            )
         except Exception as exc:
-            response = {"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": str(exc)}}
+            response = {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32000, "message": str(exc)},
+            }
         sys.stdout.write(json.dumps(response, default=str) + "\n")
         sys.stdout.flush()
 

@@ -29,8 +29,8 @@ from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
 
-from activegraph.core.event import Event
 from activegraph import Graph, Runtime
+from activegraph.core.event import Event
 from activegraph.store import EventStore, InMemoryEventStore, SQLiteEventStore
 
 from harness.automation.authoring import (
@@ -50,6 +50,7 @@ from harness.automation.authoring import (
     content_hash,
     validate_proposal,
 )
+from harness.automation.interface import ApplicationResult, Command, Query
 from harness.automation.models import (
     BUDGET_DIMENSIONS,
     TERMINAL_RUN_STATUSES,
@@ -63,19 +64,23 @@ from harness.automation.models import (
     EvidenceReference,
     ReconciliationError,
     ReconciliationResult,
-    ReplayDivergenceError,
     RepairError,
     RepairProposal,
     RepairTrialResult,
     RepeatedTransitionError,
+    ReplayDivergenceError,
     RunBudget,
     RunSummary,
     ToolResult,
     VerificationResult,
     WorkspaceRuntimeActiveError,
 )
-from harness.automation.interface import ApplicationResult, Command, Query
-from harness.automation.principals import OPERATOR, Principal, PrincipalError, coerce_principal, require_operator
+from harness.automation.principals import (
+    Principal,
+    PrincipalError,
+    coerce_principal,
+    require_operator,
+)
 from harness.automation.source_validation import (
     SourceValidation,
     SourceValidationError,
@@ -83,7 +88,6 @@ from harness.automation.source_validation import (
     validate_source,
 )
 from harness.automation.worker import (
-    PROTOCOL_VERSION,
     WorkerRequest,
     WorkerResponse,
     decode_response,
@@ -251,7 +255,13 @@ class AutomationApplication:
     def runtime(self) -> Runtime:
         return self._runtime
 
-    def execute_command(self, command: Command | str, payload: Mapping[str, Any] | None = None, *, principal: Principal | str | None = None) -> ApplicationResult:
+    def execute_command(
+        self,
+        command: Command | str,
+        payload: Mapping[str, Any] | None = None,
+        *,
+        principal: Principal | str | None = None,
+    ) -> ApplicationResult:
         """Run a catalog command through the same seam as every transport."""
 
         if isinstance(command, Command):
@@ -280,23 +290,41 @@ class AutomationApplication:
                     "rpa.approval.requested",
                     {"request": values, "principal": caller.to_dict()},
                 )
-                return ApplicationResult(True, {"requested": True, "operator_review_required": True})
+                return ApplicationResult(
+                    True, {"requested": True, "operator_review_required": True}
+                )
             if name == "workspace_status":
                 return ApplicationResult(True, self.graph_status())
             if name == "register_definition":
                 self.register_definition(values["definition"], principal=caller)
-                return ApplicationResult(True, {"definition_id": values["definition"].definition_id})
+                return ApplicationResult(
+                    True, {"definition_id": values["definition"].definition_id}
+                )
             if name == "inspect_run":
-                return ApplicationResult(True, self.inspect_run(str(values["run_id"]).strip()).to_dict())
+                return ApplicationResult(
+                    True, self.inspect_run(str(values["run_id"]).strip()).to_dict()
+                )
             if name == "grant_approval":
-                return ApplicationResult(True, self.grant_approval(principal=caller, **values).to_dict())
+                return ApplicationResult(
+                    True, self.grant_approval(principal=caller, **values).to_dict()
+                )
             raise ValueError(f"unknown application command: {name}")
         except Exception as exc:
-            return ApplicationResult(False, error_code=getattr(exc, "code", "automation_operation_failed"), error=str(exc))
+            return ApplicationResult(
+                False,
+                error_code=getattr(exc, "code", "automation_operation_failed"),
+                error=str(exc),
+            )
 
     command = execute_command
 
-    def execute_query(self, query: Query | str, payload: Mapping[str, Any] | None = None, *, principal: Principal | str | None = None) -> ApplicationResult:
+    def execute_query(
+        self,
+        query: Query | str,
+        payload: Mapping[str, Any] | None = None,
+        *,
+        principal: Principal | str | None = None,
+    ) -> ApplicationResult:
         if isinstance(query, Query):
             name, values = query.name, dict(query.payload)
         else:
@@ -312,7 +340,11 @@ class AutomationApplication:
                 return ApplicationResult(True, self.inspect_run(str(values["run_id"])).to_dict())
             raise ValueError(f"unknown application query: {name}")
         except Exception as exc:
-            return ApplicationResult(False, error_code=getattr(exc, "code", "automation_operation_failed"), error=str(exc))
+            return ApplicationResult(
+                False,
+                error_code=getattr(exc, "code", "automation_operation_failed"),
+                error=str(exc),
+            )
 
     query = execute_query
 
@@ -389,7 +421,9 @@ class AutomationApplication:
                 "content_hash": content_hash(definition),
                 "source_hash": definition.source_hash,
                 "immutable": True,
-                "action_manifest": asdict(definition.action_manifest) if definition.action_manifest else {},
+                "action_manifest": asdict(definition.action_manifest)
+                if definition.action_manifest
+                else {},
             },
             actor=caller.subject,
         )
@@ -567,9 +601,7 @@ class AutomationApplication:
         return fingerprint
 
     @staticmethod
-    def transition_fingerprint(
-        behavior: str, subject: str, input_state: Mapping[str, Any]
-    ) -> str:
+    def transition_fingerprint(behavior: str, subject: str, input_state: Mapping[str, Any]) -> str:
         material = {
             "behavior": behavior,
             "subject": subject,
@@ -591,7 +623,6 @@ class AutomationApplication:
         """Poll with budgets; persistent exceptions surface instead of being swallowed."""
 
         attempts = 0
-        last_error: Exception | None = None
         while True:
             attempts += 1
             if max_polls is not None and attempts > max_polls:
@@ -608,7 +639,6 @@ class AutomationApplication:
             try:
                 return probe()
             except Exception as exc:  # surface persistent failures after budget pressure
-                last_error = exc
                 self._append(
                     "rpa.poll.failed",
                     {
@@ -669,12 +699,15 @@ class AutomationApplication:
         if self._workspace is not None:
             target = self._workspace / snapshot_path
             target.parent.mkdir(parents=True, exist_ok=True)
-            if target.exists() and target.read_text(encoding="utf-8") != source:
+            source_bytes = source.encode("utf-8")
+            if target.exists() and target.read_bytes() != source_bytes:
                 raise SourceValidationError(
-                    SourceValidation(False, ("immutable snapshot path collision",), source_hash=source_hash)
+                    SourceValidation(
+                        False, ("immutable snapshot path collision",), source_hash=source_hash
+                    )
                 )
             if not target.exists():
-                target.write_text(source, encoding="utf-8")
+                target.write_bytes(source_bytes)
         definition = AutomationDefinition(
             definition_id=definition_id,
             name=name,
@@ -727,12 +760,38 @@ class AutomationApplication:
     ) -> WorkerResponse:
         """Execute only a staged snapshot through the JSON worker protocol."""
 
-        path = Path(snapshot_path)
-        if self._workspace is not None and not path.is_absolute():
-            path = self._workspace / path
+        if self._workspace is None:
+            raise PermissionError("worker execution requires a workspace-registered snapshot")
+        snapshots_root = (self._workspace / "snapshots").resolve()
+        supplied = Path(snapshot_path)
+        path = (supplied if supplied.is_absolute() else self._workspace / supplied).resolve()
+        try:
+            path.relative_to(snapshots_root)
+        except ValueError as exc:
+            raise PermissionError("worker execution is restricted to registered snapshots") from exc
         if not path.exists():
             raise FileNotFoundError(f"immutable snapshot not found: {path}")
-        request = WorkerRequest(request_id=request_id, snapshot_path=str(path), payload=dict(payload or {}))
+        registration = next(
+            (
+                event.payload
+                for event in self._store.iter_events()
+                if event.type == "rpa.source.snapshot.registered"
+                and (self._workspace / str(event.payload.get("snapshot_path", ""))).resolve()
+                == path
+            ),
+            None,
+        )
+        if registration is None:
+            raise PermissionError("worker execution requires a registered snapshot")
+        actual_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual_hash != registration.get("source_hash"):
+            raise PermissionError("registered snapshot content hash mismatch")
+        request = WorkerRequest(
+            request_id=request_id,
+            snapshot_path=str(path),
+            expected_source_hash=str(registration["source_hash"]),
+            payload=dict(payload or {}),
+        )
         try:
             completed = subprocess.run(
                 [sys.executable, "-m", "harness.automation.worker", "--worker"],
@@ -768,7 +827,11 @@ class AutomationApplication:
         )
         self._append("rpa.definition.version.registered", {"definition_version": asdict(version)})
         automation = next(
-            (item for item in self._graph.objects(type="automation") if item.data.get("definition_id") == proposal.definition.definition_id),
+            (
+                item
+                for item in self._graph.objects(type="automation")
+                if item.data.get("definition_id") == proposal.definition.definition_id
+            ),
             None,
         )
         if automation is None:
@@ -791,7 +854,9 @@ class AutomationApplication:
                 "content_hash": version.content_hash,
                 "source_hash": getattr(proposal.definition, "source_hash", ""),
                 "immutable": True,
-                "action_manifest": asdict(proposal.definition.action_manifest) if getattr(proposal.definition, "action_manifest", None) else {},
+                "action_manifest": asdict(proposal.definition.action_manifest)
+                if getattr(proposal.definition, "action_manifest", None)
+                else {},
             },
             actor=caller.subject,
         )
@@ -846,10 +911,15 @@ class AutomationApplication:
             raise AuthorityError("missing or invalid action class")
         if action_class == "R4" and not governance_gate:
             raise AuthorityError("R4 requires a governance gate")
-        if action_class in WRITE_ACTION_CLASSES and action_class in {"R3", "R4"}:
-            if not target_scope or not record_scope or not side_effect_scope:
-                raise ApprovalError("write approvals require target, record, and side-effect scopes")
-        expiry = expires_at if isinstance(expires_at, str) else expires_at.astimezone(UTC).isoformat()
+        if (
+            action_class in WRITE_ACTION_CLASSES
+            and action_class in {"R3", "R4"}
+            and (not target_scope or not record_scope or not side_effect_scope)
+        ):
+            raise ApprovalError("write approvals require target, record, and side-effect scopes")
+        expiry = (
+            expires_at if isinstance(expires_at, str) else expires_at.astimezone(UTC).isoformat()
+        )
         grant = ApprovalGrant(
             grant_id=f"grant_{uuid4().hex}",
             definition_id=definition_id,
@@ -863,7 +933,10 @@ class AutomationApplication:
             action_id=action_id or definition.action_id,
             governance_gate=governance_gate,
         )
-        self._append("rpa.approval.granted", {"approval_grant": grant.to_dict(), "principal": caller.to_dict()})
+        self._append(
+            "rpa.approval.granted",
+            {"approval_grant": grant.to_dict(), "principal": caller.to_dict()},
+        )
         self._graph.add_object("approval_grant", grant.to_dict(), actor=caller.subject)
         return grant
 
@@ -880,7 +953,12 @@ class AutomationApplication:
         self._require_writer()
         if not callable(verify):
             raise AuthorityError("explicit structured Verification callback is required")
-        if principal is not None and coerce_principal(principal).kind not in {"agent", "operator", "scheduler", "system"}:
+        if principal is not None and coerce_principal(principal).kind not in {
+            "agent",
+            "operator",
+            "scheduler",
+            "system",
+        }:
             raise PrincipalError("unsupported execution principal")
         definition = self._definition(definition_id)
         if definition is None:
@@ -888,9 +966,14 @@ class AutomationApplication:
         if not definition.read_only or definition.action_class != "R0":
             raise AuthorityError("Only R0 read-only definitions are admitted by execute_read_only")
         if operation_id is not None:
-            bound_actions = {definition.action_id, *(action.action_id for action in definition.actions)}
+            bound_actions = {
+                definition.action_id,
+                *(action.action_id for action in definition.actions),
+            }
             if operation_id not in bound_actions:
-                raise AuthorityError("requested operation is not bound to the registered definition")
+                raise AuthorityError(
+                    "requested operation is not bound to the registered definition"
+                )
 
         run_id = self.begin_run(definition_id, budget=budget, read_only=True)
         self.admit_transition(
@@ -983,8 +1066,7 @@ class AutomationApplication:
         self._require_writer()
         if not callable(verify):
             raise AuthorityError("explicit structured Verification callback is required")
-        if principal is not None and coerce_principal(principal).is_agent:
-            raise PrincipalError("agent principals cannot execute live writes")
+        caller = coerce_principal(principal)
         definition_version = self._definition_version(definition_id, version)
         if definition_version is None:
             raise KeyError(f"Unknown definition version: {definition_id}@{version}")
@@ -994,9 +1076,8 @@ class AutomationApplication:
             raise AuthorityError("missing or invalid action class")
         if definition.read_only or action_class not in WRITE_ACTION_CLASSES:
             raise AuthorityError("execute_write admits only write-capable action classes")
-        idempotency_scope = (
-            definition.idempotency_scope
-            or f"{definition.definition_id}:{version}:{definition.action_id}:{definition.record_scope}"
+        idempotency_scope = definition.idempotency_scope or (
+            f"{definition.definition_id}:{version}:{definition.action_id}:{definition.record_scope}"
         )
         # The attempt is admitted before authority evaluation so a denied or
         # interrupted request is still auditable. It is not duplicate-write
@@ -1012,6 +1093,7 @@ class AutomationApplication:
                 "grant_id": grant_id,
                 "read_only": False,
                 "action_class": action_class,
+                "principal": caller.to_dict(),
             },
         )
         self._append(
@@ -1024,6 +1106,7 @@ class AutomationApplication:
                 "idempotency_scope": idempotency_scope,
                 "grant_id": grant_id,
                 "authority_pending": True,
+                "principal": caller.to_dict(),
             },
         )
         self._graph.add_object(
@@ -1035,7 +1118,7 @@ class AutomationApplication:
                 "action_class": action_class,
                 "idempotency_scope": idempotency_scope,
             },
-            actor=actor,
+            actor=caller.subject,
         )
         if action_class in {"R3", "R4"}:
             try:
@@ -1052,7 +1135,9 @@ class AutomationApplication:
                 )
             except Exception as exc:
                 self._append("rpa.action.authority.denied", {"run_id": run_id, "error": str(exc)})
-                self._append("rpa.run.failed", {"run_id": run_id, "failure_kind": "authority_denied"})
+                self._append(
+                    "rpa.run.failed", {"run_id": run_id, "failure_kind": "authority_denied"}
+                )
                 raise
         else:
             # R1/R2 may run under automatic authority when scopes match the definition.
@@ -1071,23 +1156,35 @@ class AutomationApplication:
                         now=now or datetime.now(UTC),
                     )
                 except Exception as exc:
-                    self._append("rpa.action.authority.denied", {"run_id": run_id, "error": str(exc)})
-                    self._append("rpa.run.failed", {"run_id": run_id, "failure_kind": "authority_denied"})
+                    self._append(
+                        "rpa.action.authority.denied", {"run_id": run_id, "error": str(exc)}
+                    )
+                    self._append(
+                        "rpa.run.failed", {"run_id": run_id, "failure_kind": "authority_denied"}
+                    )
                     raise
             else:
-                self._append("rpa.action.authority.denied", {"run_id": run_id, "error": "approval grant is required for write execution"})
-                self._append("rpa.run.failed", {"run_id": run_id, "failure_kind": "authority_denied"})
+                self._append(
+                    "rpa.action.authority.denied",
+                    {"run_id": run_id, "error": "approval grant is required for write execution"},
+                )
+                self._append(
+                    "rpa.run.failed", {"run_id": run_id, "failure_kind": "authority_denied"}
+                )
                 raise ApprovalError("approval grant is required for write execution")
 
         action = self._primary_action(definition)
         if self._write_already_admitted(definition.action_id, idempotency_scope):
             self._append("rpa.run.failed", {"run_id": run_id, "failure_kind": "duplicate_write"})
-            raise DuplicateWriteError(
-                "write already admitted for run/action/idempotency scope"
-            )
+            raise DuplicateWriteError("write already admitted for run/action/idempotency scope")
         self._append(
             "rpa.action.authority.admitted",
-            {"run_id": run_id, "grant_id": grant.grant_id, "actor": actor, "action_class": action_class},
+            {
+                "run_id": run_id,
+                "grant_id": grant.grant_id,
+                "actor": actor,
+                "action_class": action_class,
+            },
         )
         secrets = self._resolve_secrets(definition, action, secret_adapter)
         self._append(
@@ -1111,9 +1208,7 @@ class AutomationApplication:
         except Exception as exc:
             tool_result = ToolResult(
                 evidence={"error": str(exc)},
-                write_outcome="unknown"
-                if self._looks_like_transport_or_timeout(exc)
-                else "failed",
+                write_outcome="unknown" if self._looks_like_transport_or_timeout(exc) else "failed",
             )
             if tool_result.write_outcome != "unknown":
                 verification = VerificationResult(
@@ -1207,7 +1302,9 @@ class AutomationApplication:
                     "content_hash": content_hash(proposed_definition),
                     "immutable": True,
                     "source_hash": proposed_definition.source_hash,
-                    "action_manifest": asdict(proposed_definition.action_manifest) if proposed_definition.action_manifest else {},
+                    "action_manifest": asdict(proposed_definition.action_manifest)
+                    if proposed_definition.action_manifest
+                    else {},
                 },
                 actor="repair-agent",
             )
@@ -1231,9 +1328,7 @@ class AutomationApplication:
         proposal = self._repair_proposal(repair_id)
         if proposal is None:
             raise KeyError(f"Unknown repair proposal: {repair_id}")
-        parent = self._definition_version(
-            proposal.parent_definition_id, proposal.parent_version
-        )
+        parent = self._definition_version(proposal.parent_definition_id, proposal.parent_version)
         if parent is None:
             raise RepairError("parent definition missing for trial")
         if parent.content_hash != proposal.parent_content_hash:
@@ -1250,9 +1345,7 @@ class AutomationApplication:
         trial_id = f"trial_{uuid4().hex}"
         trial_run_id: str | None = None
         candidate_runtime = (
-            self._load_fork(proposal.candidate_run_id)
-            if proposal.candidate_run_id
-            else None
+            self._load_fork(proposal.candidate_run_id) if proposal.candidate_run_id else None
         )
         if candidate_runtime is not None and candidate_runtime.graph.events:
             try:
@@ -1304,7 +1397,9 @@ class AutomationApplication:
         definition = proposal.proposed_definition
         if definition.action_class in WRITE_ACTION_CLASSES:
             if grant_id is None or actor is None:
-                raise RepairError("write repair trial requires grant_id and actor within parent scope")
+                raise RepairError(
+                    "write repair trial requires grant_id and actor within parent scope"
+                )
             grant = self._approval_grant(grant_id)
             if grant is None:
                 raise RepairError("trial tools cannot exceed parent Approval Grant scope")
@@ -1325,7 +1420,9 @@ class AutomationApplication:
             elif definition.read_only or definition.action_class == "R0":
                 tool_result = adapter(definition, trial_id)  # type: ignore[call-arg]
             else:
-                secrets = self._resolve_secrets(definition, self._primary_action(definition), secret_adapter)
+                secrets = self._resolve_secrets(
+                    definition, self._primary_action(definition), secret_adapter
+                )
                 tool_result = adapter(  # type: ignore[call-arg]
                     definition, trial_id, secrets=secrets, action=self._primary_action(definition)
                 )
@@ -1374,7 +1471,9 @@ class AutomationApplication:
             },
             evidence_references=(reference,),
             parent_diff=self._repair_diff(parent.definition, definition),
-            failure_kind=None if verification.passed else (verification.failure_kind or "trial_failed"),
+            failure_kind=None
+            if verification.passed
+            else (verification.failure_kind or "trial_failed"),
             parent_run_id=proposal.candidate_run_id,
         )
         if trial_run_id is not None:
@@ -1410,18 +1509,19 @@ class AutomationApplication:
             raise RepairError("trial not found for repair")
         if trial["status"] != "passed" or not trial["verification"].get("passed"):
             raise RepairError("promotion requires passing verification")
-        parent = self._definition_version(
-            proposal.parent_definition_id, proposal.parent_version
-        )
+        parent = self._definition_version(proposal.parent_definition_id, proposal.parent_version)
         if parent is None:
             raise RepairError("parent missing")
         if parent.content_hash != proposal.parent_content_hash:
             raise RepairError("stale parent conflict: content hash changed")
         current_versions = self.definition_versions(proposal.parent_definition_id)
         latest = current_versions[-1] if current_versions else None
-        if latest is not None and latest.version != proposal.parent_version:
-            if latest.content_hash != proposal.parent_content_hash:
-                raise RepairError("stale parent conflict: newer non-matching version exists")
+        if (
+            latest is not None
+            and latest.version != proposal.parent_version
+            and latest.content_hash != proposal.parent_content_hash
+        ):
+            raise RepairError("stale parent conflict: newer non-matching version exists")
         # No unresolved ambiguity on discovery.
         if any(
             selector.strategy in WEAK_REPAIR_STRATEGIES and not selector.verified
@@ -1540,9 +1640,7 @@ class AutomationApplication:
             VerificationResult(
                 passed=result.conclusion == "applied",
                 message=result.message or result.conclusion,
-                failure_kind=None
-                if result.conclusion == "applied"
-                else "needs_reconciliation",
+                failure_kind=None if result.conclusion == "applied" else "needs_reconciliation",
                 evidence=result.evidence,
             ),
         )
@@ -1680,9 +1778,15 @@ class AutomationApplication:
         input_hash = self._input_state_hash(inputs)
         if replay:
             for event in self._graph.events:
-                if event.type != "rpa.observation.returned" or event.payload.get("run_id") != run_id:
+                if (
+                    event.type != "rpa.observation.returned"
+                    or event.payload.get("run_id") != run_id
+                ):
                     continue
-                if event.payload.get("call_id") != call_id or event.payload.get("input_hash") != input_hash:
+                if (
+                    event.payload.get("call_id") != call_id
+                    or event.payload.get("input_hash") != input_hash
+                ):
                     continue
                 return ToolResult(
                     value=dict(event.payload.get("value") or {}),
@@ -1730,7 +1834,11 @@ class AutomationApplication:
     def record_clock(self, run_id: str, *, call_id: str, replay: bool = False) -> str:
         if replay:
             for event in self._graph.events:
-                if event.type == "rpa.clock.read" and event.payload.get("run_id") == run_id and event.payload.get("call_id") == call_id:
+                if (
+                    event.type == "rpa.clock.read"
+                    and event.payload.get("run_id") == run_id
+                    and event.payload.get("call_id") == call_id
+                ):
                     return str(event.payload["value"])
             raise ReplayDivergenceError(f"no recorded clock value matches call {call_id}")
         value = datetime.now(UTC).isoformat()
@@ -1740,7 +1848,11 @@ class AutomationApplication:
     def record_random(self, run_id: str, *, call_id: str, replay: bool = False) -> float:
         if replay:
             for event in self._graph.events:
-                if event.type == "rpa.random.read" and event.payload.get("run_id") == run_id and event.payload.get("call_id") == call_id:
+                if (
+                    event.type == "rpa.random.read"
+                    and event.payload.get("run_id") == run_id
+                    and event.payload.get("call_id") == call_id
+                ):
                     return float(event.payload["value"])
             raise ReplayDivergenceError(f"no recorded random value matches call {call_id}")
         import random
@@ -1948,9 +2060,7 @@ class AutomationApplication:
                     selectors=tuple(
                         SelectorEvidence(**item) for item in discovery_value.get("selectors", ())
                     ),
-                    observed_capabilities=tuple(
-                        discovery_value.get("observed_capabilities", ())
-                    ),
+                    observed_capabilities=tuple(discovery_value.get("observed_capabilities", ())),
                     schema_version=discovery_value.get("schema_version", "v1"),
                 ),
                 proposed_definition=definition,
@@ -1978,9 +2088,7 @@ class AutomationApplication:
                 count += 1
         return count
 
-    def _ensure_trial_run(
-        self, trial_id: str, proposal: RepairProposal, budget: RunBudget
-    ) -> str:
+    def _ensure_trial_run(self, trial_id: str, proposal: RepairProposal, budget: RunBudget) -> str:
         self._append(
             "rpa.run.started",
             {
@@ -2011,9 +2119,7 @@ class AutomationApplication:
         discovery: DiscoveryEvidence,
         surface: str,
     ) -> None:
-        priority = (
-            BROWSER_SELECTOR_PRIORITY if surface == "browser" else DESKTOP_SELECTOR_PRIORITY
-        )
+        priority = BROWSER_SELECTOR_PRIORITY if surface == "browser" else DESKTOP_SELECTOR_PRIORITY
         for selector in discovery.selectors:
             if selector.strategy not in priority:
                 raise RepairError(f"selector strategy not in {surface} priority ladder")
@@ -2090,7 +2196,7 @@ class AutomationApplication:
                 "evidence": verification.evidence,
             },
         )
-        verification_object = self._graph.add_object(
+        self._graph.add_object(
             "verification_result",
             {
                 "run_id": run_id,
@@ -2101,11 +2207,19 @@ class AutomationApplication:
         )
         reference = self._record_evidence(run_id, tool_result, verification)
         run_object = next(
-            (item for item in self._graph.objects(type="workflow_run") if item.data.get("run_id") == run_id),
+            (
+                item
+                for item in self._graph.objects(type="workflow_run")
+                if item.data.get("run_id") == run_id
+            ),
             None,
         )
         evidence_object = next(
-            (item for item in self._graph.objects(type="evidence_reference") if item.data.get("evidence_id") == reference.evidence_id),
+            (
+                item
+                for item in self._graph.objects(type="evidence_reference")
+                if item.data.get("evidence_id") == reference.evidence_id
+            ),
             None,
         )
         if run_object is not None and evidence_object is not None:
@@ -2415,7 +2529,9 @@ class AutomationApplication:
                 elif event.type == "rpa.action.dispatching":
                     state["status"] = "needs_reconciliation"
                     state["failure_kind"] = "needs_reconciliation"
-                    state["blocked_reason"] = "external effect may have been dispatched before process recovery"
+                    state["blocked_reason"] = (
+                        "external effect may have been dispatched before process recovery"
+                    )
                     state["next_required"] = "reconcile the dispatch before retrying"
                 elif event.type == "rpa.action.attempted":
                     state["action_id"] = payload.get("action_id")
