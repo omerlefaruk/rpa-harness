@@ -1,9 +1,7 @@
-"""First-party ActiveGraph pack declarations for the RPA lifecycle surface.
+"""Executable first-party ActiveGraph lifecycle pack.
 
-Tools and behaviors in this module are pack **declarations** only. They describe
-object types, relations, and tool schemas for ActiveGraph; they do not execute
-RPA actions. The product host ``AutomationApplication`` is the only execution
-path: adapters injected by the host perform real work under lifecycle authority.
+The pack owns schemas and deterministic materialization. External I/O remains a
+host adapter, but lifecycle objects and relations are real graph state.
 """
 
 from __future__ import annotations
@@ -18,6 +16,37 @@ class AutomationDefinitionObject(BaseModel):
     action_class: str = "R0"
     read_only: bool = True
     success_check: str
+
+
+class WorkspaceObject(BaseModel):
+    workspace_id: str
+    status: str = "active"
+    schema_version: str = "1"
+
+
+class AutomationObject(BaseModel):
+    definition_id: str
+    name: str
+    action_class: str = "R0"
+    read_only: bool = True
+    status: str = "registered"
+
+
+class AutomationRevisionObject(BaseModel):
+    definition_id: str
+    version: int
+    content_hash: str
+    immutable: bool = True
+    source_hash: str = ""
+    action_manifest: dict[str, object] = Field(default_factory=dict)
+
+
+class WorkflowRunObject(BaseModel):
+    run_id: str
+    definition_id: str
+    status: str
+    parent_run_id: str = ""
+    fork_point: str = ""
 
 
 class RunObject(BaseModel):
@@ -52,6 +81,8 @@ class EvidenceReferenceObject(BaseModel):
     evidence_id: str
     run_id: str
     uri: str
+    content_hash: str = ""
+    size: int = 0
 
 
 class ReadOnlyActionInput(BaseModel):
@@ -65,7 +96,23 @@ class ReadOnlyActionOutput(BaseModel):
 
 @behavior(name="start_read_only_run", on=["rpa.run.started"])
 def start_read_only_run(event, graph, ctx):
-    """The product host owns adapter invocation; this behavior declares the lifecycle trigger."""
+    """Materialize a run object when a lifecycle start event is accepted."""
+
+    payload = event.payload
+    if not payload.get("run_id") or graph.objects(type="workflow_run", where={"run_id": payload["run_id"]}):
+        return
+    graph.add_object(
+        "workflow_run",
+        {
+            "run_id": payload["run_id"],
+            "definition_id": payload.get("definition_id", ""),
+            "status": "running",
+            "parent_run_id": graph.run_id,
+            "fork_point": event.id,
+        },
+        actor="activegraph",
+        caused_by=event.id,
+    )
 
 
 class WriteActionInput(BaseModel):
@@ -122,6 +169,10 @@ pack = Pack(
     version="0.1.0",
     description="Typed RPA lifecycle objects and a governed read-only action surface.",
     object_types=(
+        ObjectType("workspace", WorkspaceObject),
+        ObjectType("automation", AutomationObject),
+        ObjectType("automation_revision", AutomationRevisionObject),
+        ObjectType("workflow_run", WorkflowRunObject),
         ObjectType("automation_definition", AutomationDefinitionObject),
         ObjectType("run", RunObject),
         ObjectType("action_attempt", ActionAttemptObject),
@@ -130,11 +181,12 @@ pack = Pack(
         ObjectType("evidence_reference", EvidenceReferenceObject),
     ),
     relation_types=(
+        RelationType("has_revision", ("automation",), ("automation_revision",)),
         RelationType("defines", ("automation_definition",), ("run",)),
         RelationType("attempts", ("run",), ("action_attempt",)),
         RelationType("authorizes", ("approval_grant",), ("action_attempt",)),
         RelationType("verifies", ("action_attempt",), ("verification_result",)),
-        RelationType("evidences", ("run",), ("evidence_reference",)),
+        RelationType("evidences", ("run", "workflow_run"), ("evidence_reference",)),
     ),
     behaviors=(start_read_only_run,),
     tools=(read_only_action, approval_gated_write),

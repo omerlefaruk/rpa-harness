@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from harness.automation.authoring import AutomationAction, DiscoveryEvidence
+from harness.automation.source_validation import ActionManifest
 from harness.security import redact_value
 
 
@@ -63,6 +64,16 @@ class ReconciliationError(RuntimeError):
     """Raised when reconciliation is invalid or still unresolved for unattended work."""
 
     code = "automation_reconciliation_invalid"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"{self.code}: {message}")
+
+
+class ReplayDivergenceError(RuntimeError):
+    """Raised when replay inputs no longer match the recorded boundary."""
+
+    code = "automation_replay_diverged"
 
     def __init__(self, message: str) -> None:
         self.message = message
@@ -144,6 +155,11 @@ class AutomationDefinition:
     idempotency_scope: str = ""
     credential_names: tuple[str, ...] = ()
     schema_version: str = "v1"
+    source_hash: str = ""
+    dependency_lock_hash: str = ""
+    skill_hashes: tuple[str, ...] = ()
+    validator_version: str = ""
+    action_manifest: ActionManifest | None = None
 
 
 @dataclass(frozen=True)
@@ -166,6 +182,8 @@ class EvidenceReference:
     evidence_id: str
     uri: str
     kind: str
+    content_hash: str = ""
+    size: int = 0
 
 
 @dataclass(frozen=True)
@@ -247,6 +265,7 @@ class RepairProposal:
     proposed_definition: AutomationDefinition
     rationale: str = ""
     surface: str = "browser"  # browser | desktop
+    candidate_run_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -260,6 +279,7 @@ class RepairProposal:
             "proposed_definition": asdict(self.proposed_definition),
             "rationale": self.rationale,
             "surface": self.surface,
+            "candidate_run_id": self.candidate_run_id,
         }
 
 
@@ -272,6 +292,7 @@ class RepairTrialResult:
     evidence_references: tuple[EvidenceReference, ...]
     parent_diff: dict[str, Any]
     failure_kind: str | None = None
+    parent_run_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -282,4 +303,5 @@ class RepairTrialResult:
             "evidence_references": [asdict(item) for item in self.evidence_references],
             "parent_diff": self.parent_diff,
             "failure_kind": self.failure_kind,
+            "parent_run_id": self.parent_run_id,
         }

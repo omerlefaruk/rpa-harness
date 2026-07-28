@@ -2,7 +2,6 @@
 import process from "node:process";
 import { buildHarnessArgs, listAllowlistedCommands } from "../lib/commands.js";
 import { ensureRuntime, runChecked, runtimePaths } from "../lib/python-runtime.js";
-import { startMcpServer } from "../lib/mcp-server.js";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -46,7 +45,8 @@ if (command === "init") {
 const python = runtimePaths().python;
 
 if (command === "mcp") {
-  startMcpServer(python);
+  const paths = ensureRuntime();
+  runChecked(paths.python, ["-m", "harness.mcp_server"]);
 } else {
   runChecked(python, buildHarnessArgs(command, args));
 }

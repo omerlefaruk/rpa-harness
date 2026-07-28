@@ -14,6 +14,7 @@ test("local source install uses editable mode", () => {
   assert.deepEqual(buildPythonInstallArgs("../../.."), ["-m", "pip", "install", "-e", "../../.."]);
 });
 
-test("default install uses GitHub main source", () => {
+test("default install uses a pinned release", () => {
+  assert.equal(DEFAULT_PYTHON_SOURCE, "rpa-harness==0.1.0");
   assert.deepEqual(buildPythonInstallArgs(), ["-m", "pip", "install", "--upgrade", DEFAULT_PYTHON_SOURCE]);
 });

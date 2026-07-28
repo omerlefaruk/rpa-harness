@@ -13,7 +13,7 @@ It calls allowlisted MCP/CLI operations that all go through `harness.automation.
 npx rpa-harness-agent init my-workspace
 npx rpa-harness-agent mcp
 # alias also supported:
-npx roi-harness init my-workspace
+npx rpa-harness-agent init my-workspace
 ```
 
 The npm package under `packages/rpa-harness-agent/` is a thin launcher. The runtime is Python; agents connect over MCP with allowlisted tools only.

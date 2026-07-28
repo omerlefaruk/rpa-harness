@@ -25,3 +25,10 @@ jobs:
 
       - name: Product release checks
         run: python scripts/check_product_release.py
+
+      - name: Python unit suite
+        run: python -m pytest -q
+
+      - name: npm package suite
+        working-directory: packages/rpa-harness-agent
+        run: npm test
